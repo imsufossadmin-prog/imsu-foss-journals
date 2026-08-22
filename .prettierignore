@@ -1,0 +1,4 @@
+AGENTS.md
+.agents/
+.playwright-cli/
+supabase/.temp/

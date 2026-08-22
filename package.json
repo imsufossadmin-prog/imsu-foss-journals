@@ -6,21 +6,48 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "test": "NODE_OPTIONS=--conditions=react-server node --import tsx --test tests/*.test.ts",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "db:generate": "prisma generate",
+    "db:migrate": "prisma migrate dev",
+    "db:migrate:deploy": "prisma migrate deploy",
+    "db:seed": "prisma db seed",
+    "db:studio": "prisma studio",
+    "db:provision-user": "NODE_OPTIONS=--conditions=react-server node --experimental-websocket --import tsx scripts/provision-user.ts",
+    "validate:live:author": "NODE_OPTIONS=--conditions=react-server node --experimental-websocket --import tsx scripts/validate-live-phase5.ts",
+    "validate:live:phase5": "NODE_OPTIONS=--conditions=react-server node --experimental-websocket --import tsx scripts/validate-live-phase5.ts",
+    "validate:live:auth-roles": "NODE_OPTIONS=--conditions=react-server node --experimental-websocket --import tsx scripts/validate-live-auth-roles.ts",
+    "validate:live:editorial": "NODE_OPTIONS=--conditions=react-server node --experimental-websocket --import tsx scripts/validate-live-editorial-workflow.ts",
+    "fixtures:editorial:browser": "node --experimental-websocket --import tsx scripts/prepare-editorial-browser-fixtures.ts"
+  },
+  "prisma": {
+    "seed": "node --env-file=.env prisma/seed.mjs"
   },
   "dependencies": {
+    "@prisma/adapter-pg": "^7.9.1",
+    "@prisma/client": "^7.9.1",
+    "@supabase/ssr": "0.12.0",
+    "@supabase/supabase-js": "2.109.0",
     "next": "16.2.12",
     "react": "19.2.4",
-    "react-dom": "19.2.4"
+    "react-dom": "19.2.4",
+    "server-only": "^0.0.1"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",
+    "dotenv": "^17.4.2",
     "eslint": "^9",
     "eslint-config-next": "16.2.12",
+    "prettier": "^3.9.6",
+    "prettier-plugin-tailwindcss": "^0.8.1",
+    "prisma": "^7.9.1",
     "tailwindcss": "^4",
+    "tsx": "^4.23.12",
     "typescript": "^5"
   }
 }

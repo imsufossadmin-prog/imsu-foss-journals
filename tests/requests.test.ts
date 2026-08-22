@@ -1,0 +1,115 @@
+import assert from "node:assert/strict";
+import test from "node:test";
+
+import {
+  canAccessRequest,
+  canManageRequest,
+  canUseSubmissionPermission,
+  type RequestActor,
+} from "@/lib/requests/policy";
+import {
+  normalizeTrackingId,
+  requestStatusContent,
+  validateMessageBody,
+  validateTrackingId,
+} from "@/lib/requests/validation";
+
+const author: RequestActor = {
+  id: "author-a",
+  active: true,
+  author: true,
+  adminDepartmentIds: [],
+};
+const psychologyAdmin: RequestActor = {
+  id: "admin-a",
+  active: true,
+  author: false,
+  adminDepartmentIds: ["psychology"],
+};
+const sociologyAdmin: RequestActor = {
+  id: "admin-b",
+  active: true,
+  author: false,
+  adminDepartmentIds: ["sociology"],
+};
+const request = { authorId: "author-a", departmentId: "psychology" };
+
+test("author can access their own Psychology request", () => {
+  assert.equal(canAccessRequest(author, request), true);
+});
+
+test("another author cannot access the request", () => {
+  assert.equal(canAccessRequest({ ...author, id: "author-b" }, request), false);
+});
+
+test("correct department administrator can access and manage the request", () => {
+  assert.equal(canAccessRequest(psychologyAdmin, request), true);
+  assert.equal(canManageRequest(psychologyAdmin, request), true);
+});
+
+test("unrelated department administrator is denied", () => {
+  assert.equal(canAccessRequest(sociologyAdmin, request), false);
+  assert.equal(canManageRequest(sociologyAdmin, request), false);
+});
+
+test("super administrator can manage every department request", () => {
+  const superAdmin = { ...sociologyAdmin, superAdmin: true };
+  assert.equal(canManageRequest(superAdmin, request), true);
+});
+
+test("inactive users are denied even when otherwise scoped", () => {
+  assert.equal(
+    canAccessRequest({ ...psychologyAdmin, active: false }, request),
+    false,
+  );
+});
+
+test("submission permission belongs only to the enabled request author", () => {
+  assert.equal(
+    canUseSubmissionPermission(author, {
+      ...request,
+      status: "SUBMISSION_ENABLED",
+    }),
+    true,
+  );
+  assert.equal(
+    canUseSubmissionPermission(
+      { ...author, id: "author-b" },
+      { ...request, status: "SUBMISSION_ENABLED" },
+    ),
+    false,
+  );
+  assert.equal(
+    canUseSubmissionPermission(author, {
+      ...request,
+      status: "RECEIPT_SUBMITTED",
+    }),
+    false,
+  );
+});
+
+test("request statuses use plain operational language", () => {
+  assert.equal(requestStatusContent.AWAITING_PAYMENT.label, "Payment required");
+  assert.equal(requestStatusContent.RECEIPT_SUBMITTED.label, "Receipt sent");
+  assert.equal(
+    requestStatusContent.SUBMISSION_ENABLED.label,
+    "Payment confirmed",
+  );
+  assert.equal(
+    requestStatusContent.MANUSCRIPT_SUBMITTED.label,
+    "Awaiting tracking ID",
+  );
+});
+
+test("tracking IDs normalize safely and reject unsupported formats", () => {
+  assert.equal(normalizeTrackingId(" psy 2026/001 "), "PSY-2026/001");
+  assert.equal(validateTrackingId("PSY-2026/001"), null);
+  assert.match(validateTrackingId("a") ?? "", /3–50/);
+  assert.match(validateTrackingId("PSY # 1") ?? "", /letters, numbers/);
+});
+
+test("messages require useful bounded text", () => {
+  assert.match(validateMessageBody("  ") ?? "", /Write a message/);
+  assert.equal(validateMessageBody("Please upload your receipt."), null);
+  assert.match(validateMessageBody("x".repeat(5_001)) ?? "", /5,000/);
+});

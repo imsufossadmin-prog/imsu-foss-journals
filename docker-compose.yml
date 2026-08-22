@@ -1,0 +1,21 @@
+services:
+  postgres:
+    image: postgres:16
+    container_name: imsu-foss-journals-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: imsu_foss_journals
+      POSTGRES_USER: imsu_foss_local
+      POSTGRES_PASSWORD: imsu_foss_local_password
+    ports:
+      - "5432:5432"
+    volumes:
+      - imsu_foss_journals_postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U imsu_foss_local -d imsu_foss_journals"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  imsu_foss_journals_postgres_data:

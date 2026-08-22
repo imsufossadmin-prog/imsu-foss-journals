@@ -1,0 +1,430 @@
+import "server-only";
+
+import { Prisma } from "@prisma/client";
+
+import { isSuperAdmin } from "@/lib/auth/permissions";
+import { prisma } from "@/lib/db/prisma";
+import type { SubmissionAuthorInput } from "@/lib/submissions/types";
+import { validateAuthors, validateDetails } from "@/lib/submissions/validation";
+import {
+  normalizeTrackingId,
+  validateMessageBody,
+  validateTrackingId,
+} from "@/lib/requests/validation";
+
+export class RequestMutationError extends Error {
+  constructor(
+    message: string,
+    readonly fieldErrors?: Record<string, string>,
+  ) {
+    super(message);
+  }
+}
+
+async function actorAccess(actorId: string, requestId: string) {
+  const [actor, request] = await Promise.all([
+    prisma.user.findUnique({
+      where: { id: actorId },
+      include: {
+        globalRoles: true,
+        journalRoles: {
+          include: { journal: { select: { departmentId: true } } },
+        },
+      },
+    }),
+    prisma.submissionRequest.findUnique({
+      where: { id: requestId },
+      select: {
+        id: true,
+        authorId: true,
+        departmentId: true,
+        journalId: true,
+        status: true,
+      },
+    }),
+  ]);
+  if (!actor?.isActive || !request)
+    throw new RequestMutationError("This request is unavailable.");
+  const author = request.authorId === actorId;
+  const admin =
+    isSuperAdmin(actor) ||
+    actor.journalRoles.some(
+      ({ role, journal }) =>
+        role === "JOURNAL_ADMIN" &&
+        journal.departmentId === request.departmentId,
+    );
+  if (!author && !admin)
+    throw new RequestMutationError("This request is unavailable.");
+  return { actor, request, author, admin };
+}
+
+async function requireAdmin(actorId: string, requestId: string) {
+  const access = await actorAccess(actorId, requestId);
+  if (!access.admin)
+    throw new RequestMutationError(
+      "Only the department administrator can do that.",
+    );
+  return access;
+}
+
+export async function createSubmissionRequest(authorId: string) {
+  const operations = await prisma.journal.findFirst({
+    where: {
+      slug: "psychology",
+      isActive: true,
+      department: { slug: "psychology", isActive: true },
+    },
+    select: { id: true, departmentId: true },
+  });
+  if (!operations)
+    throw new RequestMutationError(
+      "Psychology journal operations are not available yet.",
+    );
+
+  const existing = await prisma.submissionRequest.findFirst({
+    where: {
+      authorId,
+      departmentId: operations.departmentId,
+      status: { not: "TRACKING_ASSIGNED" },
+    },
+    orderBy: { updatedAt: "desc" },
+    select: { id: true },
+  });
+  if (existing) return existing;
+
+  return prisma.submissionRequest.create({
+    data: {
+      authorId,
+      departmentId: operations.departmentId,
+      journalId: operations.id,
+      messages: {
+        create: {
+          kind: "SYSTEM",
+          body: "Submission request started. The Psychology journal team can now assist you here.",
+        },
+      },
+    },
+    select: { id: true },
+  });
+}
+
+export async function sendRequestMessage(input: {
+  actorId: string;
+  requestId: string;
+  body: string;
+}) {
+  const error = validateMessageBody(input.body);
+  if (error) throw new RequestMutationError(error, { body: error });
+  const { request, admin } = await actorAccess(input.actorId, input.requestId);
+  await prisma.$transaction(async (transaction) => {
+    await transaction.submissionConversationMessage.create({
+      data: {
+        requestId: request.id,
+        senderId: input.actorId,
+        body: input.body.trim(),
+      },
+    });
+    if (admin && request.status === "NEW") {
+      await transaction.submissionRequest.update({
+        where: { id: request.id },
+        data: { status: "AWAITING_PAYMENT", version: { increment: 1 } },
+      });
+    } else {
+      await transaction.submissionRequest.update({
+        where: { id: request.id },
+        data: { updatedAt: new Date() },
+      });
+    }
+  });
+}
+
+export async function confirmPaymentAndEnableSubmission(
+  actorId: string,
+  requestId: string,
+) {
+  const { request } = await requireAdmin(actorId, requestId);
+  if (request.status !== "RECEIPT_SUBMITTED") {
+    throw new RequestMutationError(
+      "A payment receipt must be waiting for review.",
+    );
+  }
+  const now = new Date();
+  const updated = await prisma.$transaction(async (transaction) => {
+    const changed = await transaction.submissionRequest.updateMany({
+      where: { id: request.id, status: "RECEIPT_SUBMITTED" },
+      data: {
+        status: "SUBMISSION_ENABLED",
+        paymentConfirmedAt: now,
+        paymentConfirmedById: actorId,
+        submissionEnabledAt: now,
+        submissionEnabledById: actorId,
+        version: { increment: 1 },
+      },
+    });
+    if (changed.count !== 1)
+      throw new RequestMutationError(
+        "This request changed. Refresh and try again.",
+      );
+    await transaction.submissionConversationMessage.create({
+      data: {
+        requestId: request.id,
+        kind: "SYSTEM",
+        body: "Payment confirmed. Article submission is now available.",
+      },
+    });
+    return changed;
+  });
+  return updated;
+}
+
+export async function beginRequestSubmission(
+  authorId: string,
+  requestId: string,
+) {
+  return prisma.$transaction(async (transaction) => {
+    const request = await transaction.submissionRequest.findFirst({
+      where: { id: requestId, authorId, status: "SUBMISSION_ENABLED" },
+      select: { id: true, journalId: true, submissionId: true },
+    });
+    if (!request)
+      throw new RequestMutationError(
+        "The journal has not enabled article submission for this request.",
+      );
+    if (request.submissionId) return { id: request.submissionId };
+    const submission = await transaction.submission.create({
+      data: { ownerId: authorId, journalId: request.journalId },
+    });
+    await transaction.submissionRequest.update({
+      where: { id: request.id },
+      data: { submissionId: submission.id, version: { increment: 1 } },
+    });
+    return { id: submission.id };
+  });
+}
+
+export async function saveSimpleArticle(input: {
+  authorId: string;
+  requestId: string;
+  submissionId: string;
+  version: number;
+  title: string;
+  abstract: string;
+  keywords: string[];
+  authors: SubmissionAuthorInput[];
+}) {
+  const details = validateDetails(input);
+  const authors = validateAuthors(input.authors);
+  const fieldErrors = { ...details.fieldErrors, ...authors.fieldErrors };
+  if (!details.valid || !authors.valid)
+    throw new RequestMutationError(
+      "Review the highlighted article information.",
+      fieldErrors,
+    );
+  await prisma.$transaction(async (transaction) => {
+    const updated = await transaction.submission.updateMany({
+      where: {
+        id: input.submissionId,
+        ownerId: input.authorId,
+        status: "DRAFT",
+        version: input.version,
+        request: {
+          id: input.requestId,
+          authorId: input.authorId,
+          status: "SUBMISSION_ENABLED",
+        },
+      },
+      data: {
+        title: input.title.trim(),
+        abstract: input.abstract.trim(),
+        keywords: input.keywords,
+        version: { increment: 1 },
+      },
+    });
+    if (updated.count !== 1)
+      throw new RequestMutationError(
+        "This article changed. Refresh before saving again.",
+      );
+    await transaction.submissionAuthor.deleteMany({
+      where: { submissionId: input.submissionId },
+    });
+    await transaction.submissionAuthor.createMany({
+      data: input.authors.map((author, index) => ({
+        submissionId: input.submissionId,
+        fullName: author.fullName.trim(),
+        email: author.email.trim() || null,
+        affiliation: author.affiliation.trim() || null,
+        orcid: null,
+        position: index + 1,
+        isCorrespondingAuthor: author.isCorrespondingAuthor,
+      })),
+    });
+  });
+}
+
+export async function finalizeRequestSubmission(
+  authorId: string,
+  requestId: string,
+  submissionId: string,
+) {
+  await prisma.$transaction(async (transaction) => {
+    const request = await transaction.submissionRequest.findFirst({
+      where: {
+        id: requestId,
+        authorId,
+        submissionId,
+        status: "SUBMISSION_ENABLED",
+      },
+      include: {
+        submission: {
+          include: {
+            authors: true,
+            files: { include: { storedFile: true } },
+            journal: true,
+          },
+        },
+      },
+    });
+    const submission = request?.submission;
+    if (!request || !submission || submission.status !== "DRAFT") {
+      throw new RequestMutationError("This article is not ready to submit.");
+    }
+    const details = validateDetails({
+      title: submission.title ?? "",
+      abstract: submission.abstract ?? "",
+      keywords: submission.keywords,
+    });
+    const authors = validateAuthors(
+      submission.authors.map((author) => ({
+        fullName: author.fullName,
+        email: author.email ?? "",
+        affiliation: author.affiliation ?? "",
+        orcid: "",
+        isCorrespondingAuthor: author.isCorrespondingAuthor,
+      })),
+    );
+    const manuscript = submission.files.find(
+      ({ type }) => type === "MANUSCRIPT",
+    );
+    if (!details.valid || !authors.valid || !manuscript) {
+      throw new RequestMutationError(
+        "Add the article information and manuscript before submitting.",
+      );
+    }
+    const now = new Date();
+    const updated = await transaction.submission.updateMany({
+      where: {
+        id: submission.id,
+        ownerId: authorId,
+        status: "DRAFT",
+        trackingNumber: null,
+      },
+      data: {
+        status: "SUBMITTED",
+        submittedAt: now,
+        version: { increment: 1 },
+      },
+    });
+    if (updated.count !== 1)
+      throw new RequestMutationError(
+        "This article changed. Refresh before submitting.",
+      );
+    const version = await transaction.submissionVersion.create({
+      data: {
+        submissionId: submission.id,
+        versionNumber: 1,
+        kind: "ORIGINAL",
+        manuscriptStoredFileId: manuscript.storedFileId,
+        submittedAt: now,
+      },
+    });
+    await transaction.submissionEvent.create({
+      data: {
+        submissionId: submission.id,
+        submissionVersionId: version.id,
+        type: "SUBMISSION_RECEIVED",
+        actorId: authorId,
+        authorVisible: true,
+        createdAt: now,
+      },
+    });
+    await transaction.submissionRequest.update({
+      where: { id: request.id },
+      data: { status: "MANUSCRIPT_SUBMITTED", version: { increment: 1 } },
+    });
+    await transaction.submissionConversationMessage.create({
+      data: {
+        requestId: request.id,
+        kind: "SYSTEM",
+        body: "Manuscript received. The journal administrator will assign its tracking ID.",
+      },
+    });
+  });
+}
+
+export async function assignTrackingId(input: {
+  actorId: string;
+  requestId: string;
+  trackingId: string;
+}) {
+  const validation = validateTrackingId(input.trackingId);
+  if (validation)
+    throw new RequestMutationError(validation, { trackingId: validation });
+  const { request } = await requireAdmin(input.actorId, input.requestId);
+  const trackingId = normalizeTrackingId(input.trackingId);
+  try {
+    await prisma.$transaction(async (transaction) => {
+      const record = await transaction.submissionRequest.findFirst({
+        where: {
+          id: request.id,
+          status: "MANUSCRIPT_SUBMITTED",
+          submissionId: { not: null },
+        },
+        select: { submissionId: true },
+      });
+      if (!record?.submissionId)
+        throw new RequestMutationError(
+          "The manuscript is not waiting for a tracking ID.",
+        );
+      const now = new Date();
+      await transaction.submission.update({
+        where: { id: record.submissionId },
+        data: { trackingNumber: trackingId, version: { increment: 1 } },
+      });
+      await transaction.submissionRequest.update({
+        where: { id: request.id },
+        data: {
+          status: "TRACKING_ASSIGNED",
+          trackingAssignedAt: now,
+          trackingAssignedById: input.actorId,
+          version: { increment: 1 },
+        },
+      });
+      await transaction.submissionEvent.create({
+        data: {
+          submissionId: record.submissionId,
+          type: "TRACKING_ID_ASSIGNED",
+          actorId: input.actorId,
+          authorVisible: true,
+          message: `Tracking ID: ${trackingId}`,
+        },
+      });
+      await transaction.submissionConversationMessage.create({
+        data: {
+          requestId: request.id,
+          kind: "SYSTEM",
+          body: `Tracking ID assigned: ${trackingId}`,
+        },
+      });
+    });
+  } catch (error) {
+    if (
+      error instanceof Prisma.PrismaClientKnownRequestError &&
+      error.code === "P2002"
+    ) {
+      throw new RequestMutationError("That tracking ID is already in use.", {
+        trackingId: "Enter a unique tracking ID.",
+      });
+    }
+    throw error;
+  }
+}
