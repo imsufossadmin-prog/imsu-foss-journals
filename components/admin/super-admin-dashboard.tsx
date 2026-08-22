@@ -84,11 +84,10 @@ function OperationalTile({
 
 function SectionHeader({ children }: { children: React.ReactNode }) {
   return (
-    <div className="flex items-center gap-3 border-t border-[color:var(--color-border)] pt-6">
-      <p className="shrink-0 text-[10px] font-medium tracking-[0.14em] text-[color:var(--color-muted)] uppercase">
+    <div className="pt-2">
+      <p className="text-[10px] font-semibold tracking-[0.14em] text-[color:var(--color-muted)] uppercase">
         {children}
       </p>
-      <div className="h-px flex-1 bg-[color:var(--color-border)]" />
     </div>
   );
 }
@@ -104,7 +103,7 @@ export function SuperAdminDashboard({
     operational.awaitingTracking;
 
   return (
-    <div className="max-w-5xl">
+    <div className="mx-auto max-w-5xl">
       {/* Page header */}
       <header>
         <div className="flex items-center gap-2">

@@ -55,7 +55,8 @@ export function UserSearch({
           value={query}
           onChange={(e) => onSearchChange?.(e.target.value)}
           placeholder="Search by name or email (e.g. john@company.com)..."
-          className="app-field pl-10"
+          className="app-field"
+          style={{ paddingLeft: "2.5rem" }}
         />
         <svg
           aria-hidden="true"

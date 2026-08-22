@@ -37,7 +37,7 @@ export default async function PlatformAccessPage({
         { href: "/account", label: "Account" },
       ]}
     >
-      <div className="mx-auto max-w-6xl">
+      <div className="mx-auto max-w-5xl">
         <header className="max-w-3xl">
           <p className="text-xs font-semibold tracking-[0.12em] text-[color:var(--color-accent)] uppercase">
             Platform access
