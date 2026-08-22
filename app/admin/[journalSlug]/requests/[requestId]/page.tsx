@@ -95,23 +95,32 @@ export default async function AdminRequestPage({
         </section>
         <aside className="space-y-4">
           <AttachmentUploader requestId={request.id} />
-          {request.status === "RECEIPT_SUBMITTED" && receipt ? (
-            <div className="rounded-[var(--radius-lg)] border border-[color:var(--color-border)] p-5">
-              <h2 className="text-sm font-semibold">Payment receipt</h2>
-              <a
-                href={`/api/requests/${request.id}/attachments/${receipt.id}`}
-                className="mt-3 block text-xs font-semibold text-[color:var(--color-accent)]"
-              >
-                Open receipt
-              </a>
-              <div className="mt-5">
+          {["NEW", "AWAITING_PAYMENT", "RECEIPT_SUBMITTED"].includes(
+            request.status,
+          ) ? (
+            <div className="rounded-[var(--radius-lg)] border border-[color:var(--color-border)] bg-[color:var(--color-surface-raised)] p-5">
+              <h2 className="text-sm font-semibold">Submission Activation</h2>
+              {receipt ? (
+                <a
+                  href={`/api/requests/${request.id}/attachments/${receipt.id}`}
+                  className="mt-2 block text-xs font-semibold text-[color:var(--color-accent)]"
+                >
+                  View uploaded receipt →
+                </a>
+              ) : (
+                <p className="mt-1 text-xs text-[color:var(--color-muted)]">
+                  Payment verified via WhatsApp or direct transfer? Click below
+                  to enable submission for this author.
+                </p>
+              )}
+              <div className="mt-4">
                 <AdminStateAction
                   action={confirmPaymentAction.bind(
                     null,
                     journal.slug,
                     request.id,
                   )}
-                  label="Confirm payment and enable submission"
+                  label="Activate Submission for Author"
                 />
               </div>
             </div>

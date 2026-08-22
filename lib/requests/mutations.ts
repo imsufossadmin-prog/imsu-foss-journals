@@ -1,6 +1,6 @@
 import "server-only";
 
-import { Prisma } from "@prisma/client";
+import { Prisma, SubmissionRequestStatus } from "@prisma/client";
 
 import { isSuperAdmin } from "@/lib/auth/permissions";
 import { prisma } from "@/lib/db/prisma";
@@ -143,15 +143,20 @@ export async function confirmPaymentAndEnableSubmission(
   requestId: string,
 ) {
   const { request } = await requireAdmin(actorId, requestId);
-  if (request.status !== "RECEIPT_SUBMITTED") {
+  const activatableStatuses: SubmissionRequestStatus[] = [
+    "NEW",
+    "AWAITING_PAYMENT",
+    "RECEIPT_SUBMITTED",
+  ];
+  if (!activatableStatuses.includes(request.status)) {
     throw new RequestMutationError(
-      "A payment receipt must be waiting for review.",
+      "Submission has already been enabled for this request.",
     );
   }
   const now = new Date();
   const updated = await prisma.$transaction(async (transaction) => {
     const changed = await transaction.submissionRequest.updateMany({
-      where: { id: request.id, status: "RECEIPT_SUBMITTED" },
+      where: { id: request.id, status: { in: activatableStatuses } },
       data: {
         status: "SUBMISSION_ENABLED",
         paymentConfirmedAt: now,
