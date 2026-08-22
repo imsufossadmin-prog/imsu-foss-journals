@@ -9,6 +9,11 @@ import {
 
 export default async function WorkspacesPage() {
   const user = await requireAuthenticatedUser();
+
+  if (user.globalRoles.some(({ role }) => role === "SUPER_ADMIN")) {
+    redirect("/admin");
+  }
+
   const workspaces = getAvailableWorkspaces(user);
 
   if (workspaces.length < 2) redirect(getPostLoginDestination(user));

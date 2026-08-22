@@ -45,9 +45,9 @@ The finished product should feel like a premium institutional operating system, 
 The correct hierarchy is:
 
 IMSU Faculty of Social Sciences
-        ↓
+↓
 Departments
-        ↓
+↓
 Department Journal Operations
 
 Psychology is the FIRST operational department.
@@ -936,8 +936,7 @@ Example:
 
 A lecturer may have:
 
-AUTHOR
-+
+AUTHOR +
 EDITOR
 
 and can select the appropriate workspace.
@@ -1450,10 +1449,8 @@ Therefore the application should NOT introduce payment-gateway-specific assumpti
 
 Payment evidence is currently:
 
-external payment
-+
-uploaded receipt
-+
+external payment +
+uploaded receipt +
 manual administrator confirmation
 
 Any future stored monetary amount should use an integer minor-unit representation rather than floating-point arithmetic.

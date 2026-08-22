@@ -1,48 +1,55 @@
 @import "tailwindcss";
 
 :root {
-  --background: #0a1412;
-  --app-background: #0a1412;
-  --foreground: #f1f5f3;
-  --surface: #0e1c19;
-  --surface-raised: #122420;
-  --surface-strong: #172d28;
-  --muted: #94a3b8;
-  --subtle: #64748b;
-  --border: #1a332c;
-  --border-strong: #254a3f;
-  --accent: #10b981;
-  --accent-secondary: #059669;
-  --accent-soft: rgba(16, 185, 129, 0.12);
+  --background: #0a110e;
+  --app-background: #0a110e;
+  --foreground: #f2f7f4;
+  --surface: #0f1a14;
+  --surface-raised: #0f1a14;
+  --surface-strong: #16241c;
+  --muted: #8ea89a;
+  --subtle: #5f7a6d;
+  --border: #1c3025;
+  --border-strong: #2a4737;
+  --accent: #34d399;
+  --accent-secondary: #10b981;
+  --accent-soft: rgba(52, 211, 153, 0.12);
   --focus: #34d399;
   --danger: #f87171;
   --danger-border: #7f1d1d;
   --danger-surface: #450a0a;
+  --accent-gold: #eab308;
+  --page-glow: rgba(52, 211, 153, 0.12);
   --radius-sm: 0.375rem;
   --radius-md: 0.5rem;
   --radius-lg: 0.75rem;
   --shadow-menu: 0 20px 40px rgb(0 0 0 / 0.6);
+  --shadow-card:
+    0 0 0 1px rgba(52, 211, 153, 0.06), 0 16px 34px rgba(2, 8, 5, 0.55);
 }
 
 html[data-theme="light"] {
-  --background: #f8faf9;
-  --app-background: #f1f5f3;
-  --foreground: #0f172a;
+  --background: #f7f7f5;
+  --app-background: #f7f7f5;
+  --foreground: #121814;
   --surface: #ffffff;
   --surface-raised: #ffffff;
-  --surface-strong: #e2e8f0;
-  --muted: #475569;
-  --subtle: #64748b;
-  --border: #cbd5e1;
-  --border-strong: #94a3b8;
-  --accent: #059669;
-  --accent-secondary: #047857;
-  --accent-soft: rgba(5, 150, 105, 0.1);
-  --focus: #10b981;
+  --surface-strong: #f0f4f1;
+  --muted: #64746c;
+  --subtle: #8ea89a;
+  --border: #e2e8e4;
+  --border-strong: #c2d0c7;
+  --accent: #107a4c;
+  --accent-secondary: #0d633e;
+  --accent-soft: rgba(16, 122, 76, 0.1);
+  --focus: #107a4c;
   --danger: #dc2626;
   --danger-border: #fca5a5;
   --danger-surface: #fef2f2;
+  --accent-gold: #d97706;
+  --page-glow: rgba(16, 122, 76, 0.04);
   --shadow-menu: 0 10px 30px rgb(0 0 0 / 0.08);
+  --shadow-card: 0 1px 3px rgba(0, 0, 0, 0.05), 0 1px 2px rgba(0, 0, 0, 0.06);
 }
 
 @theme inline {

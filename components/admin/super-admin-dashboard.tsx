@@ -84,8 +84,8 @@ function OperationalTile({
 
 function SectionHeader({ children }: { children: React.ReactNode }) {
   return (
-    <div className="flex items-center gap-4 border-t border-[color:var(--color-border)] pt-7">
-      <p className="shrink-0 text-[10px] font-semibold tracking-[0.12em] text-[color:var(--color-subtle)] uppercase">
+    <div className="flex items-center gap-3 border-t border-[color:var(--color-border)] pt-6">
+      <p className="shrink-0 text-[10px] font-medium tracking-[0.14em] text-[color:var(--color-muted)] uppercase">
         {children}
       </p>
       <div className="h-px flex-1 bg-[color:var(--color-border)]" />
@@ -107,24 +107,31 @@ export function SuperAdminDashboard({
     <div className="max-w-5xl">
       {/* Page header */}
       <header>
-        <p className="text-[11px] font-semibold tracking-[0.12em] text-[color:var(--color-accent)] uppercase">
-          Platform administration
-        </p>
-        <h1 className="mt-4 max-w-2xl font-serif text-4xl leading-[1.08] font-medium tracking-[-0.035em] text-[color:var(--color-foreground)] sm:text-5xl lg:text-[3.25rem]">
+        <div className="flex items-center gap-2">
+          <p className="text-[10px] font-medium tracking-[0.14em] text-[color:var(--color-accent)] uppercase">
+            Platform administration
+          </p>
+          <span className="text-[color:var(--color-border-strong)]">·</span>
+          <span className="rounded-full bg-[color:var(--color-accent-soft)] px-2 py-0.5 text-[11px] font-semibold text-[color:var(--color-accent)]">
+            {journals.length}{" "}
+            {pluralise(journals.length, "Journal", "Journals")} Active
+          </span>
+        </div>
+        <h1 className="mt-3 max-w-2xl font-serif text-3xl leading-[1.12] font-medium tracking-[-0.035em] text-[color:var(--color-foreground)] sm:text-4xl lg:text-[2.75rem]">
           {totalItems > 0
             ? "Here is what needs your attention."
             : "Everything is up to date."}
         </h1>
-        <p className="mt-4 max-w-xl text-base leading-7 text-[color:var(--color-muted)]">
-          A live summary of activity across IMSU FOSS Journals. Use the links
-          below to act on each item.
+        <p className="mt-3 max-w-xl text-sm leading-6 text-[color:var(--color-muted)]">
+          Live operational status across IMSU FOSS Journals. Click any action
+          item to manage department operations.
         </p>
       </header>
 
       {/* Operational queue */}
-      <section className="mt-12 sm:mt-14">
+      <section className="mt-10 sm:mt-12">
         <SectionHeader>Operational queue</SectionHeader>
-        <div className="mt-6 grid gap-4 sm:grid-cols-3">
+        <div className="mt-5 grid gap-4 sm:grid-cols-3">
           <OperationalTile
             count={operational.pendingReceipts}
             label={pluralise(
@@ -168,35 +175,37 @@ export function SuperAdminDashboard({
               "Active departments",
             )}
           </SectionHeader>
-          <ul className="mt-6 space-y-3">
-            {journals.map((journal) => (
-              <li key={journal.id}>
-                <div className="flex flex-col gap-4 rounded-[var(--radius-lg)] border border-[color:var(--color-border)] bg-[color:var(--color-surface-raised)] px-6 py-5 sm:flex-row sm:items-center sm:justify-between">
-                  <div>
-                    <p className="text-sm font-semibold text-[color:var(--color-foreground)]">
-                      {journal.department.name}
-                    </p>
-                    <p className="mt-0.5 text-xs text-[color:var(--color-muted)]">
-                      {journal.name}
-                    </p>
+          <div className="mt-5 rounded-[var(--radius-lg)] border border-[color:var(--color-border)] bg-[color:var(--color-surface-raised)] p-1">
+            <ul className="divide-y divide-[color:var(--color-border)]/70">
+              {journals.map((journal) => (
+                <li key={journal.id} className="p-4 sm:px-5">
+                  <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                    <div>
+                      <p className="text-sm font-semibold tracking-[-0.01em] text-[color:var(--color-foreground)]">
+                        {journal.department.name}
+                      </p>
+                      <p className="mt-0.5 text-[12px] text-[color:var(--color-muted)]">
+                        {journal.name}
+                      </p>
+                    </div>
+                    <Link
+                      href={`/admin/${journal.slug}`}
+                      className="shrink-0 text-xs font-semibold text-[color:var(--color-accent)] underline-offset-4 hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[color:var(--color-focus)]"
+                    >
+                      Open operations →
+                    </Link>
                   </div>
-                  <Link
-                    href={`/admin/${journal.slug}`}
-                    className="shrink-0 text-xs font-semibold text-[color:var(--color-accent)] underline-offset-4 hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[color:var(--color-focus)]"
-                  >
-                    Open operations →
-                  </Link>
-                </div>
-              </li>
-            ))}
-          </ul>
+                </li>
+              ))}
+            </ul>
+          </div>
         </section>
       ) : null}
 
       {/* Platform staff */}
       <section className="mt-10 sm:mt-12">
         <SectionHeader>Platform staff</SectionHeader>
-        <div className="mt-6 flex flex-col gap-4 rounded-[var(--radius-lg)] border border-[color:var(--color-border)] bg-[color:var(--color-surface-raised)] px-6 py-5 sm:flex-row sm:items-center sm:justify-between">
+        <div className="mt-5 flex flex-col gap-4 rounded-[var(--radius-lg)] border border-[color:var(--color-border)] bg-[color:var(--color-surface-raised)] px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
           <p className="text-sm text-[color:var(--color-muted)]">
             <span className="font-semibold text-[color:var(--color-foreground)]">
               {staff.journalAdmins}

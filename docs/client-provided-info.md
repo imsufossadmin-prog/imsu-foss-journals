@@ -7,7 +7,7 @@
 
 ## ABOUT US
 
-The Faculty of Social Sciences (FOSS) at Imo State University (IMSU), Owerri, Nigeria, is one of the foremost faculties at IMSU. As a distinguished faculty in academic research, FOSS is dedicated to advancing knowledge in the fields of social and behavioural sciences. Over the years, FOSS has built a strong reputation for promoting research, innovation, and academic excellence, with the aim of addressing local, national, and global challenges. FOSS journals are scholarly, refereed, open-access, high-quality and peer-reviewed journals in all social and behavioural sciences fields utilising multi-dimensional research approaches in the conduct of scholarly inquiry. These approaches include theoretical, empirical and experimental methods. 
+The Faculty of Social Sciences (FOSS) at Imo State University (IMSU), Owerri, Nigeria, is one of the foremost faculties at IMSU. As a distinguished faculty in academic research, FOSS is dedicated to advancing knowledge in the fields of social and behavioural sciences. Over the years, FOSS has built a strong reputation for promoting research, innovation, and academic excellence, with the aim of addressing local, national, and global challenges. FOSS journals are scholarly, refereed, open-access, high-quality and peer-reviewed journals in all social and behavioural sciences fields utilising multi-dimensional research approaches in the conduct of scholarly inquiry. These approaches include theoretical, empirical and experimental methods.
 
 The FOSS journal platform was developed to house and manage scholarly journals published by the Faculty of Social Sciences. Currently, the platform features three key journals:
 
@@ -22,6 +22,7 @@ Our goal is to create a robust and inclusive platform for researchers, scholars,
 ## INFORMATION FOR AUTHORS
 
 ### Manuscript Preparation Guidelines:
+
 - **Formatting:** Manuscripts must be prepared using Microsoft Word, formatted on A4-sized paper, with 1-inch margins on all sides. The text should be double-spaced and written in 12-point Times New Roman font.
 - **Length:** Articles should not exceed 25 pages (8,000 words), including tables, figures, and references.
 - **Content Structure:** The manuscript should include:
@@ -32,20 +33,24 @@ Our goal is to create a robust and inclusive platform for researchers, scholars,
   - References must be formatted according to APA 7th Edition guidelines.
 
 ### Submission Process:
+
 - Manuscripts can be submitted via email to `fossjournals@gmail.com` or `ajsbs2016@gmail.com`, which will guide authors through the process.
 - Submissions must include all required documents and adhere to the journal's formatting rules to proceed to the review stage.
 
 ### Peer Review Policy:
+
 - All submissions undergo a rigorous double-blind peer review process to ensure unbiased evaluation.
 - Reviewers are selected based on their expertise in the subject area of the manuscript.
 - Feedback is provided to authors, and manuscripts may be accepted, revised, or rejected based on the reviewers’ recommendations.
 
 ### Ethical Considerations:
+
 - Authors must ensure their work is original and free from plagiarism.
 - Proper acknowledgement must be given to all sources, and ethical approval must be secured for studies involving human or animal participants.
 - Conflicts of interest must be disclosed, and authors are required to adhere to the highest ethical standards in research and publication.
 
 ### Publication Fees:
+
 - A non-refundable review fee of **₦10,000** (or equivalent in USD for international authors) is required upon submission.
 - Upon acceptance, a publication fee of **₦25,000** (or equivalent in USD for international authors) must be paid before the article is published.
 
@@ -77,6 +82,7 @@ Our goal is to create a robust and inclusive platform for researchers, scholars,
 ## EDITORIAL TEAM & ADVISORY BOARD
 
 ### Editorial Team
+
 - **Founding Editor:** Prof. Nkwam C. Uwaoma
 - **Chief Editor:** Prof. Ikechukwu J.D. Nwosu
 - **Deputy Editor:** Vin O. Umeh, Ph.D.
@@ -90,6 +96,7 @@ Our goal is to create a robust and inclusive platform for researchers, scholars,
   - Ngozi Sydney-Agbor, PhD.
 
 ### Advisory Board
+
 - Prof. Nkwam C. Uwaoma
 - Prof. B.T.O. Ikegwuoha
 - Prof. Fabian Emerenini

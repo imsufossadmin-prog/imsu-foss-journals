@@ -115,6 +115,11 @@ export function getPostLoginDestination(
       ? canonicalSubmissionEntryPath
       : "/unauthorized?reason=author";
   }
+
+  if (subject.globalRoles.some(({ role }) => role === "SUPER_ADMIN")) {
+    return "/admin";
+  }
+
   const workspaces = getAvailableWorkspaces(subject);
 
   if (workspaces.length === 0) return "/unauthorized?reason=workspace";

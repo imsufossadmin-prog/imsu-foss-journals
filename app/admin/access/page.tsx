@@ -2,7 +2,6 @@ import { AuthenticatedShell } from "@/components/app/authenticated-shell";
 import {
   PlatformRoleManager,
   RoleManagementNotice,
-  UserSearch,
 } from "@/components/admin/role-management";
 import { requireGlobalRole } from "@/lib/auth/authorization";
 import {
@@ -50,7 +49,6 @@ export default async function PlatformAccessPage({
             Users sign in with Google first. Search their Google email, then
             assign only the access they need.
           </p>
-          <UserSearch query={q} />
           <RoleManagementNotice notice={notice} error={error} />
         </header>
         <PlatformRoleManager
