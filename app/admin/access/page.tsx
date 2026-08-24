@@ -33,8 +33,9 @@ export default async function PlatformAccessPage({
       workspaces={workspaces}
       navigation={[
         { href: "/admin", label: "Overview" },
+        { href: "/admin/requests", label: "Requests" },
+        { href: "/admin/submissions", label: "Manuscripts" },
         { href: "/admin/access", label: "Users" },
-        { href: "/account", label: "Account" },
       ]}
     >
       <div className="mx-auto max-w-5xl">

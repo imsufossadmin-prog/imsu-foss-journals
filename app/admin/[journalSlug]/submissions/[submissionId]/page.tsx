@@ -1,13 +1,23 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 
+import { sendAdminMessageAction } from "@/app/admin/[journalSlug]/requests/actions";
 import {
   AssessmentAction,
   AssignmentForm,
+  AssignTrackingIdForm,
   CancelAssignmentForm,
   CorrectionForm,
   DecisionForm,
+  PublishArticleForm,
+  RevisionReceivedForm,
+  SkipToPublishingForm,
 } from "@/components/editorial/admin-forms";
+import {
+  RequestChatBox,
+  type ConversationMessageDTO,
+} from "@/components/requests/request-components";
+import { SubmissionDetailsAccordion } from "@/components/submissions/submission-details-accordion";
 import { SubmissionStatus } from "@/components/submissions/submission-status";
 import { requireJournalWorkspace } from "@/lib/auth/workspace-context";
 import {
@@ -21,21 +31,13 @@ const date = new Intl.DateTimeFormat("en-NG", {
   year: "numeric",
 });
 
-function score(values: Array<number | null>) {
-  const present = values.filter((value): value is number => value !== null);
-  if (!present.length) return "—";
-  return (
-    present.reduce((sum, value) => sum + value, 0) / present.length
-  ).toFixed(1);
-}
-
 export default async function EditorialSubmissionPage({
   params,
 }: {
   params: Promise<{ journalSlug: string; submissionId: string }>;
 }) {
   const { journalSlug, submissionId } = await params;
-  const { journal } = await requireJournalWorkspace(
+  const { user, journal } = await requireJournalWorkspace(
     "JOURNAL_ADMIN",
     journalSlug,
   );
@@ -50,118 +52,98 @@ export default async function EditorialSubmissionPage({
       ({ review }) => review?.status === "SUBMITTED",
     ) ?? [];
 
+  const messages: ConversationMessageDTO[] = submission.request
+    ? submission.request.messages.map((message) => ({
+        id: message.id,
+        kind: message.kind,
+        body: message.body,
+        createdAt: message.createdAt.toISOString(),
+        sender: message.sender,
+        attachments: message.attachments.map((attachment) => ({
+          id: attachment.id,
+          type: attachment.type,
+          originalFileName: attachment.storedFile.originalFileName,
+          sizeBytes: Number(attachment.storedFile.sizeBytes),
+        })),
+      }))
+    : [];
+
   return (
     <div className="mx-auto max-w-6xl">
-      <Link
-        href={`/admin/${journal.slug}/submissions`}
-        className="text-xs font-semibold text-[color:var(--color-muted)] hover:text-[color:var(--color-foreground)]"
-      >
-        ← Manuscripts
-      </Link>
-      <header className="mt-8 border-b border-[color:var(--color-border)] pb-8">
+      <div className="flex items-center gap-4">
+        <Link
+          href="/admin"
+          className="rounded-md border border-[color:var(--color-border)] bg-[color:var(--color-surface-raised)] px-3 py-1.5 text-xs font-semibold text-[color:var(--color-foreground)] hover:border-[color:var(--color-accent)] hover:text-[color:var(--color-accent)]"
+        >
+          ← Back to Overview
+        </Link>
+        <Link
+          href={`/admin/${journal.slug}/submissions`}
+          className="text-xs font-semibold text-[color:var(--color-muted)] hover:text-[color:var(--color-foreground)]"
+        >
+          Manuscripts list
+        </Link>
+      </div>
+      <header className="mt-6 pb-6">
         <SubmissionStatus status={submission.status} />
-        <h1 className="mt-4 max-w-4xl font-serif text-4xl leading-tight font-medium tracking-[-0.035em] sm:text-5xl">
+        <h1 className="mt-3 max-w-4xl font-serif text-4xl leading-tight font-medium tracking-[-0.035em] sm:text-5xl">
           {submission.title ?? "Untitled manuscript"}
         </h1>
-        <p className="mt-3 font-mono text-xs text-[color:var(--color-subtle)]">
+        <p className="mt-2 font-mono text-xs text-[color:var(--color-subtle)]">
           {submission.trackingNumber ?? "Tracking pending"}
         </p>
       </header>
 
-      <div className="mt-9 grid gap-10 xl:grid-cols-[minmax(0,1fr)_20rem]">
-        <main className="space-y-10">
-          <Section title="Manuscript">
-            <p className="text-sm leading-7 text-[color:var(--color-muted)]">
-              {submission.abstract ?? "No abstract provided."}
-            </p>
-            <p className="mt-4 text-xs text-[color:var(--color-subtle)]">
-              {submission.keywords.join(" · ") || "No keywords provided"}
-            </p>
-          </Section>
+      <div className="mt-6 grid gap-8 xl:grid-cols-[minmax(0,1fr)_20rem]">
+        <main className="space-y-6">
+          <SubmissionDetailsAccordion
+            abstract={submission.abstract}
+            keywords={submission.keywords}
+            submittingAccount={{
+              displayName: submission.owner.displayName,
+              institution: submission.owner.institution,
+            }}
+            authors={submission.authors.map((author) => ({
+              id: author.id,
+              position: author.position,
+              fullName: author.fullName,
+              email: author.email,
+              affiliation: author.affiliation,
+              orcid: author.orcid,
+              isCorrespondingAuthor: author.isCorrespondingAuthor,
+            }))}
+            files={submission.files.map((file) => ({
+              id: file.id,
+              originalFileName: file.storedFile.originalFileName,
+              type: file.type,
+              downloadUrl: `/api/author/submissions/${submission.id}/files/${file.id}`,
+            }))}
+            versions={submission.manuscriptVersions.map((version) => ({
+              id: version.id,
+              versionNumber: version.versionNumber,
+              label: version.kind.toLowerCase(),
+              createdAt: date.format(version.submittedAt),
+              originalFileName: version.manuscriptStoredFile.originalFileName,
+            }))}
+          />
 
-          <Section title="Author record">
-            <div className="rounded-[var(--radius-md)] bg-[color:var(--color-surface)] p-4 text-sm">
-              <p className="font-semibold">
-                Submitting account: {submission.owner.displayName}
-              </p>
-              {submission.owner.institution ? (
-                <p className="mt-1 text-xs text-[color:var(--color-subtle)]">
-                  {submission.owner.institution}
-                </p>
-              ) : null}
+          {submission.request ? (
+            <div className="rounded-[var(--radius-lg)] bg-[color:var(--color-surface-raised)] p-5">
+              <h2 className="mb-4 text-sm font-semibold text-[color:var(--color-foreground)]">
+                Conversation with author
+              </h2>
+              <RequestChatBox
+                requestId={submission.request.id}
+                viewerId={user.id}
+                messages={messages}
+                action={sendAdminMessageAction.bind(
+                  null,
+                  journal.slug,
+                  submission.request.id,
+                )}
+              />
             </div>
-            <ol className="mt-4 divide-y divide-[color:var(--color-border)] border-y border-[color:var(--color-border)]">
-              {submission.authors.map((author) => (
-                <li key={author.id} className="py-4 text-sm">
-                  <p className="font-semibold">
-                    {author.position}. {author.fullName}
-                    {author.isCorrespondingAuthor ? " · Corresponding" : ""}
-                  </p>
-                  <p className="mt-1 text-xs text-[color:var(--color-subtle)]">
-                    {[author.affiliation, author.email, author.orcid]
-                      .filter(Boolean)
-                      .join(" · ")}
-                  </p>
-                </li>
-              ))}
-            </ol>
-          </Section>
-
-          <Section title="Files and preserved versions">
-            <div className="divide-y divide-[color:var(--color-border)] border-y border-[color:var(--color-border)]">
-              {submission.files.map((file) => (
-                <a
-                  key={file.id}
-                  href={`/api/author/submissions/${submission.id}/files/${file.id}`}
-                  className="flex min-h-14 items-center justify-between gap-4 py-3 text-sm font-semibold hover:text-[color:var(--color-accent)]"
-                >
-                  <span className="truncate">
-                    {file.storedFile.originalFileName}
-                  </span>
-                  <span className="text-[10px] text-[color:var(--color-subtle)]">
-                    {file.type.replaceAll("_", " ")} · Download
-                  </span>
-                </a>
-              ))}
-              {submission.manuscriptVersions.map((version) => (
-                <div key={version.id} className="py-4">
-                  <div className="flex flex-wrap items-center justify-between gap-3">
-                    <div>
-                      <p className="text-sm font-semibold">
-                        Version {version.versionNumber} ·{" "}
-                        {version.kind.toLowerCase()}
-                      </p>
-                      <p className="mt-1 text-xs text-[color:var(--color-subtle)]">
-                        {date.format(version.submittedAt)} ·{" "}
-                        {version.manuscriptStoredFile.originalFileName}
-                      </p>
-                    </div>
-                    <div className="flex gap-3 text-xs font-semibold">
-                      <a
-                        href={`/api/admin/${journal.slug}/submissions/${submission.id}/versions/${version.id}/manuscript`}
-                        className="hover:text-[color:var(--color-accent)]"
-                      >
-                        Manuscript
-                      </a>
-                      {version.responseStoredFile ? (
-                        <a
-                          href={`/api/admin/${journal.slug}/submissions/${submission.id}/versions/${version.id}/response`}
-                          className="hover:text-[color:var(--color-accent)]"
-                        >
-                          Response
-                        </a>
-                      ) : null}
-                    </div>
-                  </div>
-                  {version.authorNote ? (
-                    <p className="mt-2 text-xs leading-5 text-[color:var(--color-muted)]">
-                      {version.authorNote}
-                    </p>
-                  ) : null}
-                </div>
-              ))}
-            </div>
-          </Section>
+          ) : null}
 
           {currentRound ? (
             <Section title={`Review round ${currentRound.roundNumber}`}>
@@ -179,19 +161,27 @@ export default async function EditorialSubmissionPage({
               ["AWAITING_REVIEWERS", "UNDER_REVIEW"].includes(
                 submission.status,
               ) ? (
-                <div className="mb-6 rounded-[var(--radius-lg)] border border-[color:var(--color-border)] bg-[color:var(--color-surface)] p-5">
-                  <AssignmentForm
-                    journalSlug={journal.slug}
-                    submissionId={submission.id}
-                    editors={editors}
-                  />
-                  {editors.length < 2 ? (
-                    <p className="mt-3 text-xs text-[color:var(--color-danger)]">
-                      At least two active editors in this journal are required
-                      to begin peer review.
-                    </p>
-                  ) : null}
-                </div>
+                <details className="group mb-6 rounded-[var(--radius-lg)] border border-[color:var(--color-border)] bg-[color:var(--color-surface)]">
+                  <summary className="flex cursor-pointer items-center justify-between p-4 text-xs font-semibold text-[color:var(--color-foreground)] select-none">
+                    <span>Assign system reviewer (optional)</span>
+                    <span className="text-[10px] text-[color:var(--color-subtle)] transition-transform group-open:rotate-180">
+                      ▼
+                    </span>
+                  </summary>
+                  <div className="border-t border-[color:var(--color-border)] p-4">
+                    <AssignmentForm
+                      journalSlug={journal.slug}
+                      submissionId={submission.id}
+                      editors={editors}
+                    />
+                    {editors.length < 2 ? (
+                      <p className="mt-3 text-xs text-[color:var(--color-danger)]">
+                        At least two active editors in this journal are required
+                        to assign online reviewers.
+                      </p>
+                    ) : null}
+                  </div>
+                </details>
               ) : null}
               <div className="divide-y divide-[color:var(--color-border)] border-y border-[color:var(--color-border)]">
                 {currentRound.assignments.map((assignment, index) => (
@@ -262,60 +252,29 @@ export default async function EditorialSubmissionPage({
                   </div>
                 ))}
               </div>
+            </Section>
+          ) : null}
 
-              {submittedReviews.length ? (
-                <div className="mt-6 rounded-[var(--radius-lg)] border border-[color:var(--color-border)] p-5">
-                  <h3 className="text-sm font-semibold">Review summary</h3>
-                  <div className="mt-4 grid grid-cols-2 gap-4 sm:grid-cols-4">
-                    <Metric
-                      label="Originality average"
-                      value={score(
-                        submittedReviews.map(
-                          ({ review }) => review!.originality,
-                        ),
-                      )}
-                    />
-                    <Metric
-                      label="Methodology average"
-                      value={score(
-                        submittedReviews.map(
-                          ({ review }) => review!.methodology,
-                        ),
-                      )}
-                    />
-                    <Metric
-                      label="Clarity average"
-                      value={score(
-                        submittedReviews.map(({ review }) => review!.clarity),
-                      )}
-                    />
-                    <Metric
-                      label="Relevance average"
-                      value={score(
-                        submittedReviews.map(({ review }) => review!.relevance),
-                      )}
-                    />
-                  </div>
+          {submission.status === "ACCEPTED" ||
+          (submission.status === "REVIEWS_RECEIVED" &&
+            submittedReviews.some(
+              ({ review }) => review?.recommendation === "ACCEPT",
+            )) ? (
+            <Section title="Publishing & Production">
+              <div className="rounded-[var(--radius-lg)] border border-[color:var(--color-accent)] bg-[color:var(--color-surface-raised)] p-5 sm:p-6">
+                <h3 className="text-sm font-semibold">Publish Article</h3>
+                <p className="mt-2 text-xs leading-5 text-[color:var(--color-muted)]">
+                  This manuscript has been approved by the editorial team. Fill
+                  out the volume/issue details and upload the final PDF to
+                  publish it to the official journal archives.
+                </p>
+                <div className="mt-5">
+                  <PublishArticleForm
+                    journalSlug={journal.slug}
+                    submissionId={submission.id}
+                  />
                 </div>
-              ) : null}
-
-              {submission.status === "REVIEWS_RECEIVED" &&
-              !currentRound.decisions.length ? (
-                <div className="mt-8 rounded-[var(--radius-lg)] border border-[color:var(--color-border-strong)] bg-[color:var(--color-surface-raised)] p-5 sm:p-6">
-                  <h3 className="text-sm font-semibold">Editorial decision</h3>
-                  <p className="mt-2 text-xs leading-5 text-[color:var(--color-subtle)]">
-                    Reviews inform the decision; they do not make it
-                    automatically.
-                  </p>
-                  <div className="mt-5">
-                    <DecisionForm
-                      journalSlug={journal.slug}
-                      submissionId={submission.id}
-                      roundId={currentRound.id}
-                    />
-                  </div>
-                </div>
-              ) : null}
+              </div>
             </Section>
           ) : null}
 
@@ -360,10 +319,10 @@ export default async function EditorialSubmissionPage({
               ) : null}
               {["SUBMITTED", "REVISED"].includes(submission.status) &&
               !submission.trackingNumber ? (
-                <p className="text-xs leading-5 text-[color:var(--color-muted)]">
-                  Assign the tracking ID from the submission request before
-                  beginning editorial assessment.
-                </p>
+                <AssignTrackingIdForm
+                  journalSlug={journal.slug}
+                  submissionId={submission.id}
+                />
               ) : null}
               {submission.status === "SCREENING" ? (
                 <div className="space-y-6">
@@ -383,18 +342,58 @@ export default async function EditorialSubmissionPage({
               {["CORRECTION_REQUESTED", "REVISION_REQUESTED"].includes(
                 submission.status,
               ) ? (
-                <p className="text-xs leading-5 text-[color:var(--color-muted)]">
-                  Waiting for the author to upload a revised manuscript.
-                </p>
+                <div className="space-y-3">
+                  <p className="text-xs leading-5 text-[color:var(--color-muted)]">
+                    Waiting for author revision in chatbox. When revision is
+                    ready, click below:
+                  </p>
+                  <RevisionReceivedForm
+                    journalSlug={journal.slug}
+                    submissionId={submission.id}
+                  />
+                </div>
               ) : null}
               {[
                 "AWAITING_REVIEWERS",
                 "UNDER_REVIEW",
                 "REVIEWS_RECEIVED",
-              ].includes(submission.status) ? (
-                <p className="text-xs leading-5 text-[color:var(--color-muted)]">
-                  Manage the current review round in the main panel.
-                </p>
+              ].includes(submission.status) &&
+              currentRound &&
+              !currentRound.decisions.length ? (
+                <div className="space-y-4">
+                  <div>
+                    <p className="text-xs leading-5 font-semibold text-[color:var(--color-foreground)]">
+                      Publishing & Production
+                    </p>
+                    <p className="mt-1 text-[11px] leading-4 text-[color:var(--color-muted)]">
+                      Skip formal decision steps and proceed directly to
+                      publishing at any time.
+                    </p>
+                    <div className="mt-3">
+                      <SkipToPublishingForm
+                        journalSlug={journal.slug}
+                        submissionId={submission.id}
+                      />
+                    </div>
+                  </div>
+                  <div className="border-t border-[color:var(--color-border)] pt-3">
+                    <details className="group rounded-[var(--radius-md)] border border-[color:var(--color-border)] bg-[color:var(--color-surface)] p-3">
+                      <summary className="flex cursor-pointer items-center justify-between text-xs font-semibold text-[color:var(--color-subtle)] select-none">
+                        <span>Record Editorial Decision (Optional)</span>
+                        <span className="text-[10px] text-[color:var(--color-subtle)] transition-transform group-open:rotate-180">
+                          ▼
+                        </span>
+                      </summary>
+                      <div className="mt-3 border-t border-[color:var(--color-border)] pt-3">
+                        <DecisionForm
+                          journalSlug={journal.slug}
+                          submissionId={submission.id}
+                          roundId={currentRound.id}
+                        />
+                      </div>
+                    </details>
+                  </div>
+                </div>
               ) : null}
               {["ACCEPTED", "REJECTED"].includes(submission.status) ? (
                 <p className="text-xs leading-5 text-[color:var(--color-muted)]">
@@ -407,23 +406,51 @@ export default async function EditorialSubmissionPage({
           <div>
             <h2 className="text-sm font-semibold">Audit trail</h2>
             <ol className="mt-4 border-l border-[color:var(--color-border-strong)] pl-5">
-              {submission.events.map((event) => (
-                <li key={event.id} className="relative pb-5 last:pb-0">
-                  <span className="absolute top-1.5 -left-[1.42rem] size-2 rounded-full bg-[color:var(--color-accent)]" />
-                  <p className="text-xs font-semibold">
-                    {event.type.replaceAll("_", " ").toLowerCase()}
-                  </p>
-                  <p className="mt-1 text-[11px] text-[color:var(--color-subtle)]">
-                    {date.format(event.createdAt)}
-                    {event.actor ? ` · ${event.actor.displayName}` : ""}
-                  </p>
-                  {event.message ? (
-                    <p className="mt-1 text-xs leading-5 text-[color:var(--color-muted)]">
-                      {event.message}
+              {[
+                {
+                  id: "draft_created",
+                  type: "Draft created",
+                  message: null,
+                  createdAt: submission.createdAt,
+                  actorName: null,
+                },
+                ...(submission.submittedAt
+                  ? [
+                      {
+                        id: "submitted",
+                        type: "Submitted",
+                        message: null,
+                        createdAt: submission.submittedAt,
+                        actorName: submission.owner.displayName,
+                      },
+                    ]
+                  : []),
+                ...submission.events.map((event) => ({
+                  id: event.id,
+                  type: event.type.replaceAll("_", " ").toLowerCase(),
+                  message: event.message,
+                  createdAt: event.createdAt,
+                  actorName: event.actor?.displayName,
+                })),
+              ]
+                .sort((a, b) => a.createdAt.getTime() - b.createdAt.getTime())
+                .map((event) => (
+                  <li key={event.id} className="relative pb-5 last:pb-0">
+                    <span className="absolute top-1.5 -left-[1.42rem] size-2 rounded-full bg-[color:var(--color-accent)]" />
+                    <p className="text-xs font-semibold capitalize">
+                      {event.type}
                     </p>
-                  ) : null}
-                </li>
-              ))}
+                    <p className="mt-1 text-[11px] text-[color:var(--color-subtle)]">
+                      {date.format(event.createdAt)}
+                      {event.actorName ? ` · ${event.actorName}` : ""}
+                    </p>
+                    {event.message ? (
+                      <p className="mt-1 text-xs leading-5 text-[color:var(--color-muted)]">
+                        {event.message}
+                      </p>
+                    ) : null}
+                  </li>
+                ))}
             </ol>
           </div>
         </aside>

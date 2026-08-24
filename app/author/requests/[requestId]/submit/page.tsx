@@ -1,15 +1,8 @@
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 
-import {
-  saveSimpleArticleAction,
-  submitSimpleArticleAction,
-} from "@/app/author/requests/actions";
-import {
-  ManuscriptUpload,
-  SimpleArticleDetailsForm,
-  SubmitArticleForm,
-} from "@/components/requests/request-components";
+import { submitSimpleArticleAction } from "@/app/author/requests/actions";
+import { CanonicalArticleSubmissionForm } from "@/components/requests/request-components";
 import { requireGlobalRole } from "@/lib/auth/authorization";
 import { getRequestSubmission } from "@/lib/requests/data";
 
@@ -26,21 +19,16 @@ export default async function SimpleSubmissionPage({
     redirect(`/author/requests/${requestId}`);
   const submission = request.submission;
   const manuscript = submission.files.find(({ type }) => type === "MANUSCRIPT");
-  const ready = Boolean(
-    submission.title &&
-    submission.abstract &&
-    submission.authors.length &&
-    manuscript,
-  );
+
   return (
     <div className="mx-auto max-w-4xl">
       <Link
         href={`/author/requests/${requestId}`}
-        className="text-xs font-semibold text-[color:var(--color-muted)]"
+        className="text-xs font-semibold text-[color:var(--color-muted)] hover:underline"
       >
         ← Back to conversation
       </Link>
-      <header className="mt-7 border-b border-[color:var(--color-border)] pb-7">
+      <header className="mt-6 pb-4">
         <p className="text-xs font-semibold tracking-[0.12em] text-[color:var(--color-accent)] uppercase">
           Article submission
         </p>
@@ -49,13 +37,19 @@ export default async function SimpleSubmissionPage({
         </h1>
         <p className="mt-3 text-sm leading-6 text-[color:var(--color-muted)]">
           Add the article information, upload the manuscript, then submit it to
-          the Psychology journal team.
+          the journal team.
         </p>
       </header>
-      <section className="mt-8 rounded-[var(--radius-lg)] border border-[color:var(--color-border)] bg-[color:var(--color-surface-raised)] p-5 sm:p-8">
-        <SimpleArticleDetailsForm
-          action={saveSimpleArticleAction.bind(null, requestId, submission.id)}
+      <section className="mt-6 rounded-[var(--radius-lg)] bg-[color:var(--color-surface-raised)] p-5 sm:p-8">
+        <CanonicalArticleSubmissionForm
+          action={submitSimpleArticleAction.bind(
+            null,
+            requestId,
+            submission.id,
+          )}
+          submissionId={submission.id}
           version={submission.version}
+          fileName={manuscript?.storedFile.originalFileName}
           initial={{
             title: submission.title ?? "",
             abstract: submission.abstract ?? "",
@@ -69,27 +63,6 @@ export default async function SimpleSubmissionPage({
             })),
           }}
         />
-        <div className="mt-8 border-t border-[color:var(--color-border)] pt-8">
-          <ManuscriptUpload
-            submissionId={submission.id}
-            version={submission.version}
-            fileName={manuscript?.storedFile.originalFileName}
-          />
-        </div>
-        <div className="mt-8 border-t border-[color:var(--color-border)] pt-8">
-          <p className="mb-4 text-sm leading-6 text-[color:var(--color-muted)]">
-            Submitting sends the manuscript to the journal. Its tracking ID will
-            be assigned by the Journal Admin afterward.
-          </p>
-          <SubmitArticleForm
-            action={submitSimpleArticleAction.bind(
-              null,
-              requestId,
-              submission.id,
-            )}
-            disabled={!ready}
-          />
-        </div>
       </section>
     </div>
   );

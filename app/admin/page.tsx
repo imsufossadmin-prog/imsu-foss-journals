@@ -53,8 +53,10 @@ export default async function AdminPage() {
       workspaces={workspaces}
       navigation={[
         { href: "/admin", label: "Overview" },
+        { href: "/admin/requests", label: "Requests" },
+        { href: "/admin/submissions", label: "Manuscripts" },
+        { href: "/admin/articles", label: "Articles & Content" },
         { href: "/admin/access", label: "Users" },
-        { href: "/account", label: "Account" },
       ]}
     >
       <SuperAdminDashboard

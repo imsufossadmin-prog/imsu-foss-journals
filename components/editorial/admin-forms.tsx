@@ -5,11 +5,15 @@ import { useFormStatus } from "react-dom";
 
 import {
   assignReviewerAction,
+  assignTrackingIdAction,
   beginAssessmentAction,
   cancelReviewerAction,
   correctionAction,
   decisionAction,
+  markRevisionReceivedAction,
   passAssessmentAction,
+  publishArticleAction,
+  skipToPublishingAction,
 } from "@/app/admin/[journalSlug]/submissions/actions";
 import type { ActionState } from "@/lib/submissions/types";
 
@@ -37,6 +41,62 @@ function SubmitButton({ children }: { children: React.ReactNode }) {
     <button className="button-primary" disabled={pending}>
       {pending ? "Saving…" : children}
     </button>
+  );
+}
+
+export function RevisionReceivedForm({
+  journalSlug,
+  submissionId,
+}: {
+  journalSlug: string;
+  submissionId: string;
+}) {
+  const bound = markRevisionReceivedAction.bind(
+    null,
+    journalSlug,
+    submissionId,
+  );
+  const [state, action] = useActionState(bound, initialState);
+  return (
+    <form action={action} className="space-y-3">
+      <SubmitButton>Revision received</SubmitButton>
+      <Message state={state} />
+    </form>
+  );
+}
+
+export function AssignTrackingIdForm({
+  journalSlug,
+  submissionId,
+}: {
+  journalSlug: string;
+  submissionId: string;
+}) {
+  const bound = assignTrackingIdAction.bind(null, journalSlug, submissionId);
+  const [state, action] = useActionState(bound, initialState);
+  return (
+    <form action={action} className="space-y-3">
+      <div>
+        <label
+          htmlFor="trackingId"
+          className="block text-xs font-semibold text-[color:var(--color-foreground)]"
+        >
+          Assign Tracking ID
+        </label>
+        <p className="mt-1 text-[11px] leading-4 text-[color:var(--color-muted)]">
+          Enter custom tracking ID or leave blank to auto-generate.
+        </p>
+        <input
+          id="trackingId"
+          name="trackingId"
+          type="text"
+          placeholder="e.g. IMSUJ-PSY-2026-0001"
+          className="app-field mt-2 text-xs"
+        />
+      </div>
+      <SubmitButton>Assign Tracking ID</SubmitButton>
+      <Message state={state} />
+    </form>
   );
 }
 
@@ -223,6 +283,89 @@ export function DecisionForm({
         />
       </label>
       <SubmitButton>Issue decision</SubmitButton>
+      <Message state={state} />
+    </form>
+  );
+}
+
+export function SkipToPublishingForm({
+  journalSlug,
+  submissionId,
+}: {
+  journalSlug: string;
+  submissionId: string;
+}) {
+  const bound = skipToPublishingAction.bind(null, journalSlug, submissionId);
+  const [state, action] = useActionState(bound, initialState);
+  return (
+    <form action={action} className="space-y-2">
+      <SubmitButton>Proceed to Publishing →</SubmitButton>
+      <Message state={state} />
+    </form>
+  );
+}
+
+export function PublishArticleForm({
+  journalSlug,
+  submissionId,
+}: {
+  journalSlug: string;
+  submissionId: string;
+}) {
+  const bound = publishArticleAction.bind(null, journalSlug, submissionId);
+  const [state, action] = useActionState(bound, initialState);
+  return (
+    <form action={action} className="space-y-4">
+      <div className="grid gap-3 sm:grid-cols-3">
+        <label className="text-xs font-semibold">
+          Volume Number
+          <input
+            name="volume"
+            type="text"
+            className="app-field mt-1.5"
+            placeholder="e.g. 1"
+          />
+        </label>
+        <label className="text-xs font-semibold">
+          Issue Number
+          <input
+            name="issue"
+            type="text"
+            className="app-field mt-1.5"
+            placeholder="e.g. 1"
+          />
+        </label>
+        <label className="text-xs font-semibold">
+          Page Range
+          <input
+            name="pageRange"
+            type="text"
+            className="app-field mt-1.5"
+            placeholder="e.g. 15–28"
+          />
+        </label>
+      </div>
+      <div className="grid gap-3 sm:grid-cols-2">
+        <label className="block text-xs font-semibold">
+          Digital Object Identifier - DOI (Optional)
+          <input
+            name="doi"
+            type="text"
+            className="app-field mt-1.5 text-xs"
+            placeholder="e.g. 10.4314/imsufoss.v1i1.1"
+          />
+        </label>
+        <label className="block text-xs font-semibold">
+          Upload Article Cover Image (Optional)
+          <input
+            name="coverImageFile"
+            type="file"
+            accept="image/png,image/jpeg,image/webp,image/gif"
+            className="app-field mt-1.5 text-xs file:mr-3 file:rounded-md file:border-0 file:bg-[color:var(--color-surface-strong)] file:px-2.5 file:py-1 file:text-xs file:font-semibold file:text-[color:var(--color-accent)]"
+          />
+        </label>
+      </div>
+      <SubmitButton>Publish Article to Journal</SubmitButton>
       <Message state={state} />
     </form>
   );

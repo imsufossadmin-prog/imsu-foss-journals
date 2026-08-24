@@ -70,7 +70,7 @@ test("a user with one meaningful workspace is sent there directly", () => {
   );
 });
 
-test("multiple roles resolve to the workspace chooser", () => {
+test("editors and staff users resolve directly to their operational workspace", () => {
   const user = subject({
     globalRoles: [{ role: "AUTHOR" }],
     journalRoles: [
@@ -78,10 +78,10 @@ test("multiple roles resolve to the workspace chooser", () => {
     ],
   });
 
-  assert.equal(getPostLoginDestination(user), "/workspaces");
+  assert.equal(getPostLoginDestination(user), "/editor/social-sciences-review");
   assert.deepEqual(
     getAvailableWorkspaces(user).map(({ id }) => id),
-    ["editor:journal-a", "author:personal"],
+    ["editor:journal-a"],
   );
 });
 

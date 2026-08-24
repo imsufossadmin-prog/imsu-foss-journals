@@ -52,7 +52,13 @@ export async function POST(
   const { requestId } = await params;
   const record = await prisma.submissionRequest.findUnique({
     where: { id: requestId },
-    select: { id: true, authorId: true, departmentId: true, status: true },
+    select: {
+      id: true,
+      authorId: true,
+      departmentId: true,
+      status: true,
+      submission: { select: { id: true, status: true } },
+    },
   });
   if (!record)
     return NextResponse.json(
@@ -169,6 +175,35 @@ export async function POST(
             requestId,
             kind: "SYSTEM",
             body: "Payment receipt sent. The journal will confirm it shortly.",
+          },
+        });
+      }
+
+      if (
+        author &&
+        record.submission &&
+        ["CORRECTION_REQUESTED", "REVISION_REQUESTED"].includes(
+          record.submission.status,
+        )
+      ) {
+        await transaction.submission.update({
+          where: { id: record.submission.id },
+          data: { status: "REVISED", version: { increment: 1 } },
+        });
+        await transaction.submissionEvent.create({
+          data: {
+            submissionId: record.submission.id,
+            actorId: user.id,
+            type: "REVISION_SUBMITTED",
+            authorVisible: true,
+            message: `Revised file '${file.name}' attached in chatbox by author.`,
+          },
+        });
+        await transaction.submissionConversationMessage.create({
+          data: {
+            requestId,
+            kind: "SYSTEM",
+            body: "Revised manuscript attached. The journal team will review your revision.",
           },
         });
       }

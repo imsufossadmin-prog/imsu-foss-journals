@@ -89,6 +89,7 @@ test("submission permission belongs only to the enabled request author", () => {
 });
 
 test("request statuses use plain operational language", () => {
+  assert.equal(requestStatusContent.NEW.label, "New message");
   assert.equal(requestStatusContent.AWAITING_PAYMENT.label, "Payment required");
   assert.equal(requestStatusContent.RECEIPT_SUBMITTED.label, "Receipt sent");
   assert.equal(

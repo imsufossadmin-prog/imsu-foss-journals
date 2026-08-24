@@ -11,7 +11,7 @@ import {
   validateMessageBody,
   validateTrackingId,
 } from "@/lib/requests/validation";
-
+import { createTrackingNumber } from "@/lib/submissions/tracking";
 export class RequestMutationError extends Error {
   constructor(
     message: string,
@@ -67,18 +67,27 @@ async function requireAdmin(actorId: string, requestId: string) {
   return access;
 }
 
-export async function createSubmissionRequest(authorId: string) {
+export async function createSubmissionRequest(
+  authorId: string,
+  journalSlug?: string,
+) {
+  const targetSlug = journalSlug?.trim() || "psychology";
   const operations = await prisma.journal.findFirst({
     where: {
-      slug: "psychology",
+      slug: targetSlug,
       isActive: true,
-      department: { slug: "psychology", isActive: true },
+      department: { isActive: true },
     },
-    select: { id: true, departmentId: true },
+    select: {
+      id: true,
+      name: true,
+      departmentId: true,
+      department: { select: { name: true } },
+    },
   });
   if (!operations)
     throw new RequestMutationError(
-      "Psychology journal operations are not available yet.",
+      "Journal operations for this department are not available yet.",
     );
 
   const existing = await prisma.submissionRequest.findFirst({
@@ -100,7 +109,7 @@ export async function createSubmissionRequest(authorId: string) {
       messages: {
         create: {
           kind: "SYSTEM",
-          body: "Submission request started. The Psychology journal team can now assist you here.",
+          body: `Submission request started. The ${operations.department.name} journal team can now assist you here.`,
         },
       },
     },
@@ -231,7 +240,6 @@ export async function saveSimpleArticle(input: {
         id: input.submissionId,
         ownerId: input.authorId,
         status: "DRAFT",
-        version: input.version,
         request: {
           id: input.requestId,
           authorId: input.authorId,
@@ -366,58 +374,81 @@ export async function finalizeRequestSubmission(
   });
 }
 
-export async function assignTrackingId(input: {
+export async function assignTrackingIdBySubmissionId(input: {
   actorId: string;
-  requestId: string;
-  trackingId: string;
+  submissionId: string;
+  trackingId?: string;
 }) {
-  const validation = validateTrackingId(input.trackingId);
-  if (validation)
-    throw new RequestMutationError(validation, { trackingId: validation });
-  const { request } = await requireAdmin(input.actorId, input.requestId);
-  const trackingId = normalizeTrackingId(input.trackingId);
+  const submission = await prisma.submission.findUnique({
+    where: { id: input.submissionId },
+    select: {
+      id: true,
+      journalId: true,
+      journal: { select: { id: true, name: true, shortName: true } },
+      trackingNumber: true,
+      request: { select: { id: true } },
+    },
+  });
+  if (!submission) throw new RequestMutationError("Submission not found.");
+
+  const rawId = input.trackingId?.trim();
+  let trackingId = "";
+
+  if (rawId) {
+    const validation = validateTrackingId(rawId);
+    if (validation)
+      throw new RequestMutationError(validation, { trackingId: validation });
+    trackingId = normalizeTrackingId(rawId);
+  } else {
+    const count = await prisma.submission.count({
+      where: {
+        journalId: submission.journalId,
+        trackingNumber: { not: null },
+      },
+    });
+    trackingId = createTrackingNumber({
+      journalId: submission.journal.id,
+      journalName: submission.journal.name,
+      journalShortName: submission.journal.shortName,
+      year: new Date().getFullYear(),
+      sequence: count + 1,
+    });
+  }
+
+  const now = new Date();
   try {
     await prisma.$transaction(async (transaction) => {
-      const record = await transaction.submissionRequest.findFirst({
-        where: {
-          id: request.id,
-          status: "MANUSCRIPT_SUBMITTED",
-          submissionId: { not: null },
-        },
-        select: { submissionId: true },
-      });
-      if (!record?.submissionId)
-        throw new RequestMutationError(
-          "The manuscript is not waiting for a tracking ID.",
-        );
-      const now = new Date();
       await transaction.submission.update({
-        where: { id: record.submissionId },
+        where: { id: submission.id },
         data: { trackingNumber: trackingId, version: { increment: 1 } },
       });
-      await transaction.submissionRequest.update({
-        where: { id: request.id },
-        data: {
-          status: "TRACKING_ASSIGNED",
-          trackingAssignedAt: now,
-          trackingAssignedById: input.actorId,
-          version: { increment: 1 },
-        },
-      });
+
+      if (submission.request) {
+        await transaction.submissionRequest.update({
+          where: { id: submission.request.id },
+          data: {
+            status: "TRACKING_ASSIGNED",
+            trackingAssignedAt: now,
+            trackingAssignedById: input.actorId,
+            version: { increment: 1 },
+          },
+        });
+        await transaction.submissionConversationMessage.create({
+          data: {
+            requestId: submission.request.id,
+            kind: "SYSTEM",
+            body: `Tracking ID assigned: ${trackingId}`,
+          },
+        });
+      }
+
       await transaction.submissionEvent.create({
         data: {
-          submissionId: record.submissionId,
+          submissionId: submission.id,
           type: "TRACKING_ID_ASSIGNED",
           actorId: input.actorId,
           authorVisible: true,
           message: `Tracking ID: ${trackingId}`,
-        },
-      });
-      await transaction.submissionConversationMessage.create({
-        data: {
-          requestId: request.id,
-          kind: "SYSTEM",
-          body: `Tracking ID assigned: ${trackingId}`,
         },
       });
     });
@@ -432,4 +463,24 @@ export async function assignTrackingId(input: {
     }
     throw error;
   }
+}
+
+export async function assignTrackingId(input: {
+  actorId: string;
+  requestId: string;
+  trackingId: string;
+}) {
+  await requireAdmin(input.actorId, input.requestId);
+  const record = await prisma.submissionRequest.findUnique({
+    where: { id: input.requestId },
+    select: { submissionId: true },
+  });
+  if (!record?.submissionId) {
+    throw new RequestMutationError("This request has no submitted manuscript.");
+  }
+  await assignTrackingIdBySubmissionId({
+    actorId: input.actorId,
+    submissionId: record.submissionId,
+    trackingId: input.trackingId,
+  });
 }

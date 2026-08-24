@@ -1,7 +1,6 @@
 import {
   JournalEditorManager,
   RoleManagementNotice,
-  UserSearch,
 } from "@/components/admin/role-management";
 import { requireJournalWorkspace } from "@/lib/auth/workspace-context";
 import { searchRoleManagementUsers } from "@/lib/auth/role-management-session";
@@ -38,7 +37,6 @@ export default async function JournalAccessPage({
           Ask an Editor to sign in with Google once, then search for the email
           they used.
         </p>
-        <UserSearch query={q} />
         <RoleManagementNotice notice={notice} error={error} />
       </header>
       <JournalEditorManager

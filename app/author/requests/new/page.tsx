@@ -4,8 +4,13 @@ import { getCurrentUser } from "@/lib/auth/authorization";
 import { getSubmissionEntryDestination } from "@/lib/auth/submission-entry";
 import { createSubmissionRequest } from "@/lib/requests/mutations";
 
-export default async function NewRequestPage() {
+export default async function NewRequestPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ journalSlug?: string }>;
+}) {
   const user = await getCurrentUser();
+  const { journalSlug } = await searchParams;
   if (
     !user ||
     !user.isActive ||
@@ -13,6 +18,6 @@ export default async function NewRequestPage() {
   ) {
     redirect(getSubmissionEntryDestination(user));
   }
-  const request = await createSubmissionRequest(user.id);
+  const request = await createSubmissionRequest(user.id, journalSlug);
   redirect(`/author/requests/${request.id}`);
 }

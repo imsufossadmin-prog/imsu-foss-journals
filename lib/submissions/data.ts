@@ -20,6 +20,7 @@ const authorSubmissionInclude = {
       department: { select: { name: true, isActive: true } },
     },
   },
+  request: { select: { id: true } },
   authors: { orderBy: { position: "asc" as const } },
   files: {
     orderBy: { createdAt: "asc" as const },
@@ -58,6 +59,7 @@ export function submissionDTO(record: SubmissionRecord): AuthorSubmissionDTO {
     createdAt: record.createdAt,
     updatedAt: record.updatedAt,
     journal: record.journal,
+    request: record.request ? { id: record.request.id } : null,
     authors: record.authors.map((author) => ({
       id: author.id,
       position: author.position,

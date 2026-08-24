@@ -65,6 +65,56 @@ export async function listEditorialSubmissions(input: {
   });
 }
 
+export async function listPlatformSubmissions(input: {
+  departmentSlug?: string;
+  query?: string;
+  status?: SubmissionStatus;
+}) {
+  const query = input.query?.trim();
+  return prisma.submission.findMany({
+    where: {
+      ...(input.status
+        ? { status: input.status }
+        : { status: { in: editorialInboxStatuses } }),
+      ...(input.departmentSlug && input.departmentSlug !== "all"
+        ? { journal: { department: { slug: input.departmentSlug } } }
+        : {}),
+      ...(query
+        ? {
+            OR: [
+              { title: { contains: query, mode: "insensitive" as const } },
+              {
+                trackingNumber: {
+                  contains: query,
+                  mode: "insensitive" as const,
+                },
+              },
+            ],
+          }
+        : {}),
+    },
+    orderBy: [{ updatedAt: "desc" }, { id: "asc" }],
+    select: {
+      id: true,
+      trackingNumber: true,
+      title: true,
+      status: true,
+      submittedAt: true,
+      updatedAt: true,
+      journal: {
+        select: {
+          id: true,
+          name: true,
+          slug: true,
+          department: { select: { id: true, name: true, slug: true } },
+        },
+      },
+      owner: { select: { id: true, displayName: true } },
+      _count: { select: { manuscriptVersions: true } },
+    },
+  });
+}
+
 export async function getEditorialSubmission(
   journalId: string,
   submissionId: string,
@@ -83,6 +133,34 @@ export async function getEditorialSubmission(
       createdAt: true,
       updatedAt: true,
       owner: { select: { displayName: true, institution: true } },
+      request: {
+        select: {
+          id: true,
+          messages: {
+            orderBy: { createdAt: "asc" },
+            select: {
+              id: true,
+              kind: true,
+              body: true,
+              createdAt: true,
+              sender: { select: { id: true, displayName: true } },
+              attachments: {
+                select: {
+                  id: true,
+                  type: true,
+                  storedFile: {
+                    select: {
+                      id: true,
+                      originalFileName: true,
+                      sizeBytes: true,
+                    },
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
       authors: {
         orderBy: { position: "asc" },
         select: {

@@ -21,7 +21,7 @@ export function validateMessageBody(value: string) {
 
 export const requestStatusContent = {
   NEW: {
-    label: "New request",
+    label: "New message",
     authorGuidance: "Your request has reached the Psychology journal team.",
   },
   AWAITING_PAYMENT: {

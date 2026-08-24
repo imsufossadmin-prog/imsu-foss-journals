@@ -295,12 +295,28 @@ export async function deleteDraftRecord(
   storedFileIds: string[],
 ) {
   await prisma.$transaction(async (transaction) => {
+    const linkedRequest = await transaction.submissionRequest.findFirst({
+      where: { submissionId, authorId: ownerId },
+      select: { id: true },
+    });
+
     const deleted = await transaction.submission.deleteMany({
       where: { id: submissionId, ownerId, status: "DRAFT" },
     });
     if (deleted.count !== 1) {
       throw new SubmissionMutationError("Only your drafts can be deleted.");
     }
+
+    if (linkedRequest) {
+      await transaction.submissionRequest.update({
+        where: { id: linkedRequest.id },
+        data: {
+          submissionId: null,
+          status: "SUBMISSION_ENABLED",
+        },
+      });
+    }
+
     await transaction.storedFile.deleteMany({
       where: { id: { in: storedFileIds } },
     });

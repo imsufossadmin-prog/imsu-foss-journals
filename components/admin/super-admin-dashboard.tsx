@@ -4,6 +4,7 @@ type OperationalCounts = {
   newRequests: number;
   pendingReceipts: number;
   awaitingTracking: number;
+  readyForPublishing?: number;
 };
 
 type StaffCounts = {
@@ -44,6 +45,7 @@ function OperationalTile({
   return (
     <Link
       href={href}
+      prefetch={true}
       className={`group flex flex-col justify-between rounded-[var(--radius-lg)] border bg-[color:var(--color-surface-raised)] p-6 transition hover:border-[color:var(--color-border-strong)] hover:shadow-sm focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[color:var(--color-focus)] ${
         hasItems
           ? "border-[color:var(--color-border)]"
@@ -103,7 +105,7 @@ export function SuperAdminDashboard({
     operational.awaitingTracking;
 
   return (
-    <div className="mx-auto max-w-5xl">
+    <div className="mx-auto max-w-5xl space-y-12">
       {/* Page header */}
       <header>
         <div className="flex items-center gap-2">
@@ -128,9 +130,9 @@ export function SuperAdminDashboard({
       </header>
 
       {/* Operational queue */}
-      <section className="mt-10 sm:mt-12">
+      <section>
         <SectionHeader>Operational queue</SectionHeader>
-        <div className="mt-5 grid gap-4 sm:grid-cols-3">
+        <div className="mt-5 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
           <OperationalTile
             count={operational.pendingReceipts}
             label={pluralise(
@@ -139,7 +141,7 @@ export function SuperAdminDashboard({
               "Receipts awaiting review",
             )}
             actionLabel="Review receipts"
-            href={journals[0] ? `/admin/${journals[0].slug}` : "/admin/access"}
+            href="/admin/requests"
           />
           <OperationalTile
             count={operational.awaitingTracking}
@@ -149,7 +151,7 @@ export function SuperAdminDashboard({
               "Submissions awaiting tracking IDs",
             )}
             actionLabel="Assign tracking IDs"
-            href={journals[0] ? `/admin/${journals[0].slug}` : "/admin/access"}
+            href="/admin/submissions?status=SUBMITTED"
           />
           <OperationalTile
             count={operational.newRequests}
@@ -159,14 +161,24 @@ export function SuperAdminDashboard({
               "New submission requests",
             )}
             actionLabel="View requests"
-            href={journals[0] ? `/admin/${journals[0].slug}` : "/admin/access"}
+            href="/admin/requests"
+          />
+          <OperationalTile
+            count={operational.readyForPublishing ?? 0}
+            label={pluralise(
+              operational.readyForPublishing ?? 0,
+              "Approved / Ready to publish",
+              "Approved / Ready to publish",
+            )}
+            actionLabel="Publish articles"
+            href="/admin/submissions?status=ACCEPTED"
           />
         </div>
       </section>
 
       {/* Active departments */}
       {journals.length > 0 ? (
-        <section className="mt-10 sm:mt-12">
+        <section>
           <SectionHeader>
             {pluralise(
               journals.length,
@@ -189,6 +201,7 @@ export function SuperAdminDashboard({
                     </div>
                     <Link
                       href={`/admin/${journal.slug}`}
+                      prefetch={true}
                       className="shrink-0 text-xs font-semibold text-[color:var(--color-accent)] underline-offset-4 hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[color:var(--color-focus)]"
                     >
                       Open operations →
@@ -201,8 +214,55 @@ export function SuperAdminDashboard({
         </section>
       ) : null}
 
+      {/* Content & Published Archives Management */}
+      <section>
+        <SectionHeader>Content & Published Archives</SectionHeader>
+        <div className="mt-5 grid gap-4 sm:grid-cols-2">
+          <div className="flex flex-col justify-between rounded-[var(--radius-lg)] border border-[color:var(--color-border)] bg-[color:var(--color-surface-raised)] p-6">
+            <div>
+              <p className="text-base font-bold text-[color:var(--color-foreground)]">
+                Direct Legacy Publishing
+              </p>
+              <p className="mt-2 text-xs leading-relaxed text-[color:var(--color-muted)]">
+                Directly upload old manuscripts, past journal issues, or
+                pre-existing papers to the archives without an author submission
+                process.
+              </p>
+            </div>
+            <div className="mt-6">
+              <Link
+                href="/admin/articles/new"
+                className="button-primary inline-flex items-center gap-2 text-xs"
+              >
+                <span>+</span> Upload Legacy Manuscript
+              </Link>
+            </div>
+          </div>
+
+          <div className="flex flex-col justify-between rounded-[var(--radius-lg)] border border-[color:var(--color-border)] bg-[color:var(--color-surface-raised)] p-6">
+            <div>
+              <p className="text-base font-bold text-[color:var(--color-foreground)]">
+                Content Directory & Operations
+              </p>
+              <p className="mt-2 text-xs leading-relaxed text-[color:var(--color-muted)]">
+                Search, unpublish, or delete live articles across all
+                departments with 1 click.
+              </p>
+            </div>
+            <div className="mt-6">
+              <Link
+                href="/admin/articles"
+                className="button-secondary inline-flex items-center gap-2 text-xs"
+              >
+                <span>📁</span> Manage Content Directory →
+              </Link>
+            </div>
+          </div>
+        </div>
+      </section>
+
       {/* Platform staff */}
-      <section className="mt-10 sm:mt-12">
+      <section>
         <SectionHeader>Platform staff</SectionHeader>
         <div className="mt-5 flex flex-col gap-4 rounded-[var(--radius-lg)] border border-[color:var(--color-border)] bg-[color:var(--color-surface-raised)] px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
           <p className="text-sm text-[color:var(--color-muted)]">
@@ -221,6 +281,7 @@ export function SuperAdminDashboard({
           </p>
           <Link
             href="/admin/access"
+            prefetch={true}
             className="shrink-0 text-xs font-semibold text-[color:var(--color-accent)] underline-offset-4 hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[color:var(--color-focus)]"
           >
             Manage users →

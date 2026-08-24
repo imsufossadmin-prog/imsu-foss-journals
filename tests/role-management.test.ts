@@ -205,7 +205,7 @@ test("role upgrades expose the existing multi-workspace behavior", () => {
         { journalId: journal.id, role: "EDITOR" as const, journal },
       ],
     }).map(({ area }) => area),
-    ["editor", "author"],
+    ["editor"],
   );
   assert.deepEqual(
     getAvailableWorkspaces({
@@ -214,7 +214,7 @@ test("role upgrades expose the existing multi-workspace behavior", () => {
         { journalId: journal.id, role: "JOURNAL_ADMIN" as const, journal },
       ],
     }).map(({ area }) => area),
-    ["journal-admin", "author"],
+    ["journal-admin"],
   );
   assert.deepEqual(
     getAvailableWorkspaces({
@@ -224,6 +224,6 @@ test("role upgrades expose the existing multi-workspace behavior", () => {
         { role: "SUPER_ADMIN" as const },
       ],
     }).map(({ area }) => area),
-    ["platform", "author"],
+    ["platform"],
   );
 });

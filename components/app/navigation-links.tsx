@@ -26,6 +26,7 @@ export function NavigationLinks({
       <Link
         key={item.href}
         href={item.href}
+        prefetch={true}
         aria-current={active ? "page" : undefined}
         className={
           mobile

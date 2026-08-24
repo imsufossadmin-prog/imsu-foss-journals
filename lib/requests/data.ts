@@ -26,8 +26,9 @@ const requestListSelect = {
   status: true,
   createdAt: true,
   updatedAt: true,
-  department: { select: { name: true, slug: true } },
-  author: { select: { displayName: true } },
+  department: { select: { id: true, name: true, slug: true } },
+  journal: { select: { id: true, name: true, slug: true } },
+  author: { select: { id: true, displayName: true } },
   submission: {
     select: { id: true, title: true, trackingNumber: true, status: true },
   },
@@ -45,6 +46,14 @@ export function listAuthorRequests(authorId: string) {
 export function listDepartmentRequests(departmentId: string) {
   return prisma.submissionRequest.findMany({
     where: { departmentId },
+    orderBy: { updatedAt: "desc" },
+    select: requestListSelect,
+  });
+}
+
+export function listAllPlatformRequests(departmentSlug?: string) {
+  return prisma.submissionRequest.findMany({
+    where: departmentSlug ? { journal: { slug: departmentSlug } } : undefined,
     orderBy: { updatedAt: "desc" },
     select: requestListSelect,
   });
@@ -113,14 +122,20 @@ export function getRequestSubmission(authorId: string, requestId: string) {
 // ---------------------------------------------------------------------------
 
 export async function getPlatformOperationalCounts() {
-  const [newRequests, pendingReceipts, awaitingTracking] = await Promise.all([
-    prisma.submissionRequest.count({ where: { status: "NEW" } }),
-    prisma.submissionRequest.count({ where: { status: "RECEIPT_SUBMITTED" } }),
-    prisma.submissionRequest.count({
-      where: { status: "MANUSCRIPT_SUBMITTED" },
-    }),
-  ]);
-  return { newRequests, pendingReceipts, awaitingTracking };
+  const [newRequests, pendingReceipts, awaitingTracking, readyForPublishing] =
+    await Promise.all([
+      prisma.submissionRequest.count({ where: { status: "NEW" } }),
+      prisma.submissionRequest.count({
+        where: { status: "RECEIPT_SUBMITTED" },
+      }),
+      prisma.submissionRequest.count({
+        where: { status: "MANUSCRIPT_SUBMITTED" },
+      }),
+      prisma.submission.count({
+        where: { status: { in: ["ACCEPTED", "REVIEWS_RECEIVED"] } },
+      }),
+    ]);
+  return { newRequests, pendingReceipts, awaitingTracking, readyForPublishing };
 }
 
 export async function getPlatformStaffCounts() {
@@ -136,7 +151,7 @@ export async function getPlatformStaffCounts() {
 }
 
 export async function getActiveDepartmentJournals() {
-  return prisma.journal.findMany({
+  const journals = await prisma.journal.findMany({
     where: { isActive: true, department: { isActive: true } },
     select: {
       id: true,
@@ -146,5 +161,11 @@ export async function getActiveDepartmentJournals() {
       department: { select: { id: true, name: true } },
     },
     orderBy: [{ department: { name: "asc" } }, { name: "asc" }],
+  });
+
+  return journals.sort((a, b) => {
+    if (a.slug === "psychology") return -1;
+    if (b.slug === "psychology") return 1;
+    return 0;
   });
 }

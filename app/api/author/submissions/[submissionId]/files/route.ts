@@ -1,3 +1,4 @@
+import { revalidatePath } from "next/cache";
 import { NextResponse } from "next/server";
 
 import { getCurrentUser } from "@/lib/auth/authorization";
@@ -77,7 +78,7 @@ export async function POST(
       status: "DRAFT",
       request: { authorId: user.id, status: "SUBMISSION_ENABLED" },
     },
-    select: { id: true, journalId: true },
+    select: { id: true, journalId: true, request: { select: { id: true } } },
   });
   if (!submission) {
     return NextResponse.json(
@@ -160,5 +161,16 @@ export async function POST(
     if (error) console.error("Replaced file cleanup failed", error.message);
   }
 
-  return NextResponse.json({ ok: true });
+  revalidatePath("/author");
+  if (submission.request) {
+    revalidatePath(`/author/requests/${submission.request.id}`);
+    revalidatePath(`/author/requests/${submission.request.id}/submit`);
+  }
+  revalidatePath(`/author/submissions/${submissionId}`);
+
+  return NextResponse.json({
+    ok: true,
+    fileName: file.name,
+    version: version + 1,
+  });
 }

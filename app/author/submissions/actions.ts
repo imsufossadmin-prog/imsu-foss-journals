@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
 import { requireGlobalRole } from "@/lib/auth/authorization";
+import { prisma } from "@/lib/db/prisma";
 import {
   changeDraftJournal,
   deleteDraftFileRecord,
@@ -188,6 +189,12 @@ export async function deleteDraftAction(
 ) {
   void _formData;
   const user = await requireGlobalRole("AUTHOR");
+
+  const linkedRequest = await prisma.submissionRequest.findFirst({
+    where: { submissionId, authorId: user.id },
+    select: { id: true },
+  });
+
   const files = await getDraftFilesForDeletion(user.id, submissionId);
   if (files.length > 0) {
     const supabase = await createClient();
@@ -214,5 +221,16 @@ export async function deleteDraftAction(
     files.map(({ storedFileId }) => storedFileId),
   );
   revalidatePath("/author");
-  redirect("/author/submissions");
+  revalidatePath("/author/requests");
+  if (linkedRequest) {
+    revalidatePath(`/author/requests/${linkedRequest.id}`);
+  }
+  revalidatePath("/author/submissions");
+  revalidatePath("/admin/requests");
+
+  if (linkedRequest) {
+    redirect(`/author/requests/${linkedRequest.id}`);
+  } else {
+    redirect("/author");
+  }
 }

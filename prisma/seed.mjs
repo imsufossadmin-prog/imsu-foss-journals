@@ -17,44 +17,100 @@ async function main() {
     data: { isActive: false },
   });
 
-  const department = await prisma.department.upsert({
-    where: { slug: "psychology" },
-    update: {
-      name: "Psychology",
-      description: "Department of Psychology, Faculty of Social Sciences",
-      isActive: true,
-    },
-    create: {
-      name: "Psychology",
+  const activeDepartments = [
+    {
       slug: "psychology",
+      name: "Psychology",
+      shortName: "PSY",
       description: "Department of Psychology, Faculty of Social Sciences",
     },
-  });
+    {
+      slug: "political-science",
+      name: "Political Science",
+      shortName: "POL",
+      description:
+        "Department of Political Science, Faculty of Social Sciences",
+    },
+    {
+      slug: "sociology",
+      name: "Sociology",
+      shortName: "SOC",
+      description: "Department of Sociology, Faculty of Social Sciences",
+    },
+    {
+      slug: "economics",
+      name: "Economics",
+      shortName: "ECO",
+      description: "Department of Economics, Faculty of Social Sciences",
+    },
+    {
+      slug: "public-administration",
+      name: "Public Administration",
+      shortName: "PAD",
+      description:
+        "Department of Public Administration, Faculty of Social Sciences",
+    },
+    {
+      slug: "criminology-security-studies",
+      name: "Criminology & Security Studies",
+      shortName: "CSS",
+      description:
+        "Department of Criminology & Security Studies, Faculty of Social Sciences",
+    },
+    {
+      slug: "library-information-science",
+      name: "Library & Information Science",
+      shortName: "LIS",
+      description:
+        "Department of Library & Information Science, Faculty of Social Sciences",
+    },
+  ];
 
-  const journal = await prisma.journal.upsert({
-    where: { slug: "psychology" },
-    update: {
-      departmentId: department.id,
-      name: "Psychology Journal Operations",
-      shortName: "PSY",
-      description:
-        "Academic journal operations for the Department of Psychology.",
-      institution: "Imo State University",
-      faculty: "Faculty of Social Sciences",
-      isActive: true,
-    },
-    create: {
-      slug: "psychology",
-      departmentId: department.id,
-      name: "Psychology Journal Operations",
-      shortName: "PSY",
-      description:
-        "Academic journal operations for the Department of Psychology.",
-      institution: "Imo State University",
-      faculty: "Faculty of Social Sciences",
-      isActive: true,
-    },
-  });
+  let primaryJournal = null;
+
+  for (const item of activeDepartments) {
+    const dept = await prisma.department.upsert({
+      where: { slug: item.slug },
+      update: {
+        name: item.name,
+        description: item.description,
+        isActive: true,
+      },
+      create: {
+        name: item.name,
+        slug: item.slug,
+        description: item.description,
+        isActive: true,
+      },
+    });
+
+    const jnl = await prisma.journal.upsert({
+      where: { slug: item.slug },
+      update: {
+        departmentId: dept.id,
+        name: `${item.name} Journal Operations`,
+        shortName: item.shortName,
+        description: `Academic journal operations for the Department of ${item.name}.`,
+        institution: "Imo State University",
+        faculty: "Faculty of Social Sciences",
+        isActive: true,
+      },
+      create: {
+        slug: item.slug,
+        departmentId: dept.id,
+        name: `${item.name} Journal Operations`,
+        shortName: item.shortName,
+        description: `Academic journal operations for the Department of ${item.name}.`,
+        institution: "Imo State University",
+        faculty: "Faculty of Social Sciences",
+        isActive: true,
+      },
+    });
+
+    if (item.slug === "psychology") primaryJournal = jnl;
+  }
+
+  const journal = primaryJournal;
 
   const references = await prisma.department.upsert({
     where: { slug: "reference-materials" },

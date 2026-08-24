@@ -5,10 +5,9 @@ import {
   beginSubmissionAction,
   sendAuthorMessageAction,
 } from "@/app/author/requests/actions";
+import { PendingButton } from "@/components/submissions/pending-button";
 import {
-  AttachmentUploader,
-  ConversationThread,
-  MessageComposer,
+  RequestChatBox,
   RequestStatus,
   type ConversationMessageDTO,
 } from "@/components/requests/request-components";
@@ -64,23 +63,15 @@ export default async function AuthorRequestPage({
             Conversation with the journal
           </h2>
           <div className="mt-6">
-            <ConversationThread
+            <RequestChatBox
               requestId={request.id}
               viewerId={user.id}
               messages={messages}
-            />
-          </div>
-          <div className="mt-7">
-            <MessageComposer
               action={sendAuthorMessageAction.bind(null, request.id)}
             />
           </div>
         </section>
         <aside className="space-y-4">
-          {request.status === "NEW" || request.status === "AWAITING_PAYMENT" ? (
-            <AttachmentUploader requestId={request.id} receipt />
-          ) : null}
-          <AttachmentUploader requestId={request.id} />
           {request.status === "SUBMISSION_ENABLED" ? (
             <div className="rounded-[var(--radius-lg)] border border-[color:var(--color-accent)] bg-[color:var(--color-surface-raised)] p-5">
               <h2 className="text-sm font-semibold">Ready to submit</h2>
@@ -91,7 +82,12 @@ export default async function AuthorRequestPage({
                 action={beginSubmissionAction.bind(null, request.id)}
                 className="mt-4"
               >
-                <button className="button-primary">Submit article</button>
+                <PendingButton
+                  className="button-primary"
+                  pendingLabel="Preparing form…"
+                >
+                  Submit article
+                </PendingButton>
               </form>
             </div>
           ) : null}

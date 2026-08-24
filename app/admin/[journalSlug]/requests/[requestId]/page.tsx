@@ -8,9 +8,7 @@ import {
 } from "@/app/admin/[journalSlug]/requests/actions";
 import {
   AdminStateAction,
-  AttachmentUploader,
-  ConversationThread,
-  MessageComposer,
+  RequestChatBox,
   RequestStatus,
   type ConversationMessageDTO,
 } from "@/components/requests/request-components";
@@ -53,12 +51,20 @@ export default async function AdminRequestPage({
   const manuscriptVersion = request.submission?.manuscriptVersions[0];
   return (
     <div className="mx-auto w-full max-w-6xl min-w-0 px-1 sm:px-0">
-      <Link
-        href={`/admin/${journal.slug}`}
-        className="text-xs font-semibold text-[color:var(--color-muted)] hover:text-[color:var(--color-foreground)]"
-      >
-        ← Submission requests
-      </Link>
+      <div className="flex items-center gap-4">
+        <Link
+          href="/admin"
+          className="rounded-md border border-[color:var(--color-border)] bg-[color:var(--color-surface-raised)] px-3 py-1.5 text-xs font-semibold text-[color:var(--color-foreground)] hover:border-[color:var(--color-accent)] hover:text-[color:var(--color-accent)]"
+        >
+          ← Back to Overview
+        </Link>
+        <Link
+          href="/admin/requests"
+          className="text-xs font-semibold text-[color:var(--color-muted)] hover:text-[color:var(--color-foreground)]"
+        >
+          Submission requests list
+        </Link>
+      </div>
       <header className="mt-4 border-b border-[color:var(--color-border)] pb-6">
         <RequestStatus status={request.status} />
         <h1 className="mt-3 font-serif text-2xl font-medium tracking-[-0.035em] break-words sm:text-4xl lg:text-5xl">
@@ -77,14 +83,10 @@ export default async function AdminRequestPage({
         <section className="min-w-0 rounded-[var(--radius-lg)] border border-[color:var(--color-border)] bg-[color:var(--color-surface-raised)] p-4 sm:p-6">
           <h2 className="text-sm font-semibold">Conversation with author</h2>
           <div className="mt-6">
-            <ConversationThread
+            <RequestChatBox
               requestId={request.id}
               viewerId={user.id}
               messages={messages}
-            />
-          </div>
-          <div className="mt-7">
-            <MessageComposer
               action={sendAdminMessageAction.bind(
                 null,
                 journal.slug,
@@ -94,7 +96,6 @@ export default async function AdminRequestPage({
           </div>
         </section>
         <aside className="space-y-4">
-          <AttachmentUploader requestId={request.id} />
           {["NEW", "AWAITING_PAYMENT", "RECEIPT_SUBMITTED"].includes(
             request.status,
           ) ? (
@@ -144,7 +145,6 @@ export default async function AdminRequestPage({
                     request.id,
                   )}
                   label="Assign tracking ID"
-                  field="trackingId"
                 />
               </div>
             </div>

@@ -40,6 +40,7 @@ export type AuthorSubmissionDTO = {
     isActive: boolean;
     department: { name: string; isActive: boolean };
   };
+  request: { id: string } | null;
   authors: Array<SubmissionAuthorInput & { id: string; position: number }>;
   files: SubmissionFileDTO[];
 };

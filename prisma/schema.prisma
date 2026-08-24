@@ -125,6 +125,7 @@ enum SubmissionFileType {
 enum ArticleFileType {
   PUBLISHED_PDF
   SUPPLEMENTARY
+  COVER_IMAGE
 }
 
 model Department {
@@ -206,6 +207,7 @@ model Article {
   pageStart   String?
   pageEnd     String?
   keywords    String[]        @default([])
+  coverImageUrl String?
   issueOrder  Int?
   publishedAt DateTime?
   isPublished Boolean         @default(false)

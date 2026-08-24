@@ -73,6 +73,11 @@ export default async function SubmissionStepPage({
   if (!isSubmissionStep(step)) redirect(`/author/submissions/${submissionId}`);
   const submission = await getAuthorSubmission(user.id, submissionId);
   if (!submission) redirect("/unauthorized?reason=workspace");
+  if (submission.request) {
+    redirect(
+      `/author/requests/${submission.request.id}/submit?submission=${submission.id}`,
+    );
+  }
   if (submission.status !== "DRAFT")
     redirect(`/author/submissions/${submission.id}`);
   const journals = step === "journal" ? await getEligibleJournals() : [];

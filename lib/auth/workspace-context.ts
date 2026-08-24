@@ -42,5 +42,28 @@ export async function requireJournalWorkspace(
 
   const journalWorkspaces = getJournalWorkspaces(user, role);
 
+  if (isSuperAdmin(user) && journal) {
+    const hasWorkspace = journalWorkspaces.some(
+      (item) => item.journal?.id === journal.id,
+    );
+    if (!hasWorkspace) {
+      const area =
+        role === "JOURNAL_ADMIN"
+          ? ("journal-admin" as const)
+          : ("editor" as const);
+      const roleLabel =
+        role === "JOURNAL_ADMIN" ? "Journal Administrator" : "Editor";
+      journalWorkspaces.push({
+        id: `${area}:${journal.id}`,
+        href: `/${area === "journal-admin" ? "admin" : "editor"}/${journal.slug}`,
+        area,
+        roleLabel,
+        title: `${journal.department.name} operations`,
+        description: "Manage journal activity for this department.",
+        journal,
+      });
+    }
+  }
+
   return { user, journal, journalWorkspaces };
 }

@@ -83,28 +83,133 @@ export async function returnForCorrection(input: {
     });
   }
   await prisma.$transaction(async (transaction) => {
-    const updated = await transaction.submission.updateMany({
+    const submission = await transaction.submission.findFirst({
       where: {
         id: input.submissionId,
         journalId: input.journalId,
         status: "SCREENING",
       },
-      data: { status: "CORRECTION_REQUESTED", version: { increment: 1 } },
+      select: {
+        id: true,
+        request: { select: { id: true } },
+        files: {
+          where: { type: "MANUSCRIPT" },
+          orderBy: { createdAt: "desc" },
+          take: 1,
+          select: { storedFileId: true },
+        },
+        manuscriptVersions: {
+          orderBy: { versionNumber: "desc" },
+          take: 1,
+          select: { manuscriptStoredFileId: true },
+        },
+      },
     });
-    if (updated.count !== 1) {
+
+    if (!submission) {
       throw new EditorialMutationError(
         "This manuscript is no longer in initial assessment.",
       );
     }
+
+    await transaction.submission.update({
+      where: { id: submission.id },
+      data: { status: "CORRECTION_REQUESTED", version: { increment: 1 } },
+    });
+
     await transaction.submissionEvent.create({
       data: {
-        submissionId: input.submissionId,
+        submissionId: submission.id,
         actorId: input.adminId,
         type: "CORRECTION_REQUESTED",
         message,
         authorVisible: true,
       },
     });
+
+    if (submission.request) {
+      const manuscriptFileId =
+        submission.files[0]?.storedFileId ??
+        submission.manuscriptVersions[0]?.manuscriptStoredFileId;
+
+      await transaction.submissionRequest.update({
+        where: { id: submission.request.id },
+        data: { version: { increment: 1 } },
+      });
+
+      const conversationMessage =
+        await transaction.submissionConversationMessage.create({
+          data: {
+            requestId: submission.request.id,
+            senderId: input.adminId,
+            kind: "USER",
+            body: `📋 Correction Requested:\n\n${message}`,
+          },
+        });
+
+      if (manuscriptFileId) {
+        await transaction.conversationAttachment.create({
+          data: {
+            messageId: conversationMessage.id,
+            storedFileId: manuscriptFileId,
+            type: "GENERAL",
+          },
+        });
+      }
+    }
+  });
+}
+
+export async function markRevisionReceived(input: {
+  adminId: string;
+  journalId: string;
+  submissionId: string;
+}) {
+  await assertJournalAdmin(input.adminId, input.journalId);
+  return prisma.$transaction(async (transaction) => {
+    const submission = await transaction.submission.findFirst({
+      where: {
+        id: input.submissionId,
+        journalId: input.journalId,
+        status: { in: ["CORRECTION_REQUESTED", "REVISION_REQUESTED"] },
+      },
+      select: {
+        id: true,
+        status: true,
+        request: { select: { id: true } },
+      },
+    });
+    if (!submission) {
+      throw new EditorialMutationError(
+        "This manuscript is not waiting for a revision.",
+      );
+    }
+    await transaction.submission.update({
+      where: { id: submission.id },
+      data: { status: "REVISED", version: { increment: 1 } },
+    });
+    await transaction.submissionEvent.create({
+      data: {
+        submissionId: submission.id,
+        actorId: input.adminId,
+        type: "REVISION_SUBMITTED",
+        authorVisible: true,
+        message: "Revision marked as received by journal admin.",
+      },
+    });
+    if (submission.request) {
+      await transaction.submissionRequest.update({
+        where: { id: submission.request.id },
+        data: { version: { increment: 1 } },
+      });
+      await transaction.submissionConversationMessage.create({
+        data: {
+          requestId: submission.request.id,
+          kind: "SYSTEM",
+          body: "Revision received by journal admin. Continuing initial assessment.",
+        },
+      });
+    }
   });
 }
 
@@ -316,21 +421,34 @@ export async function cancelReviewerAssignment(input: {
       where: { id: assignment.id },
       data: { status: "CANCELLED", respondedAt: new Date() },
     });
-    const activeCount = await transaction.reviewAssignment.count({
+    const submittedCount = await transaction.reviewAssignment.count({
       where: {
         reviewRoundId: assignment.reviewRoundId,
-        status: { notIn: ["CANCELLED", "DECLINED"] },
+        review: { status: "SUBMITTED" },
       },
     });
-    if (activeCount < minimumCompletedReviews) {
-      await transaction.reviewRound.update({
-        where: { id: assignment.reviewRoundId },
-        data: { status: "PLANNED" },
-      });
+    if (submittedCount >= 1) {
       await transaction.submission.update({
         where: { id: input.submissionId },
-        data: { status: "AWAITING_REVIEWERS", version: { increment: 1 } },
+        data: { status: "REVIEWS_RECEIVED", version: { increment: 1 } },
       });
+    } else {
+      const activeCount = await transaction.reviewAssignment.count({
+        where: {
+          reviewRoundId: assignment.reviewRoundId,
+          status: { notIn: ["CANCELLED", "DECLINED"] },
+        },
+      });
+      if (activeCount < minimumCompletedReviews) {
+        await transaction.reviewRound.update({
+          where: { id: assignment.reviewRoundId },
+          data: { status: "PLANNED" },
+        });
+        await transaction.submission.update({
+          where: { id: input.submissionId },
+          data: { status: "AWAITING_REVIEWERS", version: { increment: 1 } },
+        });
+      }
     }
     await transaction.submissionEvent.create({
       data: {
@@ -371,17 +489,26 @@ export async function saveEditorReview(input: {
           },
         },
         reviewRound: {
-          status: "ACTIVE",
+          status: { in: ["PLANNED", "ACTIVE"] },
           submission: {
             journalId: input.journalId,
-            status: { in: ["UNDER_REVIEW", "REVIEWS_RECEIVED"] },
+            status: {
+              in: ["AWAITING_REVIEWERS", "UNDER_REVIEW", "REVIEWS_RECEIVED"],
+            },
           },
         },
       },
       select: {
         id: true,
         reviewRoundId: true,
-        reviewRound: { select: { submissionId: true } },
+        reviewRound: {
+          select: {
+            id: true,
+            status: true,
+            submissionId: true,
+            submission: { select: { id: true, status: true } },
+          },
+        },
         review: { select: { id: true, version: true } },
       },
     });
@@ -400,6 +527,24 @@ export async function saveEditorReview(input: {
     }
     if (!assignment.review && input.reviewVersion !== 0) {
       throw new EditorialMutationError("Refresh before saving this review.");
+    }
+    if (
+      assignment.reviewRound.status === "PLANNED" ||
+      assignment.reviewRound.submission.status === "AWAITING_REVIEWERS"
+    ) {
+      await transaction.reviewRound.update({
+        where: { id: assignment.reviewRound.id },
+        data: {
+          status: "ACTIVE",
+          ...(assignment.reviewRound.status === "PLANNED"
+            ? { openedAt: new Date() }
+            : {}),
+        },
+      });
+      await transaction.submission.update({
+        where: { id: assignment.reviewRound.submissionId },
+        data: { status: "UNDER_REVIEW", version: { increment: 1 } },
+      });
     }
     const submittedAt = input.final ? new Date() : null;
     const data = {
@@ -449,16 +594,7 @@ export async function saveEditorReview(input: {
           review: { status: "SUBMITTED" },
         },
       });
-      const activeCount = await transaction.reviewAssignment.count({
-        where: {
-          reviewRoundId: assignment.reviewRoundId,
-          status: { notIn: ["CANCELLED", "DECLINED"] },
-        },
-      });
-      if (
-        completedCount >= minimumCompletedReviews &&
-        completedCount === activeCount
-      ) {
+      if (completedCount >= 1) {
         await transaction.submission.update({
           where: { id: assignment.reviewRound.submissionId },
           data: { status: "REVIEWS_RECEIVED", version: { increment: 1 } },
@@ -498,21 +634,19 @@ export async function issueEditorialDecision(input: {
         status: "ACTIVE",
         submission: {
           journalId: input.journalId,
-          status: "REVIEWS_RECEIVED",
+          status: {
+            in: ["AWAITING_REVIEWERS", "UNDER_REVIEW", "REVIEWS_RECEIVED"],
+          },
         },
       },
       select: {
         id: true,
-        _count: {
-          select: {
-            assignments: { where: { review: { status: "SUBMITTED" } } },
-          },
-        },
+        submission: { select: { request: { select: { id: true } } } },
       },
     });
-    if (!round || round._count.assignments < minimumCompletedReviews) {
+    if (!round) {
       throw new EditorialMutationError(
-        "At least two submitted reviews are required before a decision.",
+        "Active review round not found for this manuscript.",
       );
     }
     const decision = await transaction.editorialDecision.create({
@@ -550,6 +684,20 @@ export async function issueEditorialDecision(input: {
         authorVisible: true,
       },
     });
+    if (round.submission.request) {
+      await transaction.submissionRequest.update({
+        where: { id: round.submission.request.id },
+        data: { version: { increment: 1 } },
+      });
+      await transaction.submissionConversationMessage.create({
+        data: {
+          requestId: round.submission.request.id,
+          senderId: input.adminId,
+          kind: "USER",
+          body: `📋 Editorial Decision: ${input.type.replaceAll("_", " ")}\n\n${authorMessage}`,
+        },
+      });
+    }
     return decision;
   });
 }
@@ -643,4 +791,184 @@ export async function recordRevision(input: {
       timeout: 20_000,
     },
   );
+}
+
+export async function skipToPublishing(input: {
+  adminId: string;
+  journalId: string;
+  submissionId: string;
+}) {
+  await assertJournalAdmin(input.adminId, input.journalId);
+
+  const submission = await prisma.submission.findFirst({
+    where: {
+      id: input.submissionId,
+      journalId: input.journalId,
+    },
+    select: { id: true, status: true },
+  });
+
+  if (!submission) {
+    throw new EditorialMutationError("Submission not found.");
+  }
+
+  await prisma.submission.update({
+    where: { id: submission.id },
+    data: { status: "ACCEPTED", version: { increment: 1 } },
+  });
+
+  await prisma.submissionEvent.create({
+    data: {
+      submissionId: submission.id,
+      actorId: input.adminId,
+      type: "EDITORIAL_DECISION",
+      message:
+        "Manuscript approved for Publishing & Production (editorial decision skipped).",
+      authorVisible: true,
+    },
+  });
+}
+
+export async function publishArticle(input: {
+  adminId: string;
+  journalId: string;
+  submissionId: string;
+  volume?: string;
+  issue?: string;
+  pageRange?: string;
+  coverImageUrl?: string;
+  doi?: string;
+}) {
+  await assertJournalAdmin(input.adminId, input.journalId);
+
+  const submission = await prisma.submission.findFirst({
+    where: {
+      id: input.submissionId,
+      journalId: input.journalId,
+    },
+    select: {
+      id: true,
+      title: true,
+      abstract: true,
+      keywords: true,
+      journalId: true,
+      authors: {
+        select: { fullName: true, email: true, position: true },
+        orderBy: { position: "asc" },
+      },
+    },
+  });
+
+  if (!submission) {
+    throw new EditorialMutationError("Manuscript not found for publication.");
+  }
+
+  await prisma.submission.update({
+    where: { id: submission.id },
+    data: { status: "ACCEPTED", version: { increment: 1 } },
+  });
+
+  const volNum = parseInt(input.volume || "1", 10) || 1;
+  const issueNum = parseInt(input.issue || "1", 10) || 1;
+
+  const volume = await prisma.volume.upsert({
+    where: {
+      journalId_year_number: {
+        journalId: submission.journalId,
+        year: new Date().getFullYear(),
+        number: volNum,
+      },
+    },
+    update: {},
+    create: {
+      journalId: submission.journalId,
+      number: volNum,
+      year: new Date().getFullYear(),
+      title: `Volume ${volNum}`,
+    },
+  });
+
+  const issue = await prisma.issue.upsert({
+    where: { volumeId_number: { volumeId: volume.id, number: issueNum } },
+    update: { isPublished: true, publishedAt: new Date() },
+    create: {
+      volumeId: volume.id,
+      number: issueNum,
+      title: `Issue ${issueNum}`,
+      isPublished: true,
+      publishedAt: new Date(),
+    },
+  });
+
+  const articleSlug = `art-${submission.id.toLowerCase()}`;
+  const article = await prisma.article.upsert({
+    where: { slug: articleSlug },
+    update: {
+      title: submission.title || "Untitled Article",
+      abstract: submission.abstract,
+      keywords: submission.keywords,
+      doi: input.doi?.trim() || null,
+      coverImageUrl: input.coverImageUrl || null,
+      pageStart: input.pageRange?.split("-")[0]?.trim() || null,
+      pageEnd: input.pageRange?.split("-")[1]?.trim() || null,
+      isPublished: true,
+      publishedAt: new Date(),
+    },
+    create: {
+      issueId: issue.id,
+      title: submission.title || "Untitled Article",
+      slug: articleSlug,
+      abstract: submission.abstract,
+      keywords: submission.keywords,
+      doi: input.doi?.trim() || null,
+      coverImageUrl: input.coverImageUrl || null,
+      pageStart: input.pageRange?.split("-")[0]?.trim() || null,
+      pageEnd: input.pageRange?.split("-")[1]?.trim() || null,
+      isPublished: true,
+      publishedAt: new Date(),
+    },
+  });
+
+  for (const author of submission.authors) {
+    await prisma.articleAuthor.upsert({
+      where: {
+        articleId_position: {
+          articleId: article.id,
+          position: author.position,
+        },
+      },
+      update: {
+        fullName: author.fullName,
+        email: author.email,
+      },
+      create: {
+        articleId: article.id,
+        fullName: author.fullName,
+        email: author.email,
+        position: author.position,
+      },
+    });
+  }
+
+  const meta = [
+    input.volume ? `Volume ${input.volume}` : null,
+    input.issue ? `Issue ${input.issue}` : null,
+    input.pageRange ? `Pages ${input.pageRange}` : null,
+  ]
+    .filter(Boolean)
+    .join(" · ");
+
+  await prisma.submissionEvent.create({
+    data: {
+      submissionId: submission.id,
+      actorId: input.adminId,
+      type: "EDITORIAL_DECISION",
+      message: meta
+        ? `Article published live to journal archives (${meta})`
+        : "Article published live to official journal archives.",
+      authorVisible: true,
+    },
+  });
+
+  return article;
 }

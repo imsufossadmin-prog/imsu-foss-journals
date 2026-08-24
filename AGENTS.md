@@ -23,7 +23,7 @@ This version has breaking changes — APIs, conventions, and file structure may 
 **Name:** IMSU FOSS Journals  
 **Institution:** Faculty of Social Sciences, Imo State University (IMSU)  
 **Purpose:** Digital operating center for academic journal publishing operations  
-**Current Stage:** Phase 6 (Super Admin Operating Center Redesign) complete → Phase 6 Part 2 (Editor Workspace & Journal Admin Polish) / Phase 7 (Publishing & Production) is next  
+**Current Stage:** Phase 6 complete → Phase 7 (Publishing, Production & Admin Content Management Center) complete  
 **Primary active department:** Psychology  
 **Design philosophy:** Simple. Modern SaaS Aesthetic. Minimalist. Dark Green Theme. Fully Mobile Responsive. For non-technical academic operators.
 
@@ -56,8 +56,9 @@ This version has breaking changes — APIs, conventions, and file structure may 
 │   ├── admin/             # Super Admin + Journal Admin workspace
 │   │   ├── page.tsx       # Live Super Admin Operating Center Dashboard
 │   │   ├── access/        # User Access Directory & Role Management
+│   │   ├── articles/      # Admin Content Directory & Direct Legacy Publishing
 │   │   └── [journalSlug]/ # Journal-scoped admin (Psychology)
-│   ├── api/               # API Route Handlers
+│   ├── api/               # API Route Handlers (including /api/articles/[articleSlug]/pdf)
 │   ├── auth/callback/     # OAuth PKCE callback
 │   ├── author/            # Author workspace
 │   │   ├── requests/
@@ -87,7 +88,7 @@ This version has breaking changes — APIs, conventions, and file structure may 
 │   ├── auth/              # Auth, authorization, provisioning, role management
 │   ├── requests/          # Submission request data & platform query counters
 │   ├── db/prisma.ts       # Prisma client singleton
-│   ├── editorial/         # Editorial workflow
+│   ├── editorial/         # Editorial workflow & legacy article mutations
 │   ├── storage/           # Supabase Storage access & opaque paths
 │   └── supabase/          # Supabase client factories
 ├── prisma/
@@ -114,25 +115,31 @@ This version has breaking changes — APIs, conventions, and file structure may 
 
 ---
 
-## 5. RECENTLY COMPLETED WORK (PHASE 6 SUPER ADMIN OPERATING CENTER)
+## 5. RECENTLY COMPLETED WORK (ADMIN OPERATING CENTER & CONTENT MANAGEMENT)
 
-- **Super Admin Operating Center (`/admin`)**:
-  - Replaced static placeholder with `SuperAdminDashboard` component surfacing live metric counters (Receipts Awaiting Review, Submissions Awaiting Tracking IDs, New Requests).
-  - Fixed card links pointing directly to `/admin/[journalSlug]`.
-  - Removed all charts and graphs for pure, clean metrics.
+- **Admin Content & Article Management Center (`/admin/articles` & `/admin/articles/new`)**:
+  - Direct legacy manuscript upload & publishing for past journal issues/papers without author submission workflow.
+  - Native file pickers for PDF and optional cover image uploaded directly to Supabase Storage `published-articles`.
+  - Content Directory with live search, 1-click **Unpublish/Publish Toggle**, and **Delete** actions with automatic storage file cleanup.
+- **Public Article PDF Stream API (`/api/articles/[articleSlug]/pdf`)**:
+  - Public route streaming signed URLs for published PDFs without `/unauthorized` errors.
+  - Supports both direct legacy uploads and author submission workflow papers.
+- **Mobile Viewport Overflow & Layout Alignment**:
+  - Fixed horizontal scroll & chatbox input cutoffs across mobile devices by applying `min-w-0 max-w-full overflow-hidden` grid bounds and scaling headings to `text-2xl break-words sm:text-4xl`.
+- **Production Hardening**:
+  - Atomic Volume & Issue creation via Prisma `upsert` composite keys (`journalId_year_number`, `volumeId_number`).
+  - Pre-flight DOI duplicate validation and department scope authorization checks (`hasJournalRole`).
+  - Storage leak prevention cleaning binary files from Supabase Storage on article deletion.
 - **Dark Forest Green Theme & Theme Toggle**:
   - Updated `app/globals.css` to `#0a1412` dark forest slate background, `#122420` surface cards, `#10b981` emerald green highlights, `#f1f5f3` text.
   - Added `<ThemeToggle />` component in the navbar header supporting Dark Mode and Light Mode with `localStorage` persistence.
 - **User Directory & Instant Search (`/admin/access`)**:
   - Updated `searchRoleManagementUsers` in `lib/auth/role-management-session.ts` to auto-load all platform users on initial page load.
   - Client component `components/admin/role-management.tsx` enables live auto-suggest filtering as the admin types.
-  - Removed avatar logos and status tag column per user specification.
 - **Modern Instant Messaging Chatbox**:
   - Overhauled `ConversationThread` and `MessageComposer` in `components/requests/request-components.tsx`.
   - Added inline `+` file attachment button directly inside the input bar.
   - Added optimistic UI updates for instant message rendering on click.
-- **Mobile & Tablet Responsiveness**:
-  - Applied container width and word-break rules (`max-w-full`, `overflow-x-hidden`, `min-w-0`, `break-words`) across shell and detail pages to prevent horizontal scroll on mobile/iPad viewports.
 
 ---
 

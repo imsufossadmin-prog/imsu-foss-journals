@@ -47,6 +47,9 @@ const workspaceOrder: ProductWorkspace["area"][] = [
 
 export function getAvailableWorkspaces(subject: WorkspaceSubject) {
   const workspaces: ProductWorkspace[] = [];
+  const hasStaffRole =
+    subject.globalRoles.some(({ role }) => role === "SUPER_ADMIN") ||
+    subject.journalRoles.some(({ journal }) => journal.isActive);
 
   if (subject.globalRoles.some(({ role }) => role === "SUPER_ADMIN")) {
     workspaces.push({
@@ -86,7 +89,10 @@ export function getAvailableWorkspaces(subject: WorkspaceSubject) {
     }
   }
 
-  if (subject.globalRoles.some(({ role }) => role === "AUTHOR")) {
+  if (
+    !hasStaffRole &&
+    subject.globalRoles.some(({ role }) => role === "AUTHOR")
+  ) {
     workspaces.push({
       id: "author:personal",
       href: "/author",
@@ -120,12 +126,25 @@ export function getPostLoginDestination(
     return "/admin";
   }
 
-  const workspaces = getAvailableWorkspaces(subject);
+  const journalAdmin = subject.journalRoles.find(
+    ({ role, journal }) => role === "JOURNAL_ADMIN" && journal.isActive,
+  );
+  if (journalAdmin) {
+    return `/admin/${journalAdmin.journal.slug}`;
+  }
 
-  if (workspaces.length === 0) return "/unauthorized?reason=workspace";
-  if (workspaces.length === 1) return workspaces[0].href;
+  const editorRole = subject.journalRoles.find(
+    ({ role, journal }) => role === "EDITOR" && journal.isActive,
+  );
+  if (editorRole) {
+    return `/editor/${editorRole.journal.slug}`;
+  }
 
-  return "/workspaces";
+  if (subject.globalRoles.some(({ role }) => role === "AUTHOR")) {
+    return "/author";
+  }
+
+  return "/unauthorized?reason=workspace";
 }
 
 export function getJournalWorkspaces(
