@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState } from "react";
+import { useActionState, useState } from "react";
 import { useFormStatus } from "react-dom";
 
 import {
@@ -94,6 +94,8 @@ export function LoginForm({
   showDevelopmentAccess?: boolean;
 }) {
   const [state, formAction] = useActionState(loginWithPassword, initialState);
+  const [emailInput, setEmailInput] = useState("superadmin@example.com");
+  const [passwordInput, setPasswordInput] = useState("password123456");
 
   return (
     <div className="mt-9">
@@ -115,17 +117,84 @@ export function LoginForm({
       </div>
 
       {showDevelopmentAccess ? (
-        <details className="mt-5 border-t border-[color:var(--color-border)] pt-5">
+        <details
+          className="mt-5 border-t border-[color:var(--color-border)] pt-5"
+          open
+        >
           <summary className="cursor-pointer text-xs font-semibold text-[color:var(--color-subtle)]">
-            Development access
+            Development access (Preset Credentials)
           </summary>
+
+          <div className="mt-4 grid grid-cols-2 gap-2 text-[11px]">
+            <button
+              type="button"
+              onClick={() => {
+                setEmailInput("superadmin@example.com");
+                setPasswordInput("password123456");
+              }}
+              className="rounded border border-[color:var(--color-border)] bg-[color:var(--color-surface-raised)] p-2 text-left hover:border-[color:var(--color-accent)]"
+            >
+              <span className="block font-semibold text-[color:var(--color-foreground)]">
+                🔑 Super Admin
+              </span>
+              <span className="text-[10px] text-[color:var(--color-subtle)]">
+                superadmin@example.com
+              </span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => {
+                setEmailInput("admin@example.com");
+                setPasswordInput("password123456");
+              }}
+              className="rounded border border-[color:var(--color-border)] bg-[color:var(--color-surface-raised)] p-2 text-left hover:border-[color:var(--color-accent)]"
+            >
+              <span className="block font-semibold text-[color:var(--color-foreground)]">
+                ✍️ Journal Admin
+              </span>
+              <span className="text-[10px] text-[color:var(--color-subtle)]">
+                admin@example.com
+              </span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => {
+                setEmailInput("editor@example.com");
+                setPasswordInput("password123456");
+              }}
+              className="rounded border border-[color:var(--color-border)] bg-[color:var(--color-surface-raised)] p-2 text-left hover:border-[color:var(--color-accent)]"
+            >
+              <span className="block font-semibold text-[color:var(--color-foreground)]">
+                🔍 Editor
+              </span>
+              <span className="text-[10px] text-[color:var(--color-subtle)]">
+                editor@example.com
+              </span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => {
+                setEmailInput("author@example.com");
+                setPasswordInput("password123456");
+              }}
+              className="rounded border border-[color:var(--color-border)] bg-[color:var(--color-surface-raised)] p-2 text-left hover:border-[color:var(--color-accent)]"
+            >
+              <span className="block font-semibold text-[color:var(--color-foreground)]">
+                📝 Author
+              </span>
+              <span className="text-[10px] text-[color:var(--color-subtle)]">
+                author@example.com
+              </span>
+            </button>
+          </div>
+
           <form action={formAction} className="mt-5 space-y-4" noValidate>
             {returnTo ? (
               <input type="hidden" name="returnTo" value={returnTo} />
             ) : null}
-            <p className="text-xs leading-5 text-[color:var(--color-subtle)]">
-              For controlled local staff testing only.
-            </p>
             <div>
               <label
                 htmlFor="email"
@@ -140,7 +209,8 @@ export function LoginForm({
                 autoComplete="email"
                 inputMode="email"
                 required
-                placeholder="name@university.edu"
+                value={emailInput}
+                onChange={(e) => setEmailInput(e.target.value)}
                 className="app-field mt-2"
               />
             </div>
@@ -157,7 +227,8 @@ export function LoginForm({
                 type="password"
                 autoComplete="current-password"
                 required
-                placeholder="Enter your password"
+                value={passwordInput}
+                onChange={(e) => setPasswordInput(e.target.value)}
                 className="app-field mt-2"
               />
             </div>

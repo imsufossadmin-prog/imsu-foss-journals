@@ -1,6 +1,7 @@
 "use client";
 
-import { useActionState } from "react";
+import { useRouter } from "next/navigation";
+import { useActionState, useState, useTransition } from "react";
 import { useFormStatus } from "react-dom";
 
 import {
@@ -35,11 +36,17 @@ function Message({ state }: { state: ActionState }) {
   );
 }
 
-function SubmitButton({ children }: { children: React.ReactNode }) {
+function SubmitButton({
+  children,
+  pendingLabel = "Saving…",
+}: {
+  children: React.ReactNode;
+  pendingLabel?: string;
+}) {
   const { pending } = useFormStatus();
   return (
     <button className="button-primary" disabled={pending}>
-      {pending ? "Saving…" : children}
+      {pending ? pendingLabel : children}
     </button>
   );
 }
@@ -109,18 +116,43 @@ export function AssessmentAction({
   submissionId: string;
   kind: "begin" | "pass";
 }) {
+  const router = useRouter();
+  const [isPending, startTransition] = useTransition();
+  const [error, setError] = useState<string | null>(null);
+
   const serverAction =
     kind === "begin" ? beginAssessmentAction : passAssessmentAction;
-  const bound = serverAction.bind(null, journalSlug, submissionId);
-  const [state, action] = useActionState(bound, initialState);
+
+  const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    setError(null);
+    startTransition(async () => {
+      const res = await serverAction(journalSlug, submissionId, initialState);
+      if (res?.error) {
+        setError(res.error);
+      } else {
+        router.refresh();
+      }
+    });
+  };
+
+  const label =
+    kind === "begin" ? "Start initial assessment" : "Pass initial assessment";
+  const pendingLabel =
+    kind === "begin" ? "Starting assessment…" : "Passing assessment…";
+
   return (
-    <form action={action} className="space-y-3">
-      <SubmitButton>
-        {kind === "begin"
-          ? "Start initial assessment"
-          : "Pass initial assessment"}
-      </SubmitButton>
-      <Message state={state} />
+    <form onSubmit={handleSubmit} className="space-y-3">
+      <button
+        type="submit"
+        disabled={isPending}
+        className="button-primary w-full"
+      >
+        {isPending ? pendingLabel : label}
+      </button>
+      {error ? (
+        <p className="text-xs text-[color:var(--color-danger)]">{error}</p>
+      ) : null}
     </form>
   );
 }
@@ -365,7 +397,9 @@ export function PublishArticleForm({
           />
         </label>
       </div>
-      <SubmitButton>Publish Article to Journal</SubmitButton>
+      <SubmitButton pendingLabel="Publishing article live…">
+        Publish Article to Journal
+      </SubmitButton>
       <Message state={state} />
     </form>
   );

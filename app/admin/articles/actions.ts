@@ -122,6 +122,7 @@ export async function createDirectLegacyArticleAction(
       .upload(pdfPath, pdfBuffer, {
         contentType: manuscriptPdf.type || "application/pdf",
         upsert: true,
+        duplex: "half",
       });
 
     if (pdfUploadError) {
@@ -142,6 +143,7 @@ export async function createDirectLegacyArticleAction(
         .upload(imgPath, imgBuffer, {
           contentType: coverImageFile.type || "image/jpeg",
           upsert: true,
+          duplex: "half",
         });
 
       if (!imgError) {
@@ -189,9 +191,8 @@ export async function createDirectLegacyArticleAction(
     };
   }
 
-  revalidatePath("/");
-  revalidatePath("/current-issue");
   revalidatePath("/admin/articles");
+  revalidatePath("/archives");
 
   redirect("/admin/articles?success=published");
 }
@@ -206,15 +207,13 @@ export async function toggleArticlePublicationAction(
   } else {
     await setArticlePublishedStatus(articleId);
   }
-  revalidatePath("/");
-  revalidatePath("/current-issue");
   revalidatePath("/admin/articles");
+  revalidatePath("/archives");
 }
 
 export async function deleteArticleAction(articleId: string) {
   await requireApplicationArea("admin");
   await deleteArticle(articleId);
-  revalidatePath("/");
-  revalidatePath("/current-issue");
   revalidatePath("/admin/articles");
+  revalidatePath("/archives");
 }

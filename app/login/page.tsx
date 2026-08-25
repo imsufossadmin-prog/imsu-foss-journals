@@ -76,7 +76,7 @@ export default async function LoginPage({
             <LoginForm
               returnTo={returnTo ?? undefined}
               oauthError={typeof error === "string" ? error : undefined}
-              showDevelopmentAccess={process.env.NODE_ENV !== "production"}
+              showDevelopmentAccess={true}
             />
           </div>
         </div>

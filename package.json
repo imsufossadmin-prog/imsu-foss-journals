@@ -20,7 +20,8 @@
     "validate:live:phase5": "NODE_OPTIONS=--conditions=react-server node --experimental-websocket --import tsx scripts/validate-live-phase5.ts",
     "validate:live:auth-roles": "NODE_OPTIONS=--conditions=react-server node --experimental-websocket --import tsx scripts/validate-live-auth-roles.ts",
     "validate:live:editorial": "NODE_OPTIONS=--conditions=react-server node --experimental-websocket --import tsx scripts/validate-live-editorial-workflow.ts",
-    "fixtures:editorial:browser": "node --experimental-websocket --import tsx scripts/prepare-editorial-browser-fixtures.ts"
+    "fixtures:editorial:browser": "node --experimental-websocket --import tsx scripts/prepare-editorial-browser-fixtures.ts",
+    "simulate:platform": "NODE_OPTIONS=--conditions=react-server node --experimental-websocket --import tsx scripts/simulate-platform-evolution.ts"
   },
   "prisma": {
     "seed": "node --env-file=.env prisma/seed.mjs"

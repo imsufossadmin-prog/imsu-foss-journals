@@ -863,112 +863,116 @@ export async function publishArticle(input: {
     throw new EditorialMutationError("Manuscript not found for publication.");
   }
 
-  await prisma.submission.update({
-    where: { id: submission.id },
-    data: { status: "ACCEPTED", version: { increment: 1 } },
-  });
+  return prisma.$transaction(async (tx) => {
+    await tx.submission.update({
+      where: { id: submission.id },
+      data: { status: "ACCEPTED", version: { increment: 1 } },
+    });
 
-  const volNum = parseInt(input.volume || "1", 10) || 1;
-  const issueNum = parseInt(input.issue || "1", 10) || 1;
+    const volNum = parseInt(input.volume || "1", 10) || 1;
+    const issueNum = parseInt(input.issue || "1", 10) || 1;
 
-  const volume = await prisma.volume.upsert({
-    where: {
-      journalId_year_number: {
-        journalId: submission.journalId,
-        year: new Date().getFullYear(),
-        number: volNum,
-      },
-    },
-    update: {},
-    create: {
-      journalId: submission.journalId,
-      number: volNum,
-      year: new Date().getFullYear(),
-      title: `Volume ${volNum}`,
-    },
-  });
-
-  const issue = await prisma.issue.upsert({
-    where: { volumeId_number: { volumeId: volume.id, number: issueNum } },
-    update: { isPublished: true, publishedAt: new Date() },
-    create: {
-      volumeId: volume.id,
-      number: issueNum,
-      title: `Issue ${issueNum}`,
-      isPublished: true,
-      publishedAt: new Date(),
-    },
-  });
-
-  const articleSlug = `art-${submission.id.toLowerCase()}`;
-  const article = await prisma.article.upsert({
-    where: { slug: articleSlug },
-    update: {
-      title: submission.title || "Untitled Article",
-      abstract: submission.abstract,
-      keywords: submission.keywords,
-      doi: input.doi?.trim() || null,
-      coverImageUrl: input.coverImageUrl || null,
-      pageStart: input.pageRange?.split("-")[0]?.trim() || null,
-      pageEnd: input.pageRange?.split("-")[1]?.trim() || null,
-      isPublished: true,
-      publishedAt: new Date(),
-    },
-    create: {
-      issueId: issue.id,
-      title: submission.title || "Untitled Article",
-      slug: articleSlug,
-      abstract: submission.abstract,
-      keywords: submission.keywords,
-      doi: input.doi?.trim() || null,
-      coverImageUrl: input.coverImageUrl || null,
-      pageStart: input.pageRange?.split("-")[0]?.trim() || null,
-      pageEnd: input.pageRange?.split("-")[1]?.trim() || null,
-      isPublished: true,
-      publishedAt: new Date(),
-    },
-  });
-
-  for (const author of submission.authors) {
-    await prisma.articleAuthor.upsert({
+    const volume = await tx.volume.upsert({
       where: {
-        articleId_position: {
-          articleId: article.id,
-          position: author.position,
+        journalId_year_number: {
+          journalId: submission.journalId,
+          year: new Date().getFullYear(),
+          number: volNum,
         },
       },
-      update: {
-        fullName: author.fullName,
-        email: author.email,
-      },
+      update: {},
       create: {
-        articleId: article.id,
-        fullName: author.fullName,
-        email: author.email,
-        position: author.position,
+        journalId: submission.journalId,
+        number: volNum,
+        year: new Date().getFullYear(),
+        title: `Volume ${volNum}`,
       },
     });
-  }
 
-  const meta = [
-    input.volume ? `Volume ${input.volume}` : null,
-    input.issue ? `Issue ${input.issue}` : null,
-    input.pageRange ? `Pages ${input.pageRange}` : null,
-  ]
-    .filter(Boolean)
-    .join(" · ");
+    const issue = await tx.issue.upsert({
+      where: { volumeId_number: { volumeId: volume.id, number: issueNum } },
+      update: { isPublished: true, publishedAt: new Date() },
+      create: {
+        volumeId: volume.id,
+        number: issueNum,
+        title: `Issue ${issueNum}`,
+        isPublished: true,
+        publishedAt: new Date(),
+      },
+    });
 
-  await prisma.submissionEvent.create({
-    data: {
-      submissionId: submission.id,
-      actorId: input.adminId,
-      type: "EDITORIAL_DECISION",
-      message: meta
-        ? `Article published live to journal archives (${meta})`
-        : "Article published live to official journal archives.",
-      authorVisible: true,
-    },
+    const articleSlug = `art-${submission.id.toLowerCase()}`;
+    const article = await tx.article.upsert({
+      where: { slug: articleSlug },
+      update: {
+        title: submission.title || "Untitled Article",
+        abstract: submission.abstract,
+        keywords: submission.keywords,
+        doi: input.doi?.trim() || null,
+        coverImageUrl: input.coverImageUrl || null,
+        pageStart: input.pageRange?.split("-")[0]?.trim() || null,
+        pageEnd: input.pageRange?.split("-")[1]?.trim() || null,
+        isPublished: true,
+        publishedAt: new Date(),
+      },
+      create: {
+        issueId: issue.id,
+        title: submission.title || "Untitled Article",
+        slug: articleSlug,
+        abstract: submission.abstract,
+        keywords: submission.keywords,
+        doi: input.doi?.trim() || null,
+        coverImageUrl: input.coverImageUrl || null,
+        pageStart: input.pageRange?.split("-")[0]?.trim() || null,
+        pageEnd: input.pageRange?.split("-")[1]?.trim() || null,
+        isPublished: true,
+        publishedAt: new Date(),
+      },
+    });
+
+    await Promise.all(
+      submission.authors.map((author) =>
+        tx.articleAuthor.upsert({
+          where: {
+            articleId_position: {
+              articleId: article.id,
+              position: author.position,
+            },
+          },
+          update: {
+            fullName: author.fullName,
+            email: author.email,
+          },
+          create: {
+            articleId: article.id,
+            fullName: author.fullName,
+            email: author.email,
+            position: author.position,
+          },
+        }),
+      ),
+    );
+
+    const meta = [
+      input.volume ? `Volume ${input.volume}` : null,
+      input.issue ? `Issue ${input.issue}` : null,
+      input.pageRange ? `Pages ${input.pageRange}` : null,
+    ]
+      .filter(Boolean)
+      .join(" · ");
+
+    await tx.submissionEvent.create({
+      data: {
+        submissionId: submission.id,
+        actorId: input.adminId,
+        type: "EDITORIAL_DECISION",
+        message: meta
+          ? `Article published live to journal archives (${meta})`
+          : "Article published live to official journal archives.",
+        authorVisible: true,
+      },
+    });
+
+    return article;
   });
-
-  return article;
 }

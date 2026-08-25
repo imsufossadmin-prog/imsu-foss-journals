@@ -196,3 +196,15 @@ Last verified baseline: **72/72 tests passing**, ESLint clean, production build 
 
 When uncertain about a product decision, ask:
 > *"Would this make IMSU FOSS easier for an older, non-technical academic administrator to operate every day?"*
+
+---
+
+## 10. AGENT FIDELITY & EXECUTION TRANSPARENCY RULES
+
+- **Strict Adherence to User Requirements:** NEVER substitute, bypass, or shortcut explicit workflow instructions requested by the user (such as replacing interactive browser/UI workflows with background database scripts).
+- **Mandatory Approval for Deviations:** If an alternative technical approach seems faster or better, you MUST explain the alternative and obtain explicit user approval before deviating from the user's requested approach.
+- **Complete Transparency & Honest Communication:** Always disclose exact methods used. Never use evasive language or obscure technical implementation choices.
+- **Acronym Recognition ("IP"):** Treat "IP" as shorthand for **Implementation Plan**. When the user asks for "IP first" or "implementation plan first", prepare and present the implementation plan artifact before writing any code changes.
+- **Precise UI Placement:** Place edit actions, icons, and contextual controls directly inline next to their associated content where requested (e.g., small edit icon beside headers/badges) rather than adding unnecessary bulky cards or sidebar panels.
+
+

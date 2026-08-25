@@ -8,8 +8,10 @@ import {
 } from "@/app/admin/[journalSlug]/requests/actions";
 import {
   AdminStateAction,
+  InlineEditableTrackingId,
   RequestChatBox,
   RequestStatus,
+  TrackingIdForm,
   type ConversationMessageDTO,
 } from "@/components/requests/request-components";
 import { requireJournalWorkspace } from "@/lib/auth/workspace-context";
@@ -74,9 +76,10 @@ export default async function AdminRequestPage({
           Author: {request.author.displayName}
         </p>
         {request.submission?.trackingNumber ? (
-          <p className="mt-2 font-mono text-xs font-semibold text-[color:var(--color-accent)] sm:text-sm">
-            Tracking ID: {request.submission.trackingNumber}
-          </p>
+          <InlineEditableTrackingId
+            trackingId={request.submission.trackingNumber}
+            action={assignTrackingAction.bind(null, journal.slug, request.id)}
+          />
         ) : null}
       </header>
       <div className="mt-6 grid min-w-0 gap-6 lg:grid-cols-[minmax(0,1fr)_20rem]">
@@ -138,13 +141,14 @@ export default async function AdminRequestPage({
                 </a>
               ) : null}
               <div className="mt-5">
-                <AdminStateAction
+                <TrackingIdForm
                   action={assignTrackingAction.bind(
                     null,
                     journal.slug,
                     request.id,
                   )}
-                  label="Assign tracking ID"
+                  currentTrackingId={request.submission.trackingNumber}
+                  isEditing={false}
                 />
               </div>
             </div>
@@ -152,9 +156,10 @@ export default async function AdminRequestPage({
           {request.submission ? (
             <Link
               href={`/admin/${journal.slug}/submissions/${request.submission.id}`}
-              className="button-secondary inline-flex"
+              prefetch={true}
+              className="button-secondary inline-flex items-center justify-center gap-2"
             >
-              Open manuscript record
+              Open manuscript record →
             </Link>
           ) : null}
         </aside>

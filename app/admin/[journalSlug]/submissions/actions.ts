@@ -46,11 +46,8 @@ function errorState(error: unknown): ActionState {
 }
 
 function refresh(journalSlug: string, submissionId: string) {
-  revalidatePath(`/admin/${journalSlug}`);
   revalidatePath(`/admin/${journalSlug}/submissions/${submissionId}`);
   revalidatePath(`/author/submissions/${submissionId}`);
-  revalidatePath("/admin/submissions");
-  revalidatePath("/author/submissions");
 }
 
 export async function markRevisionReceivedAction(
@@ -314,6 +311,7 @@ export async function publishArticleAction(
         .upload(path, bytes, {
           contentType: coverFile.type,
           upsert: true,
+          duplex: "half",
         });
       if (!error) {
         const { data } = supabase.storage
@@ -336,8 +334,6 @@ export async function publishArticleAction(
       coverImageUrl,
     });
     refresh(journalSlug, submissionId);
-    revalidatePath("/");
-    revalidatePath("/current-issue");
     revalidatePath("/archives");
     return { message: "Article published live to the journal!" } as ActionState;
   } catch (error) {

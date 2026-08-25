@@ -256,6 +256,7 @@ export function MessageComposer({
   viewerId = "",
   receipt = false,
   onOptimisticAdd,
+  onOptimisticUpdate,
 }: {
   action: (
     state: RequestActionState,
@@ -265,6 +266,10 @@ export function MessageComposer({
   viewerId?: string;
   receipt?: boolean;
   onOptimisticAdd?: (msg: ConversationMessageDTO) => void;
+  onOptimisticUpdate?: (
+    id: string,
+    update: Partial<ConversationMessageDTO>,
+  ) => void;
 }) {
   const router = useRouter();
   const [text, setText] = useState("");
@@ -290,8 +295,9 @@ export function MessageComposer({
     const messageText = text.trim();
     setText("");
 
+    const tempId = `temp-${Date.now()}`;
     const tempMsg: ConversationMessageDTO = {
-      id: `temp-${Date.now()}`,
+      id: tempId,
       kind: "USER",
       body: messageText,
       createdAt: new Date().toISOString(),
@@ -309,7 +315,9 @@ export function MessageComposer({
       if (res?.error) {
         setError(res.error);
         setText(messageText);
+        onOptimisticUpdate?.(tempId, { status: "sending" });
       } else {
+        onOptimisticUpdate?.(tempId, { status: "delivered" });
         router.refresh();
       }
     });
@@ -318,8 +326,9 @@ export function MessageComposer({
   const handleFileUpload = (file: File) => {
     if (!requestId) return;
 
+    const tempId = `temp-file-${Date.now()}`;
     const tempFileMsg: ConversationMessageDTO = {
-      id: `temp-file-${Date.now()}`,
+      id: tempId,
       kind: "USER",
       body: null,
       createdAt: new Date().toISOString(),
@@ -344,8 +353,14 @@ export function MessageComposer({
     xhr.open("POST", `/api/requests/${requestId}/attachments`);
     xhr.addEventListener("load", () => {
       if (xhr.status < 200 || xhr.status >= 300) {
-        setError("File upload failed.");
+        try {
+          const json = JSON.parse(xhr.responseText);
+          setError(json.error || "File upload failed.");
+        } catch {
+          setError("File upload failed.");
+        }
       } else {
+        onOptimisticUpdate?.(tempId, { status: "delivered" });
         startTransition(() => router.refresh());
       }
     });
@@ -540,10 +555,19 @@ export function RequestChatBox({
       if (document.visibilityState === "visible") {
         router.refresh();
       }
-    }, 4000);
+    }, 1500);
 
     return () => clearInterval(interval);
   }, [router]);
+
+  const handleOptimisticUpdate = (
+    id: string,
+    update: Partial<ConversationMessageDTO>,
+  ) => {
+    setOptimisticMessages((prev) =>
+      prev.map((msg) => (msg.id === id ? { ...msg, ...update } : msg)),
+    );
+  };
 
   return (
     <div>
@@ -561,6 +585,7 @@ export function RequestChatBox({
           onOptimisticAdd={(msg) =>
             setOptimisticMessages((prev) => [...prev, msg])
           }
+          onOptimisticUpdate={handleOptimisticUpdate}
         />
       </div>
     </div>
@@ -579,24 +604,208 @@ export function AdminStateAction({
   label: string;
   variant?: "primary" | "secondary";
 }) {
-  const [state, formAction] = useActionState(action, initialState);
+  const router = useRouter();
+  const [isPending, startTransition] = useTransition();
+  const [error, setError] = useState<string | null>(null);
+
+  const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    setError(null);
+    const formData = new FormData(e.currentTarget);
+    startTransition(async () => {
+      const res = await action(initialState, formData);
+      if (res?.error) {
+        setError(res.error);
+      } else {
+        router.refresh();
+      }
+    });
+  };
+
   return (
-    <form action={formAction}>
-      <PendingButton
+    <form onSubmit={handleSubmit}>
+      <button
+        type="submit"
+        disabled={isPending}
         className={
           variant === "primary"
             ? "button-primary w-full"
             : "button-secondary w-full"
         }
       >
-        {label}
+        {isPending ? "Processing…" : label}
+      </button>
+      {error ? (
+        <p className="mt-2 text-xs text-[color:var(--color-danger)]">{error}</p>
+      ) : null}
+    </form>
+  );
+}
+
+export function TrackingIdForm({
+  action,
+  currentTrackingId,
+  isEditing = false,
+}: {
+  action: (
+    state: RequestActionState,
+    formData: FormData,
+  ) => Promise<RequestActionState>;
+  currentTrackingId?: string | null;
+  isEditing?: boolean;
+}) {
+  const router = useRouter();
+  const [state, formAction] = useActionState(action, initialState);
+
+  useEffect(() => {
+    if (state.message) {
+      router.refresh();
+    }
+  }, [state.message, router]);
+
+  return (
+    <form action={formAction} className="space-y-3">
+      <div>
+        <label
+          htmlFor="trackingId"
+          className="block text-xs font-semibold text-[color:var(--color-muted)]"
+        >
+          {isEditing ? "Custom Tracking ID" : "Assign Tracking ID"}
+        </label>
+        <input
+          key={currentTrackingId ?? "empty"}
+          id="trackingId"
+          name="trackingId"
+          type="text"
+          defaultValue={currentTrackingId ?? ""}
+          placeholder="e.g. IMSU-AJSBS-2026-001"
+          className="mt-1 block w-full rounded-md border border-[color:var(--color-border)] bg-[color:var(--color-surface)] px-3 py-2 font-mono text-xs text-[color:var(--color-foreground)] placeholder:text-[color:var(--color-muted)] focus:border-[color:var(--color-accent)] focus:outline-none"
+        />
+        <p className="mt-1 text-[11px] text-[color:var(--color-muted)]">
+          {isEditing
+            ? "Changing this will update the tracking ID for the author and internal records."
+            : "Leave empty to auto-generate, or enter a custom identifier."}
+        </p>
+      </div>
+
+      <PendingButton
+        className="button-primary w-full"
+        pendingLabel={isEditing ? "Updating…" : "Assigning…"}
+      >
+        {isEditing ? "Update Tracking ID" : "Assign Tracking ID"}
       </PendingButton>
+
       {state.error ? (
-        <p className="mt-2 text-xs text-[color:var(--color-danger)]">
+        <p className="text-xs text-[color:var(--color-danger)]">
           {state.error}
         </p>
       ) : null}
+      {state.message && !state.error ? (
+        <p className="text-xs text-[color:var(--color-accent)]">
+          {state.message}
+        </p>
+      ) : null}
     </form>
+  );
+}
+
+export function InlineEditableTrackingId({
+  action,
+  trackingId,
+}: {
+  action: (
+    state: RequestActionState,
+    formData: FormData,
+  ) => Promise<RequestActionState>;
+  trackingId: string;
+}) {
+  const router = useRouter();
+  const [isEditing, setIsEditing] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [isPending, startTransition] = useTransition();
+
+  const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    setError(null);
+    const formData = new FormData(e.currentTarget);
+    startTransition(async () => {
+      const res = await action(initialState, formData);
+      if (res?.error) {
+        setError(res.error);
+      } else {
+        setIsEditing(false);
+        router.refresh();
+      }
+    });
+  };
+
+  if (!isEditing) {
+    return (
+      <div className="mt-2 flex items-center gap-2">
+        <p className="font-mono text-xs font-semibold text-[color:var(--color-accent)] sm:text-sm">
+          Tracking ID: {trackingId}
+        </p>
+        <button
+          type="button"
+          onClick={() => {
+            setError(null);
+            setIsEditing(true);
+          }}
+          className="inline-flex items-center justify-center rounded p-1 text-[color:var(--color-muted)] transition-colors hover:bg-[color:var(--color-surface)] hover:text-[color:var(--color-foreground)]"
+          title="Edit tracking ID"
+          aria-label="Edit tracking ID"
+        >
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            viewBox="0 0 20 20"
+            fill="currentColor"
+            className="h-3.5 w-3.5"
+          >
+            <path d="m5.433 13.917 1.262-3.155A4 4 0 0 1 7.58 9.42l6.92-6.918a2.121 2.121 0 0 1 3 3l-6.92 6.918c-.383.383-.84.685-1.343.886l-3.154 1.262a.5.5 0 0 1-.65-.65Z" />
+            <path d="M3.5 5.75c0-.69.56-1.25 1.25-1.25H10A.75.75 0 0 0 10 3H4.75A2.75 2.75 0 0 0 2 5.75v9.5A2.75 2.75 0 0 0 4.75 18h9.5A2.75 2.75 0 0 0 17 15.25V10a.75.75 0 0 0-1.5 0v5.25c0 .69-.56 1.25-1.25 1.25h-9.5c-.69 0-1.25-.56-1.25-1.25v-9.5Z" />
+          </svg>
+        </button>
+      </div>
+    );
+  }
+
+  return (
+    <div className="mt-2 max-w-md rounded-md border border-[color:var(--color-border)] bg-[color:var(--color-surface)] p-2.5">
+      <form onSubmit={handleSubmit} className="space-y-2">
+        <div className="flex items-center gap-2">
+          <input
+            id="trackingId"
+            name="trackingId"
+            type="text"
+            defaultValue={trackingId}
+            placeholder="e.g. IMSU-2026-002"
+            autoFocus
+            disabled={isPending}
+            className="block flex-1 rounded border border-[color:var(--color-border)] bg-[color:var(--color-surface-raised)] px-2.5 py-1 font-mono text-xs text-[color:var(--color-foreground)] placeholder:text-[color:var(--color-muted)] focus:border-[color:var(--color-accent)] focus:outline-none disabled:opacity-50"
+          />
+          <button
+            type="submit"
+            disabled={isPending}
+            className="button-primary px-2.5 py-1 text-xs"
+          >
+            {isPending ? "Saving…" : "Save"}
+          </button>
+          <button
+            type="button"
+            disabled={isPending}
+            onClick={() => setIsEditing(false)}
+            className="rounded border border-[color:var(--color-border)] bg-[color:var(--color-surface-raised)] px-2.5 py-1 text-xs text-[color:var(--color-muted)] hover:text-[color:var(--color-foreground)] disabled:opacity-50"
+          >
+            Cancel
+          </button>
+        </div>
+        {error ? (
+          <p className="text-[11px] text-[color:var(--color-danger)]">
+            {error}
+          </p>
+        ) : null}
+      </form>
+    </div>
   );
 }
 

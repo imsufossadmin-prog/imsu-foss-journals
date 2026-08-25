@@ -5,6 +5,7 @@ import type {
   JournalRole,
   SubmissionFileType,
 } from "@prisma/client";
+import { cache } from "react";
 import { redirect } from "next/navigation";
 
 import {
@@ -42,7 +43,7 @@ const applicationUserInclude = {
   },
 } as const;
 
-export async function getCurrentUser() {
+export const getCurrentUser = cache(async () => {
   try {
     const supabase = await createClient();
     const { data, error } = await supabase.auth.getClaims();
@@ -65,7 +66,7 @@ export async function getCurrentUser() {
     if (error instanceof SupabaseConfigurationError) return null;
     throw error;
   }
-}
+});
 
 export async function requireAuthenticatedUser() {
   const user = await getCurrentUser();

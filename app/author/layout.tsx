@@ -12,19 +12,14 @@ type AuthorLayoutProps = {
 export default async function AuthorLayout({ children }: AuthorLayoutProps) {
   const user = await requireApplicationArea("author");
   const workspaces = getAvailableWorkspaces(user);
-  const workspace =
-    workspaces.find((item) => item.area === "author") ??
-    (user.globalRoles.some(({ role }) => role === "SUPER_ADMIN")
-      ? {
-          id: "author:super-admin",
-          href: "/author",
-          area: "author" as const,
-          roleLabel: "Author workspace",
-          title: "Research workspace",
-          description: "Personal author workspace.",
-          journal: null,
-        }
-      : null);
+
+  // If user has staff responsibilities (Editor, Journal Admin, Super Admin), redirect them to their operational workspace
+  const operationalWorkspace = workspaces.find((w) => w.area !== "author");
+  if (operationalWorkspace) {
+    redirect(operationalWorkspace.href);
+  }
+
+  const workspace = workspaces.find((item) => item.area === "author");
 
   if (!workspace) redirect("/unauthorized?reason=workspace");
 

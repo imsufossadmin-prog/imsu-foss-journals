@@ -9,6 +9,13 @@ export default function GlobalError({
   error: Error & { digest?: string };
   reset: () => void;
 }) {
+  if (
+    error.digest?.startsWith("NEXT_REDIRECT") ||
+    error.message?.includes("NEXT_REDIRECT")
+  ) {
+    throw error;
+  }
+
   useEffect(() => {
     console.error(error);
   }, [error]);
