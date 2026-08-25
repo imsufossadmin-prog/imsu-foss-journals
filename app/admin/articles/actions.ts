@@ -107,44 +107,54 @@ export async function createDirectLegacyArticleAction(
 
   const supabase = createAdminClient();
 
-  // Upload manuscript PDF to Supabase Storage
-  const pdfBytes = await manuscriptPdf.arrayBuffer();
-  const pdfFileName = manuscriptPdf.name.replace(/[^a-zA-Z0-9.-]/g, "_");
-  const pdfPath = `published-legacy/${journalSlug}/${Date.now()}_${pdfFileName}`;
-
-  const { error: pdfUploadError } = await supabase.storage
-    .from("published-articles")
-    .upload(pdfPath, pdfBytes, {
-      contentType: manuscriptPdf.type || "application/pdf",
-      upsert: true,
-    });
-
-  if (pdfUploadError) {
-    return {
-      error: `Failed to upload manuscript PDF: ${pdfUploadError.message}`,
-    };
-  }
-
-  // Upload Cover Image if provided
+  let pdfPath = "";
   let coverImageUrl: string | null = null;
-  if (coverImageFile && coverImageFile.size > 0) {
-    const imgBytes = await coverImageFile.arrayBuffer();
-    const imgFileName = coverImageFile.name.replace(/[^a-zA-Z0-9.-]/g, "_");
-    const imgPath = `published-covers/${journalSlug}/${Date.now()}_${imgFileName}`;
 
-    const { error: imgError } = await supabase.storage
+  try {
+    // Upload manuscript PDF to Supabase Storage
+    const pdfArrayBuffer = await manuscriptPdf.arrayBuffer();
+    const pdfBuffer = Buffer.from(pdfArrayBuffer);
+    const pdfFileName = manuscriptPdf.name.replace(/[^a-zA-Z0-9.-]/g, "_");
+    pdfPath = `published-legacy/${journalSlug}/${Date.now()}_${pdfFileName}`;
+
+    const { error: pdfUploadError } = await supabase.storage
       .from("published-articles")
-      .upload(imgPath, imgBytes, {
-        contentType: coverImageFile.type || "image/jpeg",
+      .upload(pdfPath, pdfBuffer, {
+        contentType: manuscriptPdf.type || "application/pdf",
         upsert: true,
       });
 
-    if (!imgError) {
-      const { data: publicUrlData } = supabase.storage
-        .from("published-articles")
-        .getPublicUrl(imgPath);
-      coverImageUrl = publicUrlData.publicUrl;
+    if (pdfUploadError) {
+      return {
+        error: `Failed to upload manuscript PDF: ${pdfUploadError.message}`,
+      };
     }
+
+    // Upload Cover Image if provided
+    if (coverImageFile && coverImageFile.size > 0) {
+      const imgArrayBuffer = await coverImageFile.arrayBuffer();
+      const imgBuffer = Buffer.from(imgArrayBuffer);
+      const imgFileName = coverImageFile.name.replace(/[^a-zA-Z0-9.-]/g, "_");
+      const imgPath = `published-covers/${journalSlug}/${Date.now()}_${imgFileName}`;
+
+      const { error: imgError } = await supabase.storage
+        .from("published-articles")
+        .upload(imgPath, imgBuffer, {
+          contentType: coverImageFile.type || "image/jpeg",
+          upsert: true,
+        });
+
+      if (!imgError) {
+        const { data: publicUrlData } = supabase.storage
+          .from("published-articles")
+          .getPublicUrl(imgPath);
+        coverImageUrl = publicUrlData.publicUrl;
+      }
+    }
+  } catch (err: unknown) {
+    return {
+      error: `Storage upload error: ${err instanceof Error ? err.message : String(err)}`,
+    };
   }
 
   try {

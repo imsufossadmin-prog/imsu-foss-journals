@@ -34,10 +34,22 @@ export function AdminLegacyUploadForm({
         </div>
       ) : null}
 
+      {journals.length === 0 ? (
+        <div className="rounded-[var(--radius-md)] border border-amber-500/30 bg-amber-500/10 p-4 text-xs font-semibold text-amber-300">
+          No active journals found in database. Please ensure a journal is
+          seeded and active before uploading legacy manuscripts.
+        </div>
+      ) : null}
+
       <div className="grid gap-6 sm:grid-cols-2">
         <label className="text-xs font-semibold text-[color:var(--color-foreground)]">
           Target Journal / Department *
-          <select name="journalSlug" className="app-field mt-1.5" required>
+          <select
+            name="journalSlug"
+            className="app-field mt-1.5"
+            required
+            disabled={journals.length === 0}
+          >
             {journals.map((j) => (
               <option key={j.id} value={j.slug}>
                 {j.department.name} — {j.name}
