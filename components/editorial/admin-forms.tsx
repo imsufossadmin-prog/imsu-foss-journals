@@ -1,6 +1,5 @@
 "use client";
 
-import { useRouter } from "next/navigation";
 import { useActionState, useState, useTransition } from "react";
 import { useFormStatus } from "react-dom";
 
@@ -116,7 +115,6 @@ export function AssessmentAction({
   submissionId: string;
   kind: "begin" | "pass";
 }) {
-  const router = useRouter();
   const [isPending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
 
@@ -130,8 +128,6 @@ export function AssessmentAction({
       const res = await serverAction(journalSlug, submissionId, initialState);
       if (res?.error) {
         setError(res.error);
-      } else {
-        router.refresh();
       }
     });
   };

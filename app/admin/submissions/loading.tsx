@@ -1,3 +1,1 @@
-export default function AdminSubmissionsLoading() {
-  return null;
-}
+export { default } from "../loading";

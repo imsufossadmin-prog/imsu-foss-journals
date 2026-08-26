@@ -10,9 +10,15 @@ const adapter = new PrismaPg(pool);
 const prisma = new PrismaClient({ adapter });
 
 async function resetCleanSlate() {
-  console.log("===============================================================================");
-  console.log("RESETTING DATABASE TO CLEAN SLATE (0 Articles, 0 Requests, 0 Submissions)");
-  console.log("===============================================================================\n");
+  console.log(
+    "===============================================================================",
+  );
+  console.log(
+    "RESETTING DATABASE TO CLEAN SLATE (0 Articles, 0 Requests, 0 Submissions)",
+  );
+  console.log(
+    "===============================================================================\n",
+  );
 
   await prisma.$executeRawUnsafe(`
     DELETE FROM "EditorialDecision";
@@ -35,8 +41,12 @@ async function resetCleanSlate() {
     DELETE FROM "StoredFile";
   `);
 
-  console.log("✓ All submissions, requests, reviews, and published articles purged.");
-  console.log("✓ Verified: Database is now on a 100% CLEAN SLATE ready for live client demo!");
+  console.log(
+    "✓ All submissions, requests, reviews, and published articles purged.",
+  );
+  console.log(
+    "✓ Verified: Database is now on a 100% CLEAN SLATE ready for live client demo!",
+  );
 }
 
 resetCleanSlate()

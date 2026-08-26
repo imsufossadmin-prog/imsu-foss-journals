@@ -318,7 +318,6 @@ export function MessageComposer({
         onOptimisticUpdate?.(tempId, { status: "sending" });
       } else {
         onOptimisticUpdate?.(tempId, { status: "delivered" });
-        router.refresh();
       }
     });
   };
@@ -550,14 +549,52 @@ export function RequestChatBox({
     setOptimisticMessages([]);
   }
 
-  useEffect(() => {
-    const interval = setInterval(() => {
-      if (document.visibilityState === "visible") {
-        router.refresh();
-      }
-    }, 1500);
+  const [, startTransition] = useTransition();
+  const isPollingRef = useRef(false);
 
-    return () => clearInterval(interval);
+  useEffect(() => {
+    let timer: NodeJS.Timeout | null = null;
+
+    const poll = () => {
+      if (
+        typeof document === "undefined" ||
+        document.visibilityState !== "visible"
+      )
+        return;
+      if (isPollingRef.current) return;
+
+      isPollingRef.current = true;
+      startTransition(() => {
+        router.refresh();
+        isPollingRef.current = false;
+      });
+    };
+
+    const scheduleNext = () => {
+      if (timer) clearTimeout(timer);
+      timer = setTimeout(() => {
+        poll();
+        scheduleNext();
+      }, 4000);
+    };
+
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === "visible") {
+        poll();
+        scheduleNext();
+      } else if (timer) {
+        clearTimeout(timer);
+        timer = null;
+      }
+    };
+
+    scheduleNext();
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+
+    return () => {
+      if (timer) clearTimeout(timer);
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
+    };
   }, [router]);
 
   const handleOptimisticUpdate = (
@@ -604,7 +641,6 @@ export function AdminStateAction({
   label: string;
   variant?: "primary" | "secondary";
 }) {
-  const router = useRouter();
   const [isPending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
 
@@ -616,8 +652,6 @@ export function AdminStateAction({
       const res = await action(initialState, formData);
       if (res?.error) {
         setError(res.error);
-      } else {
-        router.refresh();
       }
     });
   };
@@ -654,14 +688,7 @@ export function TrackingIdForm({
   currentTrackingId?: string | null;
   isEditing?: boolean;
 }) {
-  const router = useRouter();
   const [state, formAction] = useActionState(action, initialState);
-
-  useEffect(() => {
-    if (state.message) {
-      router.refresh();
-    }
-  }, [state.message, router]);
 
   return (
     <form action={formAction} className="space-y-3">
@@ -719,7 +746,6 @@ export function InlineEditableTrackingId({
   ) => Promise<RequestActionState>;
   trackingId: string;
 }) {
-  const router = useRouter();
   const [isEditing, setIsEditing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
@@ -734,7 +760,6 @@ export function InlineEditableTrackingId({
         setError(res.error);
       } else {
         setIsEditing(false);
-        router.refresh();
       }
     });
   };
@@ -884,24 +909,18 @@ export function ManuscriptUpload({
     setProgress(10);
     setStatus("Uploading manuscript file…");
 
-    let currentProgress = 10;
-    const progressTimer = setInterval(() => {
-      currentProgress = Math.min(
-        currentProgress + Math.floor(Math.random() * 15 + 10),
-        92,
-      );
-      setProgress(currentProgress);
-    }, 180);
-
     const body = new FormData();
     body.set("file", file);
     body.set("type", "MANUSCRIPT");
     body.set("version", String(currentVersion));
     const xhr = new XMLHttpRequest();
     xhr.open("POST", `/api/author/submissions/${submissionId}/files`);
+    xhr.upload.addEventListener("progress", (event) => {
+      if (!event.lengthComputable) return;
+      setProgress(Math.round((event.loaded / event.total) * 100));
+    });
 
     xhr.addEventListener("load", () => {
-      clearInterval(progressTimer);
       setProgress(100);
       let response: { error?: string; fileName?: string; version?: number } =
         {};
@@ -922,7 +941,6 @@ export function ManuscriptUpload({
     });
 
     xhr.addEventListener("error", () => {
-      clearInterval(progressTimer);
       setUploading(false);
       setStatus("The network interrupted the upload. Try again.");
     });

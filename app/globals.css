@@ -29,27 +29,27 @@
 }
 
 html[data-theme="light"] {
-  --background: #f7f7f5;
-  --app-background: #f7f7f5;
-  --foreground: #121814;
+  --background: #fbfbf9;
+  --app-background: #fbfbf9;
+  --foreground: #090e0c;
   --surface: #ffffff;
   --surface-raised: #ffffff;
   --surface-strong: #f0f4f1;
-  --muted: #64746c;
-  --subtle: #8ea89a;
-  --border: #e2e8e4;
-  --border-strong: #c2d0c7;
-  --accent: #107a4c;
-  --accent-secondary: #0d633e;
-  --accent-soft: rgba(16, 122, 76, 0.1);
-  --focus: #107a4c;
+  --muted: #2d3b34;
+  --subtle: #4b5e54;
+  --border: #d7e0da;
+  --border-strong: #aabeb2;
+  --accent: #0b6b41;
+  --accent-secondary: #085231;
+  --accent-soft: rgba(11, 107, 65, 0.1);
+  --focus: #0b6b41;
   --danger: #dc2626;
   --danger-border: #fca5a5;
   --danger-surface: #fef2f2;
-  --accent-gold: #d97706;
-  --page-glow: rgba(16, 122, 76, 0.04);
+  --accent-gold: #b45309;
+  --page-glow: rgba(11, 107, 65, 0.05);
   --shadow-menu: 0 10px 30px rgb(0 0 0 / 0.08);
-  --shadow-card: 0 1px 3px rgba(0, 0, 0, 0.05), 0 1px 2px rgba(0, 0, 0, 0.06);
+  --shadow-card: 0 2px 8px rgba(0, 0, 0, 0.06), 0 1px 3px rgba(0, 0, 0, 0.04);
 }
 
 @theme inline {

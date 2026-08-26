@@ -1,3 +1,1 @@
-export default function AdminRequestsLoading() {
-  return null;
-}
+export { default } from "../loading";

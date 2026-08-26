@@ -1,6 +1,7 @@
 "use client";
 
 import { useRouter, useSearchParams } from "next/navigation";
+import { useTransition } from "react";
 
 export function SubmissionsFilterBar({
   journals,
@@ -15,6 +16,7 @@ export function SubmissionsFilterBar({
 }) {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const [isPending, startTransition] = useTransition();
 
   function updateFilter(key: "department" | "status", value: string) {
     const params = new URLSearchParams(searchParams.toString());
@@ -23,11 +25,16 @@ export function SubmissionsFilterBar({
     } else {
       params.set(key, value);
     }
-    router.push(`/admin/submissions?${params.toString()}`);
+    startTransition(() => {
+      router.push(`/admin/submissions?${params.toString()}`);
+    });
   }
 
   return (
-    <div className="flex flex-wrap items-center gap-4 rounded-[var(--radius-lg)] bg-[color:var(--color-surface-raised)] p-4">
+    <div
+      aria-busy={isPending}
+      className="flex flex-wrap items-center gap-4 rounded-[var(--radius-lg)] bg-[color:var(--color-surface-raised)] p-4"
+    >
       <div className="flex items-center gap-2">
         <label
           htmlFor="department-filter"
@@ -37,6 +44,7 @@ export function SubmissionsFilterBar({
         </label>
         <select
           id="department-filter"
+          disabled={isPending}
           value={selectedDepartment}
           onChange={(e) => updateFilter("department", e.target.value)}
           className="app-field py-1.5 pr-8 text-xs font-semibold"
@@ -59,6 +67,7 @@ export function SubmissionsFilterBar({
         </label>
         <select
           id="status-filter"
+          disabled={isPending}
           value={selectedStatus}
           onChange={(e) => updateFilter("status", e.target.value)}
           className="app-field py-1.5 pr-8 text-xs font-semibold"
@@ -70,6 +79,12 @@ export function SubmissionsFilterBar({
           ))}
         </select>
       </div>
+      <span
+        aria-live="polite"
+        className="min-w-16 text-xs font-semibold text-[color:var(--color-accent)]"
+      >
+        {isPending ? "Updating…" : null}
+      </span>
     </div>
   );
 }

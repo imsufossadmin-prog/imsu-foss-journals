@@ -140,45 +140,69 @@ export async function publishDirectLegacyArticle(
   return article;
 }
 
-export async function unpublishArticle(articleId: string) {
-  return prisma.article.update({
-    where: { id: articleId },
+function articleScope(articleId: string, journalIds: string[] | null) {
+  return {
+    id: articleId,
+    ...(journalIds
+      ? { issue: { volume: { journalId: { in: journalIds } } } }
+      : {}),
+  };
+}
+
+export async function unpublishArticle(
+  articleId: string,
+  journalIds: string[] | null,
+) {
+  return prisma.article.updateMany({
+    where: articleScope(articleId, journalIds),
     data: { isPublished: false },
   });
 }
 
-export async function publishArticle(articleId: string) {
-  return prisma.article.update({
-    where: { id: articleId },
+export async function publishArticle(
+  articleId: string,
+  journalIds: string[] | null,
+) {
+  return prisma.article.updateMany({
+    where: articleScope(articleId, journalIds),
     data: { isPublished: true, publishedAt: new Date() },
   });
 }
 
-export async function deleteArticle(articleId: string) {
-  const article = await prisma.article.findUnique({
-    where: { id: articleId },
+export async function deleteArticle(
+  articleId: string,
+  journalIds: string[] | null,
+) {
+  const article = await prisma.article.findFirst({
+    where: articleScope(articleId, journalIds),
     include: {
       files: { include: { storedFile: true } },
     },
   });
 
-  if (article && article.files.length > 0) {
+  if (!article) throw new Error("Article unavailable.");
+
+  if (article.files.length > 0) {
     const supabase = createAdminClient();
-    for (const file of article.files) {
-      if (file.storedFile) {
-        await supabase.storage
-          .from(file.storedFile.bucket)
-          .remove([file.storedFile.objectPath]);
-        await prisma.storedFile
-          .delete({
-            where: { id: file.storedFile.id },
-          })
-          .catch(() => null);
+    const byBucket = new Map<string, Array<{ objectPath: string }>>();
+    for (const { storedFile } of article.files) {
+      const files = byBucket.get(storedFile.bucket) ?? [];
+      files.push({ objectPath: storedFile.objectPath });
+      byBucket.set(storedFile.bucket, files);
+    }
+    for (const [bucket, files] of byBucket) {
+      const { error } = await supabase.storage
+        .from(bucket)
+        .remove(files.map(({ objectPath }) => objectPath));
+      if (error) {
+        throw new Error("Article files could not be removed.");
       }
     }
   }
 
-  return prisma.article.delete({
-    where: { id: articleId },
-  });
+  const storedFileIds = article.files.map(({ storedFileId }) => storedFileId);
+  return prisma.$transaction([
+    prisma.article.delete({ where: { id: article.id } }),
+    prisma.storedFile.deleteMany({ where: { id: { in: storedFileIds } } }),
+  ]);
 }

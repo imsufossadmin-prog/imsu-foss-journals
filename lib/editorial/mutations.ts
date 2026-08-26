@@ -44,29 +44,53 @@ export async function beginInitialAssessment(input: {
   journalId: string;
   submissionId: string;
 }) {
-  await assertJournalAdmin(input.adminId, input.journalId);
-  const updated = await prisma.submission.updateMany({
-    where: {
-      id: input.submissionId,
-      journalId: input.journalId,
-      trackingNumber: { not: null },
-      status: { in: ["SUBMITTED", "REVISED"] },
-    },
-    data: { status: "SCREENING", version: { increment: 1 } },
-  });
-  if (updated.count !== 1) {
+  const [, submission] = await Promise.all([
+    assertJournalAdmin(input.adminId, input.journalId),
+    prisma.submission.findFirst({
+      where: {
+        id: input.submissionId,
+        journalId: input.journalId,
+        trackingNumber: { not: null },
+        status: { in: ["SUBMITTED", "REVISED"] },
+      },
+      select: { id: true },
+    }),
+  ]);
+  if (!submission) {
     throw new EditorialMutationError(
       "Assign a tracking ID before starting editorial assessment.",
     );
   }
-  await prisma.submissionEvent.create({
-    data: {
-      submissionId: input.submissionId,
-      actorId: input.adminId,
-      type: "INITIAL_ASSESSMENT_STARTED",
-      authorVisible: true,
-    },
-  });
+  try {
+    await prisma.submission.update({
+      where: {
+        id: submission.id,
+        journalId: input.journalId,
+        status: { in: ["SUBMITTED", "REVISED"] },
+      },
+      data: {
+        status: "SCREENING",
+        version: { increment: 1 },
+        events: {
+          create: {
+            actorId: input.adminId,
+            type: "INITIAL_ASSESSMENT_STARTED",
+            authorVisible: true,
+          },
+        },
+      },
+    });
+  } catch (error) {
+    if (
+      error instanceof Prisma.PrismaClientKnownRequestError &&
+      error.code === "P2025"
+    ) {
+      throw new EditorialMutationError(
+        "Assign a tracking ID before starting editorial assessment.",
+      );
+    }
+    throw error;
+  }
 }
 
 export async function returnForCorrection(input: {
@@ -863,10 +887,31 @@ export async function publishArticle(input: {
     throw new EditorialMutationError("Manuscript not found for publication.");
   }
 
+  const publicationMeta = [
+    input.volume ? `Volume ${input.volume}` : null,
+    input.issue ? `Issue ${input.issue}` : null,
+    input.pageRange ? `Pages ${input.pageRange}` : null,
+  ]
+    .filter(Boolean)
+    .join(" · ");
+
   return prisma.$transaction(async (tx) => {
     await tx.submission.update({
       where: { id: submission.id },
-      data: { status: "ACCEPTED", version: { increment: 1 } },
+      data: {
+        status: "ACCEPTED",
+        version: { increment: 1 },
+        events: {
+          create: {
+            actorId: input.adminId,
+            type: "EDITORIAL_DECISION",
+            message: publicationMeta
+              ? `Article published live to journal archives (${publicationMeta})`
+              : "Article published live to official journal archives.",
+            authorVisible: true,
+          },
+        },
+      },
     });
 
     const volNum = parseInt(input.volume || "1", 10) || 1;
@@ -914,6 +959,14 @@ export async function publishArticle(input: {
         pageEnd: input.pageRange?.split("-")[1]?.trim() || null,
         isPublished: true,
         publishedAt: new Date(),
+        authors: {
+          deleteMany: {},
+          create: submission.authors.map((author) => ({
+            fullName: author.fullName,
+            email: author.email,
+            position: author.position,
+          })),
+        },
       },
       create: {
         issueId: issue.id,
@@ -927,49 +980,13 @@ export async function publishArticle(input: {
         pageEnd: input.pageRange?.split("-")[1]?.trim() || null,
         isPublished: true,
         publishedAt: new Date(),
-      },
-    });
-
-    await Promise.all(
-      submission.authors.map((author) =>
-        tx.articleAuthor.upsert({
-          where: {
-            articleId_position: {
-              articleId: article.id,
-              position: author.position,
-            },
-          },
-          update: {
-            fullName: author.fullName,
-            email: author.email,
-          },
-          create: {
-            articleId: article.id,
+        authors: {
+          create: submission.authors.map((author) => ({
             fullName: author.fullName,
             email: author.email,
             position: author.position,
-          },
-        }),
-      ),
-    );
-
-    const meta = [
-      input.volume ? `Volume ${input.volume}` : null,
-      input.issue ? `Issue ${input.issue}` : null,
-      input.pageRange ? `Pages ${input.pageRange}` : null,
-    ]
-      .filter(Boolean)
-      .join(" · ");
-
-    await tx.submissionEvent.create({
-      data: {
-        submissionId: submission.id,
-        actorId: input.adminId,
-        type: "EDITORIAL_DECISION",
-        message: meta
-          ? `Article published live to journal archives (${meta})`
-          : "Article published live to official journal archives.",
-        authorVisible: true,
+          })),
+        },
       },
     });
 

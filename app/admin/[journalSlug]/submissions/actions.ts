@@ -81,11 +81,15 @@ export async function assignTrackingIdAction(
   formData: FormData,
 ): Promise<ActionState> {
   void _previous;
-  const { user } = await requireJournalWorkspace("JOURNAL_ADMIN", journalSlug);
+  const { user, journal } = await requireJournalWorkspace(
+    "JOURNAL_ADMIN",
+    journalSlug,
+  );
   const rawTrackingId = String(formData.get("trackingId") ?? "");
   try {
     await assignTrackingIdBySubmissionId({
       actorId: user.id,
+      journalId: journal.id,
       submissionId,
       trackingId: rawTrackingId,
     });
@@ -276,9 +280,6 @@ export async function skipToPublishingAction(
       submissionId,
     });
     refresh(journalSlug, submissionId);
-    revalidatePath("/");
-    revalidatePath("/current-issue");
-    revalidatePath("/archives");
     return { message: "Approved for Publishing & Production." } as ActionState;
   } catch (error) {
     return errorState(error);
@@ -296,6 +297,7 @@ export async function publishArticleAction(
     "JOURNAL_ADMIN",
     journalSlug,
   );
+  let coverObjectPath: string | null = null;
   try {
     let coverImageUrl: string | undefined = undefined;
     const coverFile = formData.get("coverImageFile");
@@ -315,6 +317,7 @@ export async function publishArticleAction(
           duplex: "half",
         });
       if (!error) {
+        coverObjectPath = path;
         const { data } = supabase.storage
           .from(storageBuckets.publishedArticleFiles)
           .getPublicUrl(path);
@@ -335,12 +338,21 @@ export async function publishArticleAction(
       coverImageUrl,
     });
     refresh(journalSlug, submissionId);
+    revalidatePath("/");
+    revalidatePath("/current-issue");
     revalidatePath("/archives");
     revalidatePath("/admin/articles");
-    redirect(
-      `/admin/${journalSlug}/submissions/${submissionId}?published=true`,
-    );
   } catch (error) {
+    if (coverObjectPath) {
+      const supabase = createAdminClient();
+      const { error: cleanupError } = await supabase.storage
+        .from(storageBuckets.publishedArticleFiles)
+        .remove([coverObjectPath]);
+      if (cleanupError) {
+        console.error("Published cover cleanup failed:", cleanupError.message);
+      }
+    }
     return errorState(error);
   }
+  redirect(`/admin/${journalSlug}/submissions/${submissionId}?published=true`);
 }

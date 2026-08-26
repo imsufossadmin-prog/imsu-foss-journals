@@ -19,6 +19,24 @@ export type AdminArticleFormState = {
   success?: string;
 };
 
+function manageableJournalIds(
+  user: Awaited<ReturnType<typeof requireApplicationArea>>,
+) {
+  if (isSuperAdmin(user)) return null;
+  return user.journalRoles
+    .filter(
+      ({ role, journal }) =>
+        role === "JOURNAL_ADMIN" &&
+        journal.isActive &&
+        journal.department.isActive,
+    )
+    .map(({ journalId }) => journalId);
+}
+
+function assertChanged(result: { count: number }) {
+  if (result.count !== 1) throw new Error("Article unavailable.");
+}
+
 export async function createDirectLegacyArticleAction(
   _prevState: AdminArticleFormState,
   formData: FormData,
@@ -108,6 +126,7 @@ export async function createDirectLegacyArticleAction(
   const supabase = createAdminClient();
 
   let pdfPath = "";
+  let coverImagePath = "";
   let coverImageUrl: string | null = null;
 
   try {
@@ -147,6 +166,7 @@ export async function createDirectLegacyArticleAction(
         });
 
       if (!imgError) {
+        coverImagePath = imgPath;
         const { data: publicUrlData } = supabase.storage
           .from("published-articles")
           .getPublicUrl(imgPath);
@@ -183,6 +203,13 @@ export async function createDirectLegacyArticleAction(
       authors,
     });
   } catch (err: unknown) {
+    const uploadedPaths = [pdfPath, coverImagePath].filter(Boolean);
+    if (uploadedPaths.length > 0) {
+      const { error } = await supabase.storage
+        .from("published-articles")
+        .remove(uploadedPaths);
+      if (error) console.error("Legacy upload cleanup failed:", error.message);
+    }
     return {
       error:
         err instanceof Error
@@ -192,6 +219,8 @@ export async function createDirectLegacyArticleAction(
   }
 
   revalidatePath("/admin/articles");
+  revalidatePath("/");
+  revalidatePath("/current-issue");
   revalidatePath("/archives");
 
   redirect("/admin/articles?success=published");
@@ -201,19 +230,24 @@ export async function toggleArticlePublicationAction(
   articleId: string,
   currentlyPublished: boolean,
 ) {
-  await requireApplicationArea("admin");
+  const user = await requireApplicationArea("admin");
+  const journalIds = manageableJournalIds(user);
   if (currentlyPublished) {
-    await unpublishArticle(articleId);
+    assertChanged(await unpublishArticle(articleId, journalIds));
   } else {
-    await setArticlePublishedStatus(articleId);
+    assertChanged(await setArticlePublishedStatus(articleId, journalIds));
   }
   revalidatePath("/admin/articles");
+  revalidatePath("/");
+  revalidatePath("/current-issue");
   revalidatePath("/archives");
 }
 
 export async function deleteArticleAction(articleId: string) {
-  await requireApplicationArea("admin");
-  await deleteArticle(articleId);
+  const user = await requireApplicationArea("admin");
+  await deleteArticle(articleId, manageableJournalIds(user));
   revalidatePath("/admin/articles");
+  revalidatePath("/");
+  revalidatePath("/current-issue");
   revalidatePath("/archives");
 }

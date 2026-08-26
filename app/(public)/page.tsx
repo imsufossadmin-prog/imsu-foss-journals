@@ -4,7 +4,6 @@ import { DisciplinesMarquee } from "@/components/disciplines-marquee";
 import { PublicSearchBar } from "@/components/public-search-bar";
 import { Container } from "@/components/ui/container";
 import { publicSubmissionEntryPath } from "@/lib/auth/submission-entry";
-import { siteConfig } from "@/lib/config/site";
 import { prisma } from "@/lib/db/prisma";
 
 export default async function Home() {
@@ -79,52 +78,111 @@ export default async function Home() {
   return (
     <div className="space-y-20 pb-24">
       {/* ── CHAPTER 1: THE STATEMENT & DISCOVERY HERO ── */}
-      <section className="relative pt-12 pb-16 sm:pt-16 sm:pb-20">
+      <section className="relative overflow-hidden pt-8 pb-14 sm:pt-14 sm:pb-20">
+        {/* Subtle background ambient gradient */}
+        <div
+          aria-hidden="true"
+          className="pointer-events-none absolute top-0 right-1/4 -z-10 size-96 rounded-full bg-[color:var(--color-accent)] opacity-[0.07] blur-3xl"
+        />
+
         <Container>
-          <div className="mx-auto max-w-3xl text-center">
-            {/* Headline */}
-            <h1 className="font-serif text-2xl leading-[1.2] font-semibold tracking-[-0.03em] text-[color:var(--color-foreground)] sm:text-3xl lg:text-4xl">
-              Advancing Social &amp; Behavioural Research in{" "}
-              <span className="text-[color:var(--color-accent)]">
-                Africa and Beyond
-              </span>
-            </h1>
+          <div className="grid items-center gap-10 lg:grid-cols-[1.15fr_0.85fr] lg:gap-14">
+            {/* Left: Statement & Direct Actions */}
+            <div className="space-y-6 text-left">
+              {/* Institutional badge */}
+              <div className="inline-flex items-center gap-2 rounded-full border border-[color:var(--color-border-strong)] bg-[color:var(--color-surface)] px-3.5 py-1 text-xs font-semibold tracking-wider text-[color:var(--color-accent)] uppercase shadow-xs">
+                <span className="size-1.5 animate-pulse rounded-full bg-[color:var(--color-accent)]" />
+                <span>IMSU Faculty of Social Sciences</span>
+              </div>
 
-            {/* Subtitle */}
-            <p className="mt-5 font-serif text-base leading-relaxed text-[color:var(--color-muted)] sm:text-lg">
-              The official open-access publishing portal of IMSU Faculty of
-              Social Sciences. Home to the African Journal of Social and
-              Behavioural Sciences (AJSBS) and peer-reviewed faculty journals
-              since 2009.
-            </p>
+              {/* Main Headline */}
+              <h1 className="font-serif text-3xl leading-[1.15] font-semibold tracking-[-0.035em] text-[color:var(--color-foreground)] sm:text-4xl lg:text-5xl">
+                Advancing Social &amp; Behavioural Research in{" "}
+                <span className="text-[color:var(--color-accent)]">
+                  Africa and Beyond
+                </span>
+              </h1>
 
-            {/* Instant Search Bar */}
-            <div className="mt-8 flex justify-center">
-              <PublicSearchBar />
+              {/* Subtitle */}
+              <p className="font-serif text-base leading-relaxed text-[color:var(--color-muted)] sm:text-lg">
+                The official peer-reviewed open-access publishing portal of Imo
+                State University. Home to the African Journal of Social and
+                Behavioural Sciences (AJSBS) and departmental journals across 7
+                social disciplines.
+              </p>
+
+              {/* Search & Actions */}
+              <div className="space-y-4 pt-2">
+                <div className="max-w-xl">
+                  <PublicSearchBar />
+                </div>
+
+                <div className="flex flex-wrap items-center gap-3 pt-1">
+                  <Link
+                    href={publicSubmissionEntryPath}
+                    className="button-primary inline-flex items-center gap-2 px-5 py-2.5 text-xs font-semibold shadow-md transition-all hover:scale-[1.02]"
+                  >
+                    <span>Submit Manuscript</span>
+                    <span aria-hidden="true">→</span>
+                  </Link>
+                  <Link
+                    href="/archives"
+                    className="button-secondary inline-flex items-center gap-2 px-5 py-2.5 text-xs font-semibold"
+                  >
+                    <span>
+                      Browse Catalog ({publishedArticles.length} Papers)
+                    </span>
+                  </Link>
+                </div>
+              </div>
             </div>
 
-            {/* Dual Actions */}
-            <div className="mt-8 flex flex-wrap items-center justify-center gap-4">
-              <Link
-                href={publicSubmissionEntryPath}
-                className="button-primary inline-flex items-center gap-2.5 px-6 py-3 text-sm font-semibold shadow-md transition-transform hover:scale-[1.02]"
-              >
-                <span>Submit Manuscript</span>
-                <span aria-hidden="true">→</span>
-              </Link>
-              <Link
-                href="/archives"
-                className="button-secondary inline-flex items-center gap-2 px-6 py-3 text-sm font-semibold"
-              >
-                <span>Explore Catalog ({publishedArticles.length} Papers)</span>
-              </Link>
-            </div>
+            {/* Right: Modern Academic Highlight Panel */}
+            <div className="relative">
+              <div className="relative rounded-[var(--radius-lg)] border border-[color:var(--color-border-strong)] bg-[color:var(--color-surface)] p-6 shadow-[var(--shadow-card)] sm:p-8">
+                {/* Header tag */}
+                <div className="flex items-center justify-between border-b border-[color:var(--color-border)] pb-4">
+                  <span className="text-[11px] font-bold tracking-wider text-[color:var(--color-accent)] uppercase">
+                    Publishing Standards
+                  </span>
+                  <span className="font-mono text-xs text-[color:var(--color-muted)]">
+                    Est. 2009
+                  </span>
+                </div>
 
-            {/* Micro Trust Points */}
-            <div className="mt-8 flex flex-wrap items-center justify-center gap-6 text-xs text-[color:var(--color-subtle)]">
-              <span>• Double-Blind Peer Review</span>
-              <span>• Open Access Repository</span>
-              <span>• CrossRef DOIs</span>
+                {/* 3 Interactive pillar highlights */}
+                <div className="mt-5 space-y-4">
+                  <div className="group rounded-md border border-[color:var(--color-border)] bg-[color:var(--color-surface-raised)] p-3.5 transition hover:border-[color:var(--color-accent)]">
+                    <p className="text-xs font-bold text-[color:var(--color-foreground)]">
+                      Double-Blind Peer Review
+                    </p>
+                    <p className="mt-1 text-[11px] leading-relaxed text-[color:var(--color-muted)]">
+                      Rigorous blind assessments by subject specialists across
+                      all 7 departments.
+                    </p>
+                  </div>
+
+                  <div className="group rounded-md border border-[color:var(--color-border)] bg-[color:var(--color-surface-raised)] p-3.5 transition hover:border-[color:var(--color-accent)]">
+                    <p className="text-xs font-bold text-[color:var(--color-foreground)]">
+                      Open Access &amp; CrossRef DOIs
+                    </p>
+                    <p className="mt-1 text-[11px] leading-relaxed text-[color:var(--color-muted)]">
+                      Persistent digital object identifiers and global indexed
+                      discoverability.
+                    </p>
+                  </div>
+
+                  <div className="group rounded-md border border-[color:var(--color-border)] bg-[color:var(--color-surface-raised)] p-3.5 transition hover:border-[color:var(--color-accent)]">
+                    <p className="text-xs font-bold text-[color:var(--color-foreground)]">
+                      7 Active Academic Disciplines
+                    </p>
+                    <p className="mt-1 text-[11px] leading-relaxed text-[color:var(--color-muted)]">
+                      Psychology, Economics, Political Science, Sociology,
+                      Public Admin, CSS, &amp; LIS.
+                    </p>
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
         </Container>
