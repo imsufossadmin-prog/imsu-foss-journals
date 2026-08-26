@@ -2,6 +2,7 @@
 
 import type { EditorialDecisionType } from "@prisma/client";
 import { revalidatePath } from "next/cache";
+import { redirect } from "next/navigation";
 
 import { requireJournalWorkspace } from "@/lib/auth/workspace-context";
 import {
@@ -335,7 +336,10 @@ export async function publishArticleAction(
     });
     refresh(journalSlug, submissionId);
     revalidatePath("/archives");
-    return { message: "Article published live to the journal!" } as ActionState;
+    revalidatePath("/admin/articles");
+    redirect(
+      `/admin/${journalSlug}/submissions/${submissionId}?published=true`,
+    );
   } catch (error) {
     return errorState(error);
   }

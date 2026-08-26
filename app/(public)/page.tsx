@@ -1,353 +1,297 @@
 import Link from "next/link";
 
+import { DisciplinesMarquee } from "@/components/disciplines-marquee";
+import { PublicSearchBar } from "@/components/public-search-bar";
 import { Container } from "@/components/ui/container";
 import { publicSubmissionEntryPath } from "@/lib/auth/submission-entry";
 import { siteConfig } from "@/lib/config/site";
 import { prisma } from "@/lib/db/prisma";
 
 export default async function Home() {
-  const publishedArticles = await prisma.article.findMany({
-    where: { isPublished: true },
-    orderBy: { publishedAt: "desc" },
-    include: {
-      issue: {
-        include: {
-          volume: {
-            include: {
-              journal: {
-                select: {
-                  name: true,
-                  slug: true,
-                  department: { select: { name: true } },
+  const [publishedArticles, activeJournals] = await Promise.all([
+    prisma.article.findMany({
+      where: { isPublished: true },
+      orderBy: { publishedAt: "desc" },
+      include: {
+        issue: {
+          include: {
+            volume: {
+              include: {
+                journal: {
+                  select: {
+                    name: true,
+                    slug: true,
+                    department: { select: { name: true } },
+                  },
+                },
+              },
+            },
+          },
+        },
+        authors: { orderBy: { position: "asc" } },
+      },
+    }),
+    prisma.journal.findMany({
+      where: { isActive: true },
+      select: {
+        id: true,
+        name: true,
+        slug: true,
+        shortName: true,
+        description: true,
+        department: { select: { name: true } },
+        volumes: {
+          select: {
+            issues: {
+              select: {
+                _count: {
+                  select: { articles: { where: { isPublished: true } } },
                 },
               },
             },
           },
         },
       },
-      authors: { orderBy: { position: "asc" } },
-    },
+      orderBy: { name: "asc" },
+    }),
+  ]);
+
+  const currentIssueArticle = publishedArticles[0] || null;
+
+  const disciplines = activeJournals.map((j) => {
+    let articleCount = 0;
+    for (const vol of j.volumes) {
+      for (const issue of vol.issues) {
+        articleCount += issue._count.articles;
+      }
+    }
+    return {
+      id: j.id,
+      name: j.name,
+      slug: j.slug,
+      shortName: j.shortName,
+      departmentName: j.department.name,
+      description: j.description,
+      articleCount,
+    };
   });
 
-  const featuredArticle = publishedArticles[0] || null;
-
   return (
-    <div className="space-y-16 pb-20">
-      {/* Editorial Hero Section (MatheLinux-inspired Layout) */}
-      <section className="relative border-b border-[color:var(--color-border)] bg-[color:var(--color-app-background)] py-16 sm:py-24">
+    <div className="space-y-20 pb-24">
+      {/* ── CHAPTER 1: THE STATEMENT & DISCOVERY HERO ── */}
+      <section className="relative pt-12 pb-16 sm:pt-16 sm:pb-20">
         <Container>
-          <div className="grid gap-12 lg:grid-cols-[1fr_1fr] lg:items-center">
-            {/* Hero Left Column */}
-            <div>
-              <div className="inline-flex items-center gap-2 rounded-full border border-[color:var(--color-accent)]/30 bg-[color:var(--color-accent)]/10 px-3 py-1 font-mono text-[11px] font-semibold tracking-wider text-[color:var(--color-accent)] uppercase">
-                <span>01</span>
-                <span>/</span>
-                <span>{siteConfig.faculty}</span>
-              </div>
-              <h1 className="mt-5 font-serif text-4xl leading-[1.08] font-semibold tracking-[-0.035em] text-[color:var(--color-foreground)] sm:text-5xl lg:text-6xl">
-                Refereed Research <br />
-                <span className="text-[color:var(--color-accent)]">
-                  for Social Sciences.
-                </span>
-              </h1>
-              <p className="mt-5 max-w-lg font-serif text-lg leading-relaxed text-[color:var(--color-muted)] italic">
-                Digital operating center for high-impact peer-reviewed journals
-                publishing across empirical, theoretical, and experimental
-                social & behavioural sciences.
-              </p>
-              <div className="mt-8 flex flex-wrap gap-4">
-                <Link
-                  href={publicSubmissionEntryPath}
-                  className="button-primary inline-flex items-center gap-2 px-6 py-3 text-sm font-semibold"
-                >
-                  <span>Submit Manuscript</span>
-                  <span aria-hidden="true">→</span>
-                </Link>
-                <Link
-                  href="/current-issue"
-                  className="button-secondary inline-flex items-center gap-2 px-6 py-3 text-sm font-semibold"
-                >
-                  <span>Explore Catalog ({publishedArticles.length})</span>
-                </Link>
-              </div>
-              <div className="mt-6 flex items-center gap-6 font-mono text-xs text-[color:var(--color-subtle)]">
-                <span>• Double-Blind Peer Review</span>
-                <span>• Open Access</span>
-                <span>• IMSU Owerri</span>
-              </div>
+          <div className="mx-auto max-w-3xl text-center">
+            {/* Headline */}
+            <h1 className="font-serif text-2xl leading-[1.2] font-semibold tracking-[-0.03em] text-[color:var(--color-foreground)] sm:text-3xl lg:text-4xl">
+              Advancing Social &amp; Behavioural Research in{" "}
+              <span className="text-[color:var(--color-accent)]">
+                Africa and Beyond
+              </span>
+            </h1>
+
+            {/* Subtitle */}
+            <p className="mt-5 font-serif text-base leading-relaxed text-[color:var(--color-muted)] sm:text-lg">
+              The official open-access publishing portal of IMSU Faculty of
+              Social Sciences. Home to the African Journal of Social and
+              Behavioural Sciences (AJSBS) and peer-reviewed faculty journals
+              since 2009.
+            </p>
+
+            {/* Instant Search Bar */}
+            <div className="mt-8 flex justify-center">
+              <PublicSearchBar />
             </div>
 
-            {/* Hero Right Column: Featured Manuscript Showcase */}
-            <div className="rounded-[var(--radius-lg)] border border-[color:var(--color-border)] bg-[color:var(--color-surface-raised)] p-6 shadow-2xl sm:p-8">
-              <div className="flex items-center justify-between border-b border-[color:var(--color-border)] pb-4 font-mono text-[10px] tracking-widest text-[color:var(--color-accent)] uppercase">
-                <span>Featured Publication</span>
-                <span>
-                  {featuredArticle
-                    ? `DOI: ${featuredArticle.doi || "Refereed"}`
-                    : "Institutional Feature"}
-                </span>
-              </div>
+            {/* Dual Actions */}
+            <div className="mt-8 flex flex-wrap items-center justify-center gap-4">
+              <Link
+                href={publicSubmissionEntryPath}
+                className="button-primary inline-flex items-center gap-2.5 px-6 py-3 text-sm font-semibold shadow-md transition-transform hover:scale-[1.02]"
+              >
+                <span>Submit Manuscript</span>
+                <span aria-hidden="true">→</span>
+              </Link>
+              <Link
+                href="/archives"
+                className="button-secondary inline-flex items-center gap-2 px-6 py-3 text-sm font-semibold"
+              >
+                <span>Explore Catalog ({publishedArticles.length} Papers)</span>
+              </Link>
+            </div>
 
-              {featuredArticle ? (
-                <div className="mt-6 space-y-4">
-                  {featuredArticle.coverImageUrl ? (
-                    <div className="flex h-48 w-full items-center justify-center overflow-hidden rounded-[var(--radius-md)] bg-black/30 p-3">
-                      {/* eslint-disable-next-line @next/next/no-img-element */}
-                      <img
-                        src={featuredArticle.coverImageUrl}
-                        alt={featuredArticle.title}
-                        className="max-h-44 w-auto object-contain"
-                      />
-                    </div>
-                  ) : null}
-                  <div className="font-mono text-[11px] text-[color:var(--color-subtle)]">
-                    {featuredArticle.issue.volume.journal.department.name} —
-                    Vol. {featuredArticle.issue.volume.number}, Issue{" "}
-                    {featuredArticle.issue.number}
+            {/* Micro Trust Points */}
+            <div className="mt-8 flex flex-wrap items-center justify-center gap-6 text-xs text-[color:var(--color-subtle)]">
+              <span>• Double-Blind Peer Review</span>
+              <span>• Open Access Repository</span>
+              <span>• CrossRef DOIs</span>
+            </div>
+          </div>
+        </Container>
+      </section>
+
+      {/* ── CHAPTER 2: CURRENT ISSUE SPOTLIGHT (MOST RECENT ARTICLE) ── */}
+      {currentIssueArticle ? (
+        <section>
+          <Container>
+            <div className="relative overflow-hidden rounded-[var(--radius-lg)] border border-[color:var(--color-border)] bg-[color:var(--color-surface)] p-6 shadow-[var(--shadow-card)] sm:p-10">
+              <div className="grid gap-8 lg:grid-cols-[1fr_340px] lg:items-center">
+                {/* Left: Article Details */}
+                <div>
+                  <div className="flex flex-wrap items-center gap-2.5 font-mono text-[11px] uppercase">
+                    <span className="rounded-full bg-[color:var(--color-surface-strong)] px-3 py-1 font-semibold text-[color:var(--color-accent)]">
+                      Current Issue
+                    </span>
+                    <span className="text-[color:var(--color-subtle)]">
+                      {currentIssueArticle.issue.volume.journal.department.name}{" "}
+                      · Vol. {currentIssueArticle.issue.volume.number}, Issue{" "}
+                      {currentIssueArticle.issue.number}
+                    </span>
                   </div>
-                  <h3 className="font-serif text-xl leading-tight font-semibold text-[color:var(--color-foreground)]">
+
+                  <h2 className="mt-4 font-serif text-2xl leading-tight font-semibold text-[color:var(--color-foreground)] sm:text-3xl">
                     <Link
-                      href={`/articles/${featuredArticle.slug}`}
-                      className="hover:text-[color:var(--color-accent)]"
+                      href={`/articles/${currentIssueArticle.slug}`}
+                      className="transition hover:text-[color:var(--color-accent)]"
                     >
-                      {featuredArticle.title}
+                      {currentIssueArticle.title}
                     </Link>
-                  </h3>
-                  {featuredArticle.authors.length ? (
-                    <p className="font-mono text-xs text-[color:var(--color-accent)]">
+                  </h2>
+
+                  {currentIssueArticle.authors.length ? (
+                    <p className="mt-3 font-mono text-xs text-[color:var(--color-accent)]">
                       By{" "}
-                      {featuredArticle.authors
+                      {currentIssueArticle.authors
                         .map((a) => a.fullName)
                         .join(", ")}
                     </p>
                   ) : null}
-                  {featuredArticle.abstract ? (
-                    <p className="line-clamp-3 text-xs leading-relaxed text-[color:var(--color-muted)]">
-                      {featuredArticle.abstract}
+
+                  {currentIssueArticle.abstract ? (
+                    <p className="mt-4 line-clamp-3 text-xs leading-relaxed text-[color:var(--color-muted)] sm:text-sm">
+                      {currentIssueArticle.abstract}
                     </p>
                   ) : null}
-                  <div className="pt-2">
-                    <Link
-                      href={`/articles/${featuredArticle.slug}`}
-                      className="inline-flex items-center gap-2 font-mono text-xs text-[color:var(--color-accent)] hover:underline"
-                    >
-                      <span>Read Full Article & Access PDF</span>
-                      <span>→</span>
-                    </Link>
-                  </div>
-                </div>
-              ) : (
-                <div className="mt-6 space-y-4">
-                  <span className="font-mono text-[11px] text-[color:var(--color-subtle)]">
-                    Psychology Journal Operations
-                  </span>
-                  <h3 className="font-serif text-xl font-semibold text-[color:var(--color-foreground)]">
-                    African Journal of Social & Behavioural Sciences (AJSBS)
-                  </h3>
-                  <p className="text-xs leading-relaxed text-[color:var(--color-muted)]">
-                    Founded in 2009. Refereed scholarly journal promoting
-                    interdisciplinary research in political science, psychology,
-                    sociology, financial management, and environmental studies.
-                  </p>
-                  <div className="pt-2">
-                    <Link
-                      href="/about"
-                      className="inline-flex items-center gap-2 font-mono text-xs text-[color:var(--color-accent)] hover:underline"
-                    >
-                      <span>Learn about the editorial framework</span>
-                      <span>→</span>
-                    </Link>
-                  </div>
-                </div>
-              )}
-            </div>
-          </div>
-        </Container>
-      </section>
 
-      {/* Horizontal Rail: Published Articles & Department Index */}
+                  <div className="mt-6 flex flex-wrap items-center gap-4">
+                    <Link
+                      href={`/articles/${currentIssueArticle.slug}`}
+                      className="button-primary inline-flex items-center gap-2 px-5 py-2.5 text-xs font-semibold"
+                    >
+                      <span>Read Full Article & PDF</span>
+                      <span>→</span>
+                    </Link>
+                    {currentIssueArticle.doi ? (
+                      <span className="font-mono text-xs text-[color:var(--color-subtle)]">
+                        DOI: {currentIssueArticle.doi}
+                      </span>
+                    ) : null}
+                  </div>
+                </div>
+
+                {/* Right: Cover Art or Journal Seal */}
+                <div className="flex items-center justify-center">
+                  {currentIssueArticle.coverImageUrl ? (
+                    <div className="relative overflow-hidden rounded-[var(--radius-md)] border border-[color:var(--color-border)] bg-black/40 p-2 shadow-xl">
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img
+                        src={currentIssueArticle.coverImageUrl}
+                        alt={currentIssueArticle.title}
+                        className="max-h-64 w-auto object-contain"
+                      />
+                    </div>
+                  ) : (
+                    <div className="flex h-56 w-full flex-col justify-between rounded-[var(--radius-md)] border border-[color:var(--color-border)] bg-[color:var(--color-surface-raised)] p-6">
+                      <span className="font-mono text-[10px] tracking-widest text-[color:var(--color-accent)] uppercase">
+                        Current Issue
+                      </span>
+                      <p className="font-serif text-lg font-semibold text-[color:var(--color-foreground)]">
+                        {currentIssueArticle.issue.volume.journal.name}
+                      </p>
+                      <span className="font-mono text-xs text-[color:var(--color-subtle)]">
+                        Faculty of Social Sciences
+                      </span>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+          </Container>
+        </section>
+      ) : null}
+
+      {/* ── CHAPTER 3: ACADEMIC DISCIPLINES SLIDING MARQUEE ── */}
       <section>
         <Container>
-          <div className="flex items-end justify-between border-b border-[color:var(--color-border)] pb-4">
-            <div>
-              <p className="font-mono text-[10px] tracking-widest text-[color:var(--color-accent)] uppercase">
-                Latest Publications
-              </p>
-              <h2 className="mt-1 font-serif text-2xl font-semibold tracking-tight text-[color:var(--color-foreground)] sm:text-3xl">
-                Recent Peer-Reviewed Papers
-              </h2>
-            </div>
-            <Link
-              href="/current-issue"
-              className="hidden font-mono text-xs text-[color:var(--color-accent)] hover:underline sm:inline-flex"
-            >
-              View all archives →
-            </Link>
-          </div>
-
-          {publishedArticles.length === 0 ? (
-            <div className="mt-8 rounded-[var(--radius-lg)] border border-dashed border-[color:var(--color-border)] p-12 text-center">
-              <p className="font-mono text-xs text-[color:var(--color-muted)]">
-                No published articles indexed yet. New papers approved by
-                editors will appear here dynamically.
-              </p>
-            </div>
-          ) : (
-            <div className="mt-8 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-              {publishedArticles.map((article, idx) => (
-                <article
-                  key={article.id}
-                  className="group flex flex-col justify-between rounded-[var(--radius-lg)] border border-[color:var(--color-border)] bg-[color:var(--color-surface-raised)] p-6 transition duration-200 hover:border-[color:var(--color-accent)]"
-                >
-                  <div>
-                    <div className="flex items-center justify-between font-mono text-[10px] tracking-widest text-[color:var(--color-accent)] uppercase">
-                      <span>
-                        0{idx + 1} /{" "}
-                        {article.issue.volume.journal.department.name}
-                      </span>
-                      <span>Vol. {article.issue.volume.number}</span>
-                    </div>
-
-                    {article.coverImageUrl ? (
-                      <Link
-                        href={`/articles/${article.slug}`}
-                        className="mt-4 flex h-40 w-full items-center justify-center overflow-hidden rounded-[var(--radius-md)] bg-black/40 p-2"
-                      >
-                        {/* eslint-disable-next-line @next/next/no-img-element */}
-                        <img
-                          src={article.coverImageUrl}
-                          alt={article.title}
-                          className="max-h-36 w-auto object-contain transition-transform duration-300 group-hover:scale-105"
-                        />
-                      </Link>
-                    ) : null}
-
-                    <h3 className="mt-4 font-serif text-lg leading-snug font-semibold text-[color:var(--color-foreground)] group-hover:text-[color:var(--color-accent)]">
-                      <Link href={`/articles/${article.slug}`}>
-                        {article.title}
-                      </Link>
-                    </h3>
-
-                    {article.authors.length ? (
-                      <p className="mt-2 font-mono text-xs text-[color:var(--color-subtle)]">
-                        {article.authors.map((a) => a.fullName).join(", ")}
-                      </p>
-                    ) : null}
-
-                    {article.abstract ? (
-                      <p className="mt-3 line-clamp-3 text-xs leading-relaxed text-[color:var(--color-muted)]">
-                        {article.abstract}
-                      </p>
-                    ) : null}
-                  </div>
-
-                  <div className="mt-6 flex items-center justify-between border-t border-[color:var(--color-border)] pt-4 text-[11px]">
-                    <span className="font-mono text-[color:var(--color-subtle)]">
-                      {article.publishedAt
-                        ? new Date(article.publishedAt).toLocaleDateString(
-                            "en-NG",
-                            {
-                              day: "numeric",
-                              month: "short",
-                              year: "numeric",
-                            },
-                          )
-                        : "Published"}
-                    </span>
-                    <Link
-                      href={`/articles/${article.slug}`}
-                      className="font-mono font-semibold text-[color:var(--color-accent)] group-hover:underline"
-                    >
-                      Read PDF →
-                    </Link>
-                  </div>
-                </article>
-              ))}
-            </div>
-          )}
+          <DisciplinesMarquee journals={disciplines} />
         </Container>
       </section>
 
-      {/* Curriculum / Archives Roadmap List (MatheLinux-inspired) */}
-      <section className="border-t border-[color:var(--color-border)] pt-16">
+      {/* ── CHAPTER 4: INSTITUTIONAL TRUST & AUTHOR WORKFLOW ── */}
+      <section className="border-t border-[color:var(--color-border)] bg-[color:var(--color-surface)]/40 py-16">
         <Container>
-          <div className="grid gap-12 lg:grid-cols-[0.4fr_1fr]">
-            <div className="lg:sticky lg:top-28 lg:self-start">
-              <p className="font-mono text-[10px] tracking-widest text-[color:var(--color-accent)] uppercase">
-                Institutional Scope
-              </p>
-              <h2 className="mt-2 font-serif text-3xl font-semibold tracking-tight text-[color:var(--color-foreground)]">
-                Faculty of Social Sciences Journals
-              </h2>
-              <p className="mt-4 font-serif text-sm text-[color:var(--color-muted)] italic">
-                Published by Imo State University (IMSU), Owerri, Nigeria.
+          <div className="mx-auto max-w-2xl text-center">
+            <p className="font-mono text-[10px] tracking-widest text-[color:var(--color-accent)] uppercase">
+              Author Publishing Pathway
+            </p>
+            <h2 className="mt-2 font-serif text-3xl font-semibold tracking-tight text-[color:var(--color-foreground)]">
+              Rigorous, Transparent & Streamlined.
+            </h2>
+            <p className="mt-3 text-sm text-[color:var(--color-muted)]">
+              From proposal to double-blind peer review and permanent DOI
+              archiving.
+            </p>
+          </div>
+
+          <div className="mt-10 grid gap-6 md:grid-cols-3">
+            <div className="rounded-[var(--radius-lg)] border border-[color:var(--color-border)] bg-[color:var(--color-surface-raised)] p-6">
+              <span className="font-mono text-xl font-bold text-[color:var(--color-accent)]">
+                01
+              </span>
+              <h3 className="mt-3 font-serif text-base font-semibold text-[color:var(--color-foreground)]">
+                Intake & Verification
+              </h3>
+              <p className="mt-2 text-xs leading-relaxed text-[color:var(--color-muted)]">
+                Authors request a submission slot, verify the ₦10,000 review
+                fee, and upload formatted Word/PDF manuscripts.
               </p>
             </div>
 
-            <ol className="divide-y divide-[color:var(--color-border)] rounded-[var(--radius-lg)] border border-[color:var(--color-border)] bg-[color:var(--color-surface-raised)]">
-              <li className="p-6 transition hover:bg-[color:var(--color-app-background)]">
-                <div className="flex items-start justify-between gap-4">
-                  <span className="font-mono text-sm font-bold text-[color:var(--color-accent)]">
-                    01
-                  </span>
-                  <div className="min-w-0 flex-1">
-                    <h3 className="font-serif text-base font-semibold text-[color:var(--color-foreground)]">
-                      African Journal of Social and Behavioural Sciences (AJSBS)
-                    </h3>
-                    <p className="mt-1 text-xs text-[color:var(--color-muted)]">
-                      Launched in 2009. Trusted peer-reviewed outlet for
-                      political science, psychology, sociology, economics, and
-                      environmental management.
-                    </p>
-                  </div>
-                  <span className="font-mono text-xs text-[color:var(--color-accent)]">
-                    Active →
-                  </span>
-                </div>
-              </li>
+            <div className="rounded-[var(--radius-lg)] border border-[color:var(--color-border)] bg-[color:var(--color-surface-raised)] p-6">
+              <span className="font-mono text-xl font-bold text-[color:var(--color-accent)]">
+                02
+              </span>
+              <h3 className="mt-3 font-serif text-base font-semibold text-[color:var(--color-foreground)]">
+                Double-Blind Peer Review
+              </h3>
+              <p className="mt-2 text-xs leading-relaxed text-[color:var(--color-muted)]">
+                Anonymised manuscripts are evaluated by at least two discipline
+                specialists for methodology, clarity, and originality.
+              </p>
+            </div>
 
-              <li className="p-6 transition hover:bg-[color:var(--color-app-background)]">
-                <div className="flex items-start justify-between gap-4">
-                  <span className="font-mono text-sm font-bold text-[color:var(--color-subtle)]">
-                    02
-                  </span>
-                  <div className="min-w-0 flex-1">
-                    <h3 className="font-serif text-base font-semibold text-[color:var(--color-foreground)]">
-                      Global Journal of Social and Behavioural Research (GJSBR)
-                    </h3>
-                    <p className="mt-1 text-xs text-[color:var(--color-muted)]">
-                      Fostering global perspectives on human behaviour, societal
-                      changes, and international development.
-                    </p>
-                  </div>
-                  <span className="font-mono text-xs text-[color:var(--color-subtle)]">
-                    Reference →
-                  </span>
-                </div>
-              </li>
+            <div className="rounded-[var(--radius-lg)] border border-[color:var(--color-border)] bg-[color:var(--color-surface-raised)] p-6">
+              <span className="font-mono text-xl font-bold text-[color:var(--color-accent)]">
+                03
+              </span>
+              <h3 className="mt-3 font-serif text-base font-semibold text-[color:var(--color-foreground)]">
+                Production & Global Indexing
+              </h3>
+              <p className="mt-2 text-xs leading-relaxed text-[color:var(--color-muted)]">
+                Accepted papers receive volume/issue placement and permanent
+                DOIs for global scholarly citation.
+              </p>
+            </div>
+          </div>
 
-              <li className="p-6 transition hover:bg-[color:var(--color-app-background)]">
-                <div className="flex items-start justify-between gap-4">
-                  <span className="font-mono text-sm font-bold text-[color:var(--color-subtle)]">
-                    03
-                  </span>
-                  <div className="min-w-0 flex-1">
-                    <h3 className="font-serif text-base font-semibold text-[color:var(--color-foreground)]">
-                      Nwaebere Journal of Social and Behavioural Research
-                      (NJSBR)
-                    </h3>
-                    <p className="mt-1 text-xs text-[color:var(--color-muted)]">
-                      Honouring IMSU heritage through innovative research rooted
-                      in African contexts while addressing global academic
-                      audiences.
-                    </p>
-                  </div>
-                  <span className="font-mono text-xs text-[color:var(--color-subtle)]">
-                    Reference →
-                  </span>
-                </div>
-              </li>
-            </ol>
+          <div className="mt-10 text-center">
+            <Link
+              href={publicSubmissionEntryPath}
+              className="button-primary inline-flex items-center gap-2 px-8 py-3.5 text-sm font-semibold"
+            >
+              <span>Start Submission Request</span>
+              <span>→</span>
+            </Link>
           </div>
         </Container>
       </section>

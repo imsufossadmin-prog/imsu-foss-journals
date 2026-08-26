@@ -44,6 +44,17 @@ export default async function AdminArticlesDirectoryPage({
 
   return (
     <div className="mx-auto max-w-6xl min-w-0 space-y-8 px-4 py-8 sm:px-6 lg:px-8">
+      {/* Back to Overview */}
+      <div>
+        <Link
+          href="/admin"
+          prefetch={true}
+          className="rounded-md border border-[color:var(--color-border)] bg-[color:var(--color-surface-raised)] px-3 py-1.5 text-xs font-semibold text-[color:var(--color-foreground)] hover:border-[color:var(--color-accent)] hover:text-[color:var(--color-accent)]"
+        >
+          ← Back to Overview
+        </Link>
+      </div>
+
       {/* Page Header */}
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
@@ -51,27 +62,27 @@ export default async function AdminArticlesDirectoryPage({
             Platform Content Management
           </p>
           <h1 className="mt-1 font-serif text-3xl font-bold tracking-[-0.035em] text-[color:var(--color-foreground)] sm:text-4xl">
-            Published Articles & Archives
+            Published Articles &amp; Archives
           </h1>
           <p className="mt-1 text-xs text-[color:var(--color-muted)]">
-            Manage, unpublish, or delete published content, or upload legacy
-            manuscripts directly.
+            Manage, unpublish, or delete published content, or directly publish
+            manuscripts into the catalog.
           </p>
         </div>
         <div>
           <Link
             href="/admin/articles/new"
+            prefetch={true}
             className="button-primary inline-flex items-center gap-2 text-xs"
           >
-            <span>+</span> Upload Legacy Manuscript
+            <span>+</span> Direct Publish Manuscript
           </Link>
         </div>
       </div>
 
       {success === "published" ? (
         <div className="rounded-[var(--radius-md)] border border-emerald-500/30 bg-emerald-500/10 p-4 text-xs font-semibold text-emerald-400">
-          🎉 Legacy manuscript successfully published to official journal
-          archives!
+          Manuscript successfully published to journal catalog.
         </div>
       ) : null}
 

@@ -346,6 +346,7 @@ export function PublishArticleForm({
 }) {
   const bound = publishArticleAction.bind(null, journalSlug, submissionId);
   const [state, action] = useActionState(bound, initialState);
+
   return (
     <form action={action} className="space-y-4">
       <div className="grid gap-3 sm:grid-cols-3">

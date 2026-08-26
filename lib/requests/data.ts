@@ -122,20 +122,32 @@ export function getRequestSubmission(authorId: string, requestId: string) {
 // ---------------------------------------------------------------------------
 
 export async function getPlatformOperationalCounts() {
-  const [newRequests, pendingReceipts, awaitingTracking, readyForPublishing] =
-    await Promise.all([
-      prisma.submissionRequest.count({ where: { status: "NEW" } }),
-      prisma.submissionRequest.count({
-        where: { status: "RECEIPT_SUBMITTED" },
-      }),
-      prisma.submissionRequest.count({
-        where: { status: "MANUSCRIPT_SUBMITTED" },
-      }),
-      prisma.submission.count({
-        where: { status: { in: ["ACCEPTED", "REVIEWS_RECEIVED"] } },
-      }),
-    ]);
-  return { newRequests, pendingReceipts, awaitingTracking, readyForPublishing };
+  const [
+    newRequests,
+    pendingReceipts,
+    awaitingTracking,
+    readyForPublishing,
+    publishedArticles,
+  ] = await Promise.all([
+    prisma.submissionRequest.count({ where: { status: "NEW" } }),
+    prisma.submissionRequest.count({
+      where: { status: "RECEIPT_SUBMITTED" },
+    }),
+    prisma.submissionRequest.count({
+      where: { status: "MANUSCRIPT_SUBMITTED" },
+    }),
+    prisma.submission.count({
+      where: { status: { in: ["ACCEPTED", "REVIEWS_RECEIVED"] } },
+    }),
+    prisma.article.count({ where: { isPublished: true } }),
+  ]);
+  return {
+    newRequests,
+    pendingReceipts,
+    awaitingTracking,
+    readyForPublishing,
+    publishedArticles,
+  };
 }
 
 export async function getPlatformStaffCounts() {

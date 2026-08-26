@@ -51,7 +51,7 @@ export function PublicMobileNav({ items }: PublicMobileNavProps) {
         <nav
           id="mobile-navigation"
           aria-label="Mobile navigation"
-          className="absolute right-0 mt-3 w-72 border border-[color:var(--color-border)] bg-white p-4 shadow-sm"
+          className="absolute right-0 mt-3 w-72 rounded-[var(--radius-lg)] border border-[color:var(--color-border)] bg-[color:var(--color-surface-raised)] p-4 shadow-[var(--shadow-menu)] backdrop-blur-xl"
         >
           <div className="flex flex-col gap-1">
             {items.map((item) => (

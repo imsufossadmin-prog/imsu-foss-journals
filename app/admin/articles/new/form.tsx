@@ -194,7 +194,7 @@ export function AdminLegacyUploadForm({
           {pending ? (
             <span>Publishing Manuscript...</span>
           ) : (
-            <span>🚀 Publish Manuscript to Archives</span>
+            <span>Publish Manuscript to Archives</span>
           )}
         </button>
       </div>

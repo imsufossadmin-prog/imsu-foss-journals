@@ -172,26 +172,24 @@ export default async function PublicArticlePage({
             </div>
           ) : null}
 
-          {latestVersion && submission ? (
-            <div className="my-6 flex flex-wrap items-center gap-4 rounded-[var(--radius-md)] border border-[color:var(--color-border)] bg-[color:var(--color-surface)] p-4">
-              <div>
-                <p className="text-xs font-semibold text-[color:var(--color-foreground)]">
-                  Full Manuscript Access
-                </p>
-                <p className="text-[11px] text-[color:var(--color-muted)]">
-                  Read or download the complete peer-reviewed PDF article.
-                </p>
-              </div>
-              <a
-                href={`/api/articles/${article.slug}/pdf`}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="ml-auto inline-flex items-center gap-2 rounded-[var(--radius-md)] bg-[color:var(--color-accent)] px-4 py-2 text-xs font-semibold text-white transition hover:opacity-90"
-              >
-                <span>📄</span> Read & Download PDF
-              </a>
+          <div className="my-6 flex flex-wrap items-center gap-4 rounded-[var(--radius-md)] border border-[color:var(--color-border)] bg-[color:var(--color-surface)] p-4">
+            <div>
+              <p className="text-xs font-semibold text-[color:var(--color-foreground)]">
+                Full Manuscript Access
+              </p>
+              <p className="text-[11px] text-[color:var(--color-muted)]">
+                Read or download the complete peer-reviewed PDF article.
+              </p>
             </div>
-          ) : null}
+            <a
+              href={`/api/articles/${article.slug}/pdf`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="button-primary ml-auto inline-flex items-center gap-2 px-4 py-2 text-xs font-semibold"
+            >
+              <span>📄</span> Read & Download PDF
+            </a>
+          </div>
 
           {article.abstract ? (
             <div className="mt-6 border-t border-[color:var(--color-border)] pt-6">

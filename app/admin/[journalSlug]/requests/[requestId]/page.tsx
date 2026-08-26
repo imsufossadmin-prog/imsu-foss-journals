@@ -55,16 +55,18 @@ export default async function AdminRequestPage({
     <div className="mx-auto w-full max-w-6xl min-w-0 px-1 sm:px-0">
       <div className="flex items-center gap-4">
         <Link
-          href="/admin"
+          href={`/admin/${journal.slug}`}
+          prefetch={true}
           className="rounded-md border border-[color:var(--color-border)] bg-[color:var(--color-surface-raised)] px-3 py-1.5 text-xs font-semibold text-[color:var(--color-foreground)] hover:border-[color:var(--color-accent)] hover:text-[color:var(--color-accent)]"
         >
-          ← Back to Overview
+          ← Back to Requests
         </Link>
         <Link
-          href="/admin/requests"
+          href={`/admin/${journal.slug}/submissions`}
+          prefetch={true}
           className="text-xs font-semibold text-[color:var(--color-muted)] hover:text-[color:var(--color-foreground)]"
         >
-          Submission requests list
+          Manuscripts list
         </Link>
       </div>
       <header className="mt-4 border-b border-[color:var(--color-border)] pb-6">

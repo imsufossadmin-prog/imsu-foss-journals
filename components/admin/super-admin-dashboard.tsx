@@ -5,6 +5,7 @@ type OperationalCounts = {
   pendingReceipts: number;
   awaitingTracking: number;
   readyForPublishing?: number;
+  publishedArticles?: number;
 };
 
 type StaffCounts = {
@@ -107,26 +108,36 @@ export function SuperAdminDashboard({
   return (
     <div className="mx-auto max-w-5xl space-y-12">
       {/* Page header */}
-      <header>
-        <div className="flex items-center gap-2">
-          <p className="text-[10px] font-medium tracking-[0.14em] text-[color:var(--color-accent)] uppercase">
-            Platform administration
+      <header className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+        <div>
+          <div className="flex items-center gap-2">
+            <p className="text-[10px] font-medium tracking-[0.14em] text-[color:var(--color-accent)] uppercase">
+              Platform administration
+            </p>
+            <span className="text-[color:var(--color-border-strong)]">·</span>
+            <span className="rounded-full bg-[color:var(--color-accent-soft)] px-2 py-0.5 text-[11px] font-semibold text-[color:var(--color-accent)]">
+              {journals.length}{" "}
+              {pluralise(journals.length, "Journal", "Journals")} Active
+            </span>
+          </div>
+          <h1 className="mt-3 max-w-2xl font-serif text-3xl leading-[1.12] font-medium tracking-[-0.035em] text-[color:var(--color-foreground)] sm:text-4xl lg:text-[2.75rem]">
+            {totalItems > 0
+              ? "Here is what needs your attention."
+              : "Everything is up to date."}
+          </h1>
+          <p className="mt-3 max-w-xl text-sm leading-6 text-[color:var(--color-muted)]">
+            Live operational status across IMSU FOSS Journals. Click any action
+            item to manage department operations.
           </p>
-          <span className="text-[color:var(--color-border-strong)]">·</span>
-          <span className="rounded-full bg-[color:var(--color-accent-soft)] px-2 py-0.5 text-[11px] font-semibold text-[color:var(--color-accent)]">
-            {journals.length}{" "}
-            {pluralise(journals.length, "Journal", "Journals")} Active
-          </span>
         </div>
-        <h1 className="mt-3 max-w-2xl font-serif text-3xl leading-[1.12] font-medium tracking-[-0.035em] text-[color:var(--color-foreground)] sm:text-4xl lg:text-[2.75rem]">
-          {totalItems > 0
-            ? "Here is what needs your attention."
-            : "Everything is up to date."}
-        </h1>
-        <p className="mt-3 max-w-xl text-sm leading-6 text-[color:var(--color-muted)]">
-          Live operational status across IMSU FOSS Journals. Click any action
-          item to manage department operations.
-        </p>
+        <div className="shrink-0">
+          <Link
+            href="/admin/articles/new"
+            className="button-primary inline-flex items-center gap-2 text-xs"
+          >
+            <span>+</span> Direct Publish Manuscript
+          </Link>
+        </div>
       </header>
 
       {/* Operational queue */}
@@ -164,14 +175,14 @@ export function SuperAdminDashboard({
             href="/admin/requests"
           />
           <OperationalTile
-            count={operational.readyForPublishing ?? 0}
+            count={operational.publishedArticles ?? 0}
             label={pluralise(
-              operational.readyForPublishing ?? 0,
-              "Approved / Ready to publish",
-              "Approved / Ready to publish",
+              operational.publishedArticles ?? 0,
+              "Published Article in Catalog",
+              "Published Articles in Catalog",
             )}
-            actionLabel="Publish articles"
-            href="/admin/submissions?status=ACCEPTED"
+            actionLabel="Manage catalog"
+            href="/admin/articles"
           />
         </div>
       </section>
@@ -213,53 +224,6 @@ export function SuperAdminDashboard({
           </div>
         </section>
       ) : null}
-
-      {/* Content & Published Archives Management */}
-      <section>
-        <SectionHeader>Content & Published Archives</SectionHeader>
-        <div className="mt-5 grid gap-4 sm:grid-cols-2">
-          <div className="flex flex-col justify-between rounded-[var(--radius-lg)] border border-[color:var(--color-border)] bg-[color:var(--color-surface-raised)] p-6">
-            <div>
-              <p className="text-base font-bold text-[color:var(--color-foreground)]">
-                Direct Legacy Publishing
-              </p>
-              <p className="mt-2 text-xs leading-relaxed text-[color:var(--color-muted)]">
-                Directly upload old manuscripts, past journal issues, or
-                pre-existing papers to the archives without an author submission
-                process.
-              </p>
-            </div>
-            <div className="mt-6">
-              <Link
-                href="/admin/articles/new"
-                className="button-primary inline-flex items-center gap-2 text-xs"
-              >
-                <span>+</span> Upload Legacy Manuscript
-              </Link>
-            </div>
-          </div>
-
-          <div className="flex flex-col justify-between rounded-[var(--radius-lg)] border border-[color:var(--color-border)] bg-[color:var(--color-surface-raised)] p-6">
-            <div>
-              <p className="text-base font-bold text-[color:var(--color-foreground)]">
-                Content Directory & Operations
-              </p>
-              <p className="mt-2 text-xs leading-relaxed text-[color:var(--color-muted)]">
-                Search, unpublish, or delete live articles across all
-                departments with 1 click.
-              </p>
-            </div>
-            <div className="mt-6">
-              <Link
-                href="/admin/articles"
-                className="button-secondary inline-flex items-center gap-2 text-xs"
-              >
-                <span>📁</span> Manage Content Directory →
-              </Link>
-            </div>
-          </div>
-        </div>
-      </section>
 
       {/* Platform staff */}
       <section>
