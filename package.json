@@ -21,7 +21,9 @@
     "validate:live:auth-roles": "NODE_OPTIONS=--conditions=react-server node --experimental-websocket --import tsx scripts/validate-live-auth-roles.ts",
     "validate:live:editorial": "NODE_OPTIONS=--conditions=react-server node --experimental-websocket --import tsx scripts/validate-live-editorial-workflow.ts",
     "fixtures:editorial:browser": "node --experimental-websocket --import tsx scripts/prepare-editorial-browser-fixtures.ts",
-    "simulate:platform": "NODE_OPTIONS=--conditions=react-server node --experimental-websocket --import tsx scripts/simulate-platform-evolution.ts"
+    "simulate:platform": "NODE_OPTIONS=--conditions=react-server node --experimental-websocket --import tsx scripts/simulate-platform-evolution.ts",
+    "db:clean-slate": "npx tsx scripts/reset-clean-slate.ts",
+    "db:populate:demo": "npx tsx scratch/full-lifecycle-runner.ts"
   },
   "prisma": {
     "seed": "node --env-file=.env prisma/seed.mjs"
