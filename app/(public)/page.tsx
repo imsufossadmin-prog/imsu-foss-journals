@@ -141,12 +141,9 @@ export default async function Home() {
             <div className="relative">
               <div className="relative rounded-[var(--radius-lg)] border border-[color:var(--color-border-strong)] bg-[color:var(--color-surface)] p-6 shadow-[var(--shadow-card)] sm:p-8">
                 {/* Header tag */}
-                <div className="flex items-center justify-between border-b border-[color:var(--color-border)] pb-4">
+                <div className="border-b border-[color:var(--color-border)] pb-4">
                   <span className="text-[11px] font-bold tracking-wider text-[color:var(--color-accent)] uppercase">
                     Publishing Standards
-                  </span>
-                  <span className="font-mono text-xs text-[color:var(--color-muted)]">
-                    Est. 2009
                   </span>
                 </div>
 
