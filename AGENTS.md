@@ -175,7 +175,174 @@ This version has breaking changes — APIs, conventions, and file structure may 
 
 ---
 
-## 8. QUALITY GATES (ALWAYS VERIFY BEFORE COMMITTING)
+## 8. PERFORMANCE & DATA-ACCESS INVARIANTS
+
+### Performance Context & System Reality
+IMSUFOSS connects to a remote PostgreSQL/Supabase database via Prisma. Network and connection-pooling round trips cost approximately **~195–200ms per remote call**, even when PostgreSQL query execution itself completes in milliseconds.
+
+Performance auditing proved that historical application latency was **NOT** primarily caused by:
+- React rendering or client state
+- Database table size
+- PostgreSQL query computation time
+- JavaScript bundle size
+- Global application architecture
+
+The dominant performance bottleneck was **unnecessary sequential remote database round trips and duplicate client/server work**. Future feature development and refactoring must never reintroduce these patterns.
+
+### Core Engineering Mandate
+> **"IMSUFOSS became fast primarily by eliminating unnecessary waiting, sequential remote round trips, and duplicate work — NOT by removing important business logic."**
+
+All future engineering must preserve:
+```text
+Correctness
++
+Minimum necessary remote round trips
++
+No duplicate work
++
+Targeted invalidation
++
+Immediate UI feedback
++
+Measurement before optimization
+```
+
+---
+
+### Invariant Rules & Implementation Guardrails
+
+#### 1. Prevent Query Waterfalls
+Avoid unneeded sequential `await` waterfalls:
+```ts
+// ❌ Avoid sequential remote queries when operations are independent:
+await queryA();
+await queryB();
+await queryC();
+```
+Where operations are independent or can safely be unified, utilize:
+- Prisma relation joins (`include` / `select`)
+- Nested atomic writes
+- Combined queries
+- Conditional atomic updates
+- `Promise.all()` for genuinely independent reads/writes
+
+*Never parallelize operations that have sequential data dependencies purely for speed.*
+
+#### 2. Preserve Prisma Relation-Join Optimization
+The existing relation-join query strategy was introduced after production measurement demonstrated substantial latency reductions in remote relational graph queries.
+- Do **not** remove or disable relation-join optimizations casually.
+- Any change to this strategy must be strictly justified by: (1) a correctness/compatibility requirement, (2) diagnostic trace measurement, and (3) verified before/after benchmarks.
+- Future Prisma version upgrades must regression-test relation query latency.
+
+#### 3. Avoid Unnecessary Interactive Transaction Round Trips
+Do not default to long, multi-step interactive transactions:
+```ts
+// ❌ Avoid multi-round-trip interactive transactions when atomic operations suffice:
+prisma.$transaction(async (tx) => {
+  // many sequential remote round trips across pooled connections
+});
+```
+Where business rules permit, prefer atomic/nested Prisma operations or combined statements that allow PostgreSQL to execute related work in a single server-side round trip.  
+**Critical Constraint:** Never weaken transaction atomicity, introduce race conditions, break status transitions, or compromise data integrity simply to reduce round trips. *Correctness always overrides query count.*
+
+#### 4. Do Not Duplicate Revalidation and Refresh
+Historical workflows sometimes performed server-side mutation revalidations and immediately invoked client-side `router.refresh()`, triggering duplicate RSC rendering passes.
+- Before adding `router.refresh()` after a Server Action or mutation, inspect whether the Server Action already performed targeted path/tag revalidation.
+- Never fetch or re-render the same state twice without a demonstrated requirement.
+
+#### 5. Keep Cache Invalidation Targeted
+Before calling `revalidatePath()`, `revalidateTag()`, or `router.refresh()`:
+- Identify precisely which data became stale.
+- Avoid broad, indiscriminate invalidation of unrelated application state.
+- **Never remove required invalidation for performance:** Publishing workflows must always reliably invalidate and refresh all affected public surfaces (e.g., homepage, current issue, archives, journal catalog, and article detail pages).
+
+#### 6. Polling Policy
+Frequent automated polling is strictly reserved for workflows requiring near-real-time collaborative communication (such as the active request chatbox).
+- **Request Chatbox Polling Standards:**
+  - Visible/active tab: ~4-second polling cadence.
+  - Hidden browser tab: Polling immediately paused.
+  - Tab focus return: Immediate synchronization fetch.
+  - User message sent: Instant optimistic/action update without waiting for the next poll cycle.
+  - Overlapping in-flight poll requests must be strictly prevented.
+- **General Workflows:** Do **NOT** introduce polling to dashboards, request directories, submission queues, articles, user directories, journal settings, statistics, public catalogs, or filter controls without an explicit requirement. Standard data updates through navigation, Server Actions, targeted revalidation, or explicit user action.
+
+#### 7. Immediate UI Acknowledgement & Truthful Feedback
+Backend operations may legitimately require processing time (e.g., document parsing, storage uploads, PDF generation). User interactions must receive immediate visible confirmation:
+- Pending states and disabled buttons on trigger.
+- Loading indicators, inline skeletons, and React transitions.
+- Truthful, measured upload progress (e.g., native XHR upload events).
+- **Never use artificial delays or fake progress bars** to simulate or mask latency.
+
+#### 8. Preserve Existing Performance Infrastructure
+Agents must not casually remove or regress established performance patterns:
+- Admin loading skeletons and Suspense boundaries.
+- Filter pending states and transitions (`useTransition`).
+- Truthful XHR upload progress reporting.
+- Request-scoped auth session memoization (`cache()`).
+- Prisma relation-join optimizations and nested/atomic writes.
+- Storage rollback mechanisms on mutation failures.
+- Targeted cache invalidation and duplicate-refresh guards.
+- Adaptive visibility-aware chat polling.
+
+*If any of these must be modified, investigate and document the architectural reason first.*
+
+#### 9. Security and Correctness Override Performance
+Never sacrifice safety, authorization, or business integrity for speed. Do not weaken:
+- Authentication & Supabase session verification
+- Role-based access control (SUPER_ADMIN, JOURNAL_ADMIN, EDITOR, AUTHOR)
+- Department and journal boundary scoping
+- Server-side input validation and sanitization
+- Editorial status transition state machines
+- Publication consistency and transactional integrity
+- Audit and history logging
+- Duplicate-action protections
+- Storage orphan cleanup and rollback handlers
+
+*A slower, secure, and correct operation is always preferable to a faster, insecure, or corrupted one.*
+
+#### 10. Measure Before Optimizing (Scientific Workflow)
+All performance investigations and modifications must adhere to this discipline:
+```text
+OBSERVE → REPRODUCE → MEASURE → TRACE → IDENTIFY → CHANGE → VERIFY
+```
+- Never perform speculative performance refactoring.
+- Do not assume a workflow is slow without verifiable telemetry or reproduction.
+- Never claim an optimization succeeded without providing before/after measurements.
+- Development timings (local compilation, unoptimized assets) must not be confused with production runtime metrics.
+
+---
+
+### Regression Checklist for Future Features
+Before finalizing any admin workflow, data-access mutation, or page query, verify:
+1. Did this change introduce a new remote database round trip?
+2. Is that database round trip sequential when it could be combined or parallelized?
+3. Can independent read operations safely execute concurrently via `Promise.all()`?
+4. Can related writes be expressed as a single nested or atomic Prisma operation?
+5. Did this change broaden cache invalidation beyond the stale data?
+6. Did this change introduce an unnecessary `router.refresh()` after a revalidated Server Action?
+7. Did this change introduce automated polling outside of the approved chat workflow?
+8. Does a localized edit/mutation cause unrelated dataset reloads?
+9. Does the UI immediately acknowledge user input with pending/disabled states?
+10. Did database transaction holding time or connection duration increase?
+11. Are all authorization, journal-scope, and data-integrity guarantees fully preserved?
+
+---
+
+### Historical Performance Baseline (Diagnostic Reference)
+> **Note:** These figures represent historical diagnostic benchmarks used during performance tuning, *not permanent hard SLAs*. Infrastructure, connection pools, and network latency fluctuate over time. Use these baselines to detect major regressions.
+
+| Metric / Surface | Unoptimized Baseline | Optimized Reference |
+|---|---|---|
+| Remote DB / Network Round Trip | ~195 ms | ~195 ms (physical limit) |
+| Authenticated User Relation Graph | ~960 ms | **~231 ms** |
+| Super Admin Dashboard Data | 462 ms | **234 ms** |
+| Request List Data | 449 ms | **222 ms** |
+| Submission List Data | 688 ms | **248 ms** |
+| Prefetched Production Admin Navigation | — | **~65–104 ms** (perceived) |
+
+---
+
+## 9. QUALITY GATES (ALWAYS VERIFY BEFORE COMMITTING)
 
 ```bash
 npm run format:check    # Prettier check
@@ -190,7 +357,7 @@ Last verified baseline: **72/72 tests passing**, ESLint clean, production build 
 
 ---
 
-## 9. ENGINEERING PRINCIPLE
+## 10. PRODUCT ENGINEERING PRINCIPLE
 
 **SIMPLIFY → CONNECT → POLISH → COMPLETE**
 
@@ -199,7 +366,7 @@ When uncertain about a product decision, ask:
 
 ---
 
-## 10. AGENT FIDELITY & EXECUTION TRANSPARENCY RULES
+## 11. AGENT FIDELITY & EXECUTION TRANSPARENCY RULES
 
 - **Strict Adherence to User Requirements:** NEVER substitute, bypass, or shortcut explicit workflow instructions requested by the user (such as replacing interactive browser/UI workflows with background database scripts).
 - **Mandatory Approval for Deviations:** If an alternative technical approach seems faster or better, you MUST explain the alternative and obtain explicit user approval before deviating from the user's requested approach.
