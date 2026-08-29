@@ -304,3 +304,100 @@ test("Phase 3: generateIssueTOCPdf produces a valid PDF binary buffer containing
   const headerStr = Buffer.from(pdfBytes.slice(0, 5)).toString("utf-8");
   assert.equal(headerStr, "%PDF-");
 });
+
+test("Phase 7: Direct article upload authorization rules for Super Admin and Journal Admin", () => {
+  const superAdminUser = {
+    globalRoles: [
+      { role: "SUPER_ADMIN" as const },
+      { role: "AUTHOR" as const },
+    ],
+    journalRoles: [],
+  };
+
+  const multiJaUser = {
+    globalRoles: [{ role: "AUTHOR" as const }],
+    journalRoles: [
+      { journalId: "econ-id", role: "JOURNAL_ADMIN" as const },
+      { journalId: "soc-id", role: "JOURNAL_ADMIN" as const },
+      { journalId: "lis-id", role: "JOURNAL_ADMIN" as const },
+    ],
+  };
+
+  const editorUser = {
+    globalRoles: [{ role: "AUTHOR" as const }],
+    journalRoles: [{ journalId: "econ-id", role: "EDITOR" as const }],
+  };
+
+  const authorUser = {
+    globalRoles: [{ role: "AUTHOR" as const }],
+    journalRoles: [],
+  };
+
+  // Helper evaluating direct upload permission for a given journal
+  function canDirectUpload(
+    user: AuthorizationSubject,
+    targetJournalId: string,
+  ) {
+    if (isSuperAdmin(user)) return true;
+    if (!canAccessApplicationArea(user, "admin")) return false;
+    return hasJournalRole(user, targetJournalId, "JOURNAL_ADMIN");
+  }
+
+  // 1. Super Admin can upload to ANY journal
+  assert.equal(canDirectUpload(superAdminUser, "econ-id"), true);
+  assert.equal(canDirectUpload(superAdminUser, "psych-id"), true);
+  assert.equal(canDirectUpload(superAdminUser, "ajsbs-id"), true);
+
+  // 2. Multi-JA can upload ONLY to assigned journals
+  assert.equal(canDirectUpload(multiJaUser, "econ-id"), true);
+  assert.equal(canDirectUpload(multiJaUser, "soc-id"), true);
+  assert.equal(canDirectUpload(multiJaUser, "lis-id"), true);
+
+  // Denied for unassigned journals
+  assert.equal(canDirectUpload(multiJaUser, "psych-id"), false);
+  assert.equal(canDirectUpload(multiJaUser, "ajsbs-id"), false);
+  assert.equal(canDirectUpload(multiJaUser, "njsbr-id"), false);
+
+  // 3. Editor & Author denied
+  assert.equal(canDirectUpload(editorUser, "econ-id"), false);
+  assert.equal(canDirectUpload(authorUser, "econ-id"), false);
+});
+
+test("Phase 7: Direct article upload journal selection filters by user roles", () => {
+  const allActiveJournals = [
+    { id: "econ-id", slug: "economics", name: "Economics" },
+    { id: "soc-id", slug: "sociology", name: "Sociology" },
+    { id: "lis-id", slug: "library-information-science", name: "LIS" },
+    { id: "psych-id", slug: "psychology", name: "Psychology" },
+    { id: "ajsbs-id", slug: "ajsbs", name: "AJSBS" },
+  ];
+
+  function getSelectableJournals(user: AuthorizationSubject) {
+    if (isSuperAdmin(user)) return allActiveJournals;
+    const allowed = user.journalRoles
+      .filter((jr) => jr.role === "JOURNAL_ADMIN")
+      .map((jr) => jr.journalId);
+    return allActiveJournals.filter((j) => allowed.includes(j.id));
+  }
+
+  const superAdmin = {
+    globalRoles: [{ role: "SUPER_ADMIN" as const }],
+    journalRoles: [],
+  };
+
+  const jaUser = {
+    globalRoles: [{ role: "AUTHOR" as const }],
+    journalRoles: [
+      { journalId: "econ-id", role: "JOURNAL_ADMIN" as const },
+      { journalId: "lis-id", role: "JOURNAL_ADMIN" as const },
+    ],
+  };
+
+  assert.equal(getSelectableJournals(superAdmin).length, 5);
+  const jaJournals = getSelectableJournals(jaUser);
+  assert.equal(jaJournals.length, 2);
+  assert.deepEqual(
+    jaJournals.map((j) => j.slug),
+    ["economics", "library-information-science"],
+  );
+});

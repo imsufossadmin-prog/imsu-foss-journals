@@ -4,23 +4,6 @@ import type { Prisma } from "@prisma/client";
 
 import { prisma } from "@/lib/db/prisma";
 
-export async function getPsychologyOperations() {
-  return prisma.journal.findFirst({
-    where: {
-      slug: "psychology",
-      isActive: true,
-      department: { slug: "psychology", isActive: true },
-    },
-    select: {
-      id: true,
-      slug: true,
-      name: true,
-      shortName: true,
-      department: { select: { id: true, slug: true, name: true } },
-    },
-  });
-}
-
 const requestListSelect = {
   id: true,
   status: true,
@@ -59,9 +42,12 @@ export function listJournalRequests(journalId: string) {
   });
 }
 
-export function listAllPlatformRequests(departmentSlug?: string) {
+export function listAllPlatformRequests(journalSlug?: string) {
   return prisma.submissionRequest.findMany({
-    where: departmentSlug ? { journal: { slug: departmentSlug } } : undefined,
+    where:
+      journalSlug && journalSlug !== "all"
+        ? { journal: { slug: journalSlug } }
+        : undefined,
     orderBy: { updatedAt: "desc" },
     select: requestListSelect,
   });

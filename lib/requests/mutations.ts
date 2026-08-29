@@ -68,10 +68,15 @@ async function requireAdmin(actorId: string, requestId: string) {
 }
 
 export async function createSubmissionRequest(
-  authorIdOrInput: string | { authorId: string; journalSlug?: string },
+  authorIdOrInput: string | { authorId: string; journalSlug: string },
   maybeJournalSlug?: string,
 ) {
   if (typeof authorIdOrInput === "string") {
+    if (!maybeJournalSlug) {
+      throw new RequestMutationError(
+        "A valid journal must be selected for this submission request.",
+      );
+    }
     return startSubmissionRequest({
       authorId: authorIdOrInput,
       journalSlug: maybeJournalSlug,
@@ -85,9 +90,15 @@ export async function startSubmissionRequest({
   journalSlug,
 }: {
   authorId: string;
-  journalSlug?: string;
+  journalSlug: string;
 }) {
-  const targetSlug = journalSlug?.trim() || "psychology";
+  const targetSlug = journalSlug?.trim();
+  if (!targetSlug) {
+    throw new RequestMutationError(
+      "A valid journal must be selected for this submission request.",
+    );
+  }
+
   const operations = await prisma.journal.findFirst({
     where: {
       slug: targetSlug,
@@ -105,17 +116,6 @@ export async function startSubmissionRequest({
     throw new RequestMutationError(
       "Journal operations for this journal are not available yet.",
     );
-
-  const existing = await prisma.submissionRequest.findFirst({
-    where: {
-      authorId,
-      journalId: operations.id,
-      status: { not: "TRACKING_ASSIGNED" },
-    },
-    orderBy: { updatedAt: "desc" },
-    select: { id: true },
-  });
-  if (existing) return existing;
 
   const teamName = operations.department?.name ?? operations.name;
   return prisma.submissionRequest.create({

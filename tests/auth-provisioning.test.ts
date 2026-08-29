@@ -85,3 +85,30 @@ test("trusted Google identity supplies normalized email and display name", () =>
     displayName: "New Author",
   });
 });
+
+test("break-glass email helper normalizes case, trims whitespace, and detects configured admins", async () => {
+  const { getBreakGlassSuperAdminEmails, isBreakGlassSuperAdminEmail } =
+    await import("@/lib/auth/provisioning");
+
+  const originalEnv = process.env.BREAK_GLASS_SUPERADMIN_EMAILS;
+  try {
+    process.env.BREAK_GLASS_SUPERADMIN_EMAILS =
+      "  Primary.BreakGlass@example.com, Second.Admin@Example.org  ";
+
+    const emails = getBreakGlassSuperAdminEmails();
+    assert.equal(emails.size, 2);
+    assert.equal(emails.has("primary.breakglass@example.com"), true);
+    assert.equal(emails.has("second.admin@example.org"), true);
+
+    assert.equal(
+      isBreakGlassSuperAdminEmail(" PRIMARY.BREAKGLASS@EXAMPLE.COM "),
+      true,
+    );
+    assert.equal(isBreakGlassSuperAdminEmail("second.admin@example.org"), true);
+    assert.equal(isBreakGlassSuperAdminEmail("attacker@example.com"), false);
+    assert.equal(isBreakGlassSuperAdminEmail(null), false);
+    assert.equal(isBreakGlassSuperAdminEmail(""), false);
+  } finally {
+    process.env.BREAK_GLASS_SUPERADMIN_EMAILS = originalEnv;
+  }
+});

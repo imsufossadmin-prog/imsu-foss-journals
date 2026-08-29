@@ -2,13 +2,23 @@ import Link from "next/link";
 
 import { requireApplicationArea } from "@/lib/auth/authorization";
 import { prisma } from "@/lib/db/prisma";
+import { isSuperAdmin } from "@/lib/auth/permissions";
 import { AdminLegacyUploadForm } from "./form";
 
 export default async function NewLegacyArticlePage() {
-  await requireApplicationArea("admin");
+  const user = await requireApplicationArea("admin");
+  const isSuper = isSuperAdmin(user);
+  const allowedJournalIds = isSuper
+    ? undefined
+    : user.journalRoles
+        .filter((jr) => jr.role === "JOURNAL_ADMIN" && jr.journal.isActive)
+        .map((jr) => jr.journalId);
 
   const journals = await prisma.journal.findMany({
-    where: { isActive: true },
+    where: {
+      isActive: true,
+      ...(allowedJournalIds ? { id: { in: allowedJournalIds } } : {}),
+    },
     select: {
       id: true,
       slug: true,

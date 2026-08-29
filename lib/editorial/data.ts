@@ -77,7 +77,7 @@ export async function listPlatformSubmissions(input: {
         ? { status: input.status }
         : { status: { in: editorialInboxStatuses } }),
       ...(input.departmentSlug && input.departmentSlug !== "all"
-        ? { journal: { department: { slug: input.departmentSlug } } }
+        ? { journal: { slug: input.departmentSlug } }
         : {}),
       ...(query
         ? {

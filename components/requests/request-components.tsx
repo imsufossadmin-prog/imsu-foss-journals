@@ -1217,39 +1217,44 @@ export function StartSubmissionForm({
   action: (formData?: FormData) => Promise<void>;
   journals: Array<{
     id: string;
+    slug: string;
     name: string;
     department?: { name: string } | null;
   }>;
 }) {
-  const [journalId, setJournalId] = useState(journals[0]?.id ?? "");
+  const [journalSlug, setJournalSlug] = useState(journals[0]?.slug ?? "");
   const [pending, startTransition] = useTransition();
-  void pending;
 
   return (
     <form
       action={(formData) => {
-        if (journalId) formData.set("journalId", journalId);
+        if (pending) return;
+        if (journalSlug) formData.set("journalSlug", journalSlug);
         startTransition(() => action(formData));
       }}
       className="flex items-center gap-2"
     >
       {journals.length > 1 ? (
         <select
-          name="journalId"
-          value={journalId}
-          onChange={(e) => setJournalId(e.target.value)}
+          name="journalSlug"
+          value={journalSlug}
+          onChange={(e) => setJournalSlug(e.target.value)}
+          disabled={pending}
           className="app-field text-xs"
         >
           {journals.map((j) => (
-            <option key={j.id} value={j.id}>
+            <option key={j.id} value={j.slug}>
               {j.department?.name ?? j.name}
             </option>
           ))}
         </select>
       ) : (
-        <input type="hidden" name="journalId" value={journalId} />
+        <input type="hidden" name="journalSlug" value={journalSlug} />
       )}
-      <PendingButton className="button-primary shrink-0 text-xs">
+      <PendingButton
+        disabled={pending}
+        className="button-primary shrink-0 text-xs"
+      >
         Start request
       </PendingButton>
     </form>

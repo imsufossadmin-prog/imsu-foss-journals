@@ -30,8 +30,13 @@ function failure(error: unknown): RequestActionState {
 export async function startRequestAction(formData?: FormData) {
   const user = await requireGlobalRole("AUTHOR");
   const journalSlug = formData
-    ? String(formData.get("journalSlug") ?? "")
-    : undefined;
+    ? String(formData.get("journalSlug") ?? "").trim()
+    : "";
+  if (!journalSlug) {
+    throw new RequestMutationError(
+      "Please select a journal for your submission request.",
+    );
+  }
   const request = await createSubmissionRequest(user.id, journalSlug);
   redirect(`/author/requests/${request.id}`);
 }

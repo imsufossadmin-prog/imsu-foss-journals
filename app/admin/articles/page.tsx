@@ -1,6 +1,7 @@
 import Link from "next/link";
 
 import { requireApplicationArea } from "@/lib/auth/authorization";
+import { isSuperAdmin } from "@/lib/auth/permissions";
 import { prisma } from "@/lib/db/prisma";
 import { AdminArticleRowActions, AdminIssueRowActions } from "./actions-client";
 
@@ -9,19 +10,38 @@ export default async function AdminArticlesDirectoryPage({
 }: {
   searchParams: Promise<{ q?: string; success?: string }>;
 }) {
-  await requireApplicationArea("admin");
+  const user = await requireApplicationArea("admin");
   const { q, success } = await searchParams;
+  const isSuper = isSuperAdmin(user);
+  const allowedJournalIds = isSuper
+    ? undefined
+    : user.journalRoles
+        .filter((jr) => jr.role === "JOURNAL_ADMIN" && jr.journal.isActive)
+        .map((jr) => jr.journalId);
+
+  const backHref = isSuper
+    ? "/admin"
+    : user.journalRoles.find(
+          (jr) => jr.role === "JOURNAL_ADMIN" && jr.journal.isActive,
+        )
+      ? `/admin/${user.journalRoles.find((jr) => jr.role === "JOURNAL_ADMIN" && jr.journal.isActive)!.journal.slug}`
+      : "/admin";
 
   const [articles, issues] = await Promise.all([
     prisma.article.findMany({
-      where: q
-        ? {
-            OR: [
-              { title: { contains: q, mode: "insensitive" } },
-              { abstract: { contains: q, mode: "insensitive" } },
-            ],
-          }
-        : undefined,
+      where: {
+        ...(allowedJournalIds
+          ? { issue: { volume: { journalId: { in: allowedJournalIds } } } }
+          : {}),
+        ...(q
+          ? {
+              OR: [
+                { title: { contains: q, mode: "insensitive" } },
+                { abstract: { contains: q, mode: "insensitive" } },
+              ],
+            }
+          : {}),
+      },
       orderBy: { createdAt: "desc" },
       include: {
         authors: { orderBy: { position: "asc" } },
@@ -43,6 +63,9 @@ export default async function AdminArticlesDirectoryPage({
       },
     }),
     prisma.issue.findMany({
+      where: allowedJournalIds
+        ? { volume: { journalId: { in: allowedJournalIds } } }
+        : undefined,
       orderBy: [
         { volume: { journal: { name: "asc" } } },
         { volume: { year: "desc" } },
@@ -75,7 +98,7 @@ export default async function AdminArticlesDirectoryPage({
       {/* Back to Overview */}
       <div>
         <Link
-          href="/admin"
+          href={backHref}
           prefetch={true}
           className="rounded-md border border-[color:var(--color-border)] bg-[color:var(--color-surface-raised)] px-3 py-1.5 text-xs font-semibold text-[color:var(--color-foreground)] hover:border-[color:var(--color-accent)] hover:text-[color:var(--color-accent)]"
         >
@@ -110,7 +133,8 @@ export default async function AdminArticlesDirectoryPage({
 
       {success === "published" ? (
         <div className="rounded-[var(--radius-md)] border border-emerald-500/30 bg-emerald-500/10 p-4 text-xs font-semibold text-emerald-400">
-          Manuscript successfully published to journal catalog.
+          Article published successfully and is now available in Manage
+          Articles.
         </div>
       ) : null}
 

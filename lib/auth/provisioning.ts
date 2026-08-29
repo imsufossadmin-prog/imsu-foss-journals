@@ -67,20 +67,52 @@ export function getAuthorProfileInput(identity: TrustedAuthIdentity) {
   };
 }
 
+export function getBreakGlassSuperAdminEmails(): Set<string> {
+  const raw = process.env.BREAK_GLASS_SUPERADMIN_EMAILS ?? "";
+  return new Set(
+    raw
+      .split(",")
+      .map((item) => item.trim().toLowerCase())
+      .filter((item) => item.length > 0),
+  );
+}
+
+export function isBreakGlassSuperAdminEmail(
+  email: string | null | undefined,
+): boolean {
+  if (!email) return false;
+  return getBreakGlassSuperAdminEmails().has(email.trim().toLowerCase());
+}
+
 const prismaAuthorProvisioningStore: AuthorProvisioningStore = {
   async ensureAuthorProfile(input) {
     const { prisma } = await import("@/lib/db/prisma");
+    const isBreakGlass = isBreakGlassSuperAdminEmail(input.email);
+
     return prisma.$transaction(async (transaction) => {
       await transaction.user.upsert({
         where: { id: input.id },
-        update: { email: input.email },
-        create: input,
+        update: {
+          email: input.email,
+          ...(isBreakGlass ? { isActive: true } : {}),
+        },
+        create: {
+          ...input,
+          isActive: true,
+        },
       });
       await transaction.userGlobalRole.upsert({
         where: { userId_role: { userId: input.id, role: "AUTHOR" } },
         update: {},
         create: { userId: input.id, role: "AUTHOR" },
       });
+      if (isBreakGlass) {
+        await transaction.userGlobalRole.upsert({
+          where: { userId_role: { userId: input.id, role: "SUPER_ADMIN" } },
+          update: {},
+          create: { userId: input.id, role: "SUPER_ADMIN" },
+        });
+      }
 
       return transaction.user.findUniqueOrThrow({
         where: { id: input.id },

@@ -110,8 +110,6 @@ async function main() {
     if (item.slug === "psychology") primaryJournal = jnl;
   }
 
-  const journal = primaryJournal;
-
   for (const item of [
     {
       slug: "ajsbs",
@@ -156,95 +154,9 @@ async function main() {
     });
   }
 
-  const developmentDepartment = await prisma.department.upsert({
-    where: { slug: "sociology" },
-    update: { name: "Sociology", isActive: true },
-    create: { name: "Sociology", slug: "sociology", isActive: true },
-  });
-
-  await prisma.journal.upsert({
-    where: { slug: "imsu-foss-development-journal" },
-    update: {
-      departmentId: developmentDepartment.id,
-      name: "IMSU FOSS Development Journal",
-      shortName: "FOSS Development",
-      description: "Development fixture for cross-journal authorization checks",
-      institution: "Imo State University",
-      faculty: "Faculty of Social Sciences",
-      isActive: false,
-    },
-    create: {
-      departmentId: developmentDepartment.id,
-      name: "IMSU FOSS Development Journal",
-      slug: "imsu-foss-development-journal",
-      shortName: "FOSS Development",
-      description: "Development fixture for cross-journal authorization checks",
-      institution: "Imo State University",
-      faculty: "Faculty of Social Sciences",
-      isActive: false,
-    },
-  });
-
-  const volume = await prisma.volume.upsert({
-    where: {
-      journalId_year_number: { journalId: journal.id, year: 2026, number: 1 },
-    },
-    update: { title: "2026 Volume" },
-    create: {
-      journalId: journal.id,
-      year: 2026,
-      number: 1,
-      title: "2026 Volume",
-    },
-  });
-
-  const issue = await prisma.issue.upsert({
-    where: { volumeId_number: { volumeId: volume.id, number: 1 } },
-    update: { title: "Issue 1", isPublished: false },
-    create: {
-      volumeId: volume.id,
-      number: 1,
-      title: "Issue 1",
-      isPublished: false,
-    },
-  });
-
-  const article = await prisma.article.upsert({
-    where: { slug: "sample-academic-article" },
-    update: {
-      issueId: issue.id,
-      title: "Sample Academic Article",
-      abstract: "Development fixture for the publishing data model.",
-      issueOrder: 1,
-      isPublished: false,
-    },
-    create: {
-      issueId: issue.id,
-      title: "Sample Academic Article",
-      slug: "sample-academic-article",
-      abstract: "Development fixture for the publishing data model.",
-      issueOrder: 1,
-      isPublished: false,
-    },
-  });
-
-  await prisma.articleAuthor.upsert({
-    where: { articleId_position: { articleId: article.id, position: 1 } },
-    update: {
-      fullName: "Development Author",
-      affiliation: "Imo State University",
-    },
-    create: {
-      articleId: article.id,
-      fullName: "Development Author",
-      affiliation: "Imo State University",
-      position: 1,
-    },
-  });
-
-  console.log("Seeded operational department: Psychology");
-  console.log("Retained AJSBS, GJSBR and NJSBR as inactive references");
-  console.log(`Seeded development article: ${article.slug}`);
+  console.log(
+    "✓ Seeded 7 departments and 10 active journals (3 Faculty, 7 Departmental).",
+  );
 }
 
 main()

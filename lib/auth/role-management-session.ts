@@ -9,6 +9,8 @@ import {
 } from "@/lib/auth/role-management";
 import { prisma } from "@/lib/db/prisma";
 
+import { getBreakGlassSuperAdminEmails } from "@/lib/auth/provisioning";
+
 export { RoleManagementError } from "@/lib/auth/role-management";
 
 export async function assignManagedRole(input: ManagedRoleInput) {
@@ -28,11 +30,15 @@ export async function searchRoleManagementUsers(query: string) {
     actor.journalRoles.some(({ role }) => role === "JOURNAL_ADMIN");
   if (!canManage) throw new RoleManagementError("You cannot manage access.");
 
+  const breakGlassEmails = Array.from(getBreakGlassSuperAdminEmails());
   const search = query.trim();
   const whereCondition =
     search.length >= 2
       ? {
           id: { not: actor.id },
+          ...(breakGlassEmails.length > 0
+            ? { email: { notIn: breakGlassEmails } }
+            : {}),
           OR: [
             { displayName: { contains: search, mode: "insensitive" as const } },
             {
@@ -43,7 +49,12 @@ export async function searchRoleManagementUsers(query: string) {
             },
           ],
         }
-      : { id: { not: actor.id } };
+      : {
+          id: { not: actor.id },
+          ...(breakGlassEmails.length > 0
+            ? { email: { notIn: breakGlassEmails } }
+            : {}),
+        };
 
   return prisma.user.findMany({
     where: whereCondition,

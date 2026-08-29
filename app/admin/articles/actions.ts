@@ -84,7 +84,7 @@ export async function createDirectLegacyArticleAction(
     !hasJournalRole(user, targetJournal.id, "JOURNAL_ADMIN")
   ) {
     return {
-      error: "You are not authorized to publish content in this department.",
+      error: "You are not authorized to publish content in this journal.",
     };
   }
 

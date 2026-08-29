@@ -18,6 +18,16 @@ export default async function NewRequestPage({
   ) {
     redirect(getSubmissionEntryDestination(user));
   }
-  const request = await createSubmissionRequest(user.id, journalSlug);
-  redirect(`/author/requests/${request.id}`);
+
+  const slug = journalSlug?.trim();
+  if (slug) {
+    try {
+      const request = await createSubmissionRequest(user.id, slug);
+      redirect(`/author/requests/${request.id}`);
+    } catch {
+      redirect("/author");
+    }
+  }
+
+  redirect("/author");
 }

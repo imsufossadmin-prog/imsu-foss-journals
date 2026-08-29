@@ -9,6 +9,8 @@ import {
 } from "@/lib/auth/role-management-policy";
 import { prisma } from "@/lib/db/prisma";
 
+import { isBreakGlassSuperAdminEmail } from "@/lib/auth/provisioning";
+
 export class RoleManagementError extends Error {}
 
 export type ManagedRoleInput = {
@@ -61,7 +63,7 @@ async function resolveRoleChange(actorId: string, input: ManagedRoleInput) {
     loadRoleManagementActor(actorId),
     prisma.user.findUnique({
       where: { id: input.targetUserId },
-      select: { id: true, isActive: true, displayName: true },
+      select: { id: true, email: true, isActive: true, displayName: true },
     }),
     input.journalId
       ? prisma.journal.findUnique({
@@ -80,6 +82,11 @@ async function resolveRoleChange(actorId: string, input: ManagedRoleInput) {
   if (!actor) throw new RoleManagementError("Your account is unavailable.");
   if (!target)
     throw new RoleManagementError("The selected user was not found.");
+  if (isBreakGlassSuperAdminEmail(target.email)) {
+    throw new RoleManagementError(
+      "This account is protected by system security policy.",
+    );
+  }
   if (input.journalId && !journal) {
     throw new RoleManagementError("The selected journal was not found.");
   }

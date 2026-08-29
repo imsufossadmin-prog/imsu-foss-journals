@@ -51,7 +51,8 @@ export default async function AuthorRequestPage({
       <header className="mt-4 border-b border-[color:var(--color-border)] pb-6">
         <RequestStatus status={request.status} guidance />
         <h1 className="mt-3 font-serif text-2xl font-medium tracking-[-0.035em] break-words sm:text-4xl lg:text-5xl">
-          {request.submission?.title ?? "Psychology submission request"}
+          {request.submission?.title ??
+            `${request.department?.name ?? request.journal.name} submission request`}
         </h1>
         {request.submission?.trackingNumber ? (
           <p className="mt-3 font-mono text-xs font-semibold text-[color:var(--color-accent)] sm:text-sm">

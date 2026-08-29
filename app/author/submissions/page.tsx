@@ -22,7 +22,7 @@ export default async function SubmissionsPage() {
             information you need to understand their current state.
           </p>
         </div>
-        <Link href="/author/requests/new" className="button-primary shrink-0">
+        <Link href="/author" className="button-primary shrink-0">
           Start submission request
         </Link>
       </div>

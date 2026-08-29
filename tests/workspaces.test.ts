@@ -119,26 +119,38 @@ test("inactive journals never become available workspaces", () => {
   assert.equal(getPostLoginDestination(user), "/unauthorized?reason=workspace");
 });
 
-test("journal switchers show only contexts for the active role", () => {
+test("multi-journal staff users resolve to /workspaces and list all assigned journals", () => {
+  const facultyJournal: WorkspaceJournal = {
+    id: "journal-faculty",
+    slug: "ajsbs",
+    name: "African Journal of Social and Behavioural Sciences",
+    shortName: "AJSBS",
+    isActive: true,
+    department: null,
+  };
+
   const user = subject({
     globalRoles: [{ role: "AUTHOR" }],
     journalRoles: [
-      { journalId: journalA.id, role: "EDITOR", journal: journalA },
-      { journalId: journalB.id, role: "EDITOR", journal: journalB },
+      { journalId: journalA.id, role: "JOURNAL_ADMIN", journal: journalA },
+      { journalId: journalB.id, role: "JOURNAL_ADMIN", journal: journalB },
       {
-        journalId: journalB.id,
+        journalId: facultyJournal.id,
         role: "JOURNAL_ADMIN",
-        journal: journalB,
+        journal: facultyJournal,
       },
     ],
   });
 
+  assert.equal(getPostLoginDestination(user), "/workspaces");
+  const workspaces = getAvailableWorkspaces(user);
+  assert.equal(workspaces.length, 3);
   assert.deepEqual(
-    getJournalWorkspaces(user, "EDITOR").map(({ href }) => href),
-    ["/editor/social-sciences-review", "/editor/policy-studies"],
+    workspaces.map((w) => w.href),
+    ["/admin/ajsbs", "/admin/social-sciences-review", "/admin/policy-studies"],
   );
-  assert.deepEqual(
-    getJournalWorkspaces(user, "JOURNAL_ADMIN").map(({ href }) => href),
-    ["/admin/policy-studies"],
+  assert.equal(
+    workspaces.find((w) => w.href === "/admin/ajsbs")?.title,
+    "African Journal of Social and Behavioural Sciences operations",
   );
 });

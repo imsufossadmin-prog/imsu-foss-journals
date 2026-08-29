@@ -132,18 +132,14 @@ export function getPostLoginDestination(
     return "/admin";
   }
 
-  const journalAdmin = subject.journalRoles.find(
-    ({ role, journal }) => role === "JOURNAL_ADMIN" && journal.isActive,
-  );
-  if (journalAdmin) {
-    return `/admin/${journalAdmin.journal.slug}`;
+  const workspaces = getAvailableWorkspaces(subject);
+
+  if (workspaces.length === 1) {
+    return workspaces[0].href;
   }
 
-  const editorRole = subject.journalRoles.find(
-    ({ role, journal }) => role === "EDITOR" && journal.isActive,
-  );
-  if (editorRole) {
-    return `/editor/${editorRole.journal.slug}`;
+  if (workspaces.length > 1) {
+    return "/workspaces";
   }
 
   if (subject.globalRoles.some(({ role }) => role === "AUTHOR")) {

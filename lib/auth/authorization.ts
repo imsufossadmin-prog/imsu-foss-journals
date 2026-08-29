@@ -19,6 +19,7 @@ import {
   findActiveEditorAssignment,
   findOwnedSubmission,
 } from "@/lib/auth/access-queries";
+import { isBreakGlassSuperAdminEmail } from "@/lib/auth/provisioning";
 import { prisma } from "@/lib/db/prisma";
 import { SupabaseConfigurationError } from "@/lib/supabase/config";
 import { createClient } from "@/lib/supabase/server";
@@ -58,9 +59,37 @@ export const getCurrentUser = cache(async () => {
 
     if (!user) return null;
 
+    const userEmail =
+      typeof data.claims.email === "string" ? data.claims.email : null;
+
+    if (userEmail && isBreakGlassSuperAdminEmail(userEmail)) {
+      if (
+        !user.isActive ||
+        !user.globalRoles.some((gr) => gr.role === "SUPER_ADMIN")
+      ) {
+        await prisma.$transaction(async (tx) => {
+          await tx.user.update({
+            where: { id: userId },
+            data: { isActive: true },
+          });
+          await tx.userGlobalRole.upsert({
+            where: { userId_role: { userId, role: "SUPER_ADMIN" } },
+            update: {},
+            create: { userId, role: "SUPER_ADMIN" },
+          });
+        });
+
+        const refreshed = await prisma.user.findUnique({
+          where: { id: userId },
+          include: applicationUserInclude,
+        });
+        if (refreshed) return { ...refreshed, email: userEmail };
+      }
+    }
+
     return {
       ...user,
-      email: typeof data.claims.email === "string" ? data.claims.email : null,
+      email: userEmail,
     };
   } catch (error) {
     if (error instanceof SupabaseConfigurationError) return null;

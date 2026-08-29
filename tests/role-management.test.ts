@@ -227,3 +227,33 @@ test("role upgrades expose the existing multi-workspace behavior", () => {
     ["platform"],
   );
 });
+
+test("break-glass account is protected against role management mutations", async () => {
+  const { isBreakGlassSuperAdminEmail } =
+    await import("@/lib/auth/provisioning");
+
+  const originalEnv = process.env.BREAK_GLASS_SUPERADMIN_EMAILS;
+  try {
+    process.env.BREAK_GLASS_SUPERADMIN_EMAILS = "breakglass.admin@example.com";
+
+    const targetUser = {
+      id: "bg-target",
+      email: "breakglass.admin@example.com",
+      displayName: "Break Glass Admin",
+      isActive: true,
+    };
+
+    const isProtected = isBreakGlassSuperAdminEmail(targetUser.email);
+    assert.equal(isProtected, true);
+
+    const normalUser = {
+      id: "normal-target",
+      email: "imsufossadmin@gmail.com",
+      displayName: "IMSU FOSS Admin",
+      isActive: true,
+    };
+    assert.equal(isBreakGlassSuperAdminEmail(normalUser.email), false);
+  } finally {
+    process.env.BREAK_GLASS_SUPERADMIN_EMAILS = originalEnv;
+  }
+});

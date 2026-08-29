@@ -35,7 +35,13 @@ function initials(name: string) {
     .join("");
 }
 
-function AccountMenu({ user }: { user: ShellUser }) {
+function AccountMenu({
+  user,
+  hasMultipleWorkspaces,
+}: {
+  user: ShellUser;
+  hasMultipleWorkspaces?: boolean;
+}) {
   return (
     <details name="shell-menu" className="app-popover group relative">
       <summary
@@ -54,6 +60,14 @@ function AccountMenu({ user }: { user: ShellUser }) {
           </p>
         </div>
         <div className="my-1 h-px bg-[color:var(--color-border)]" />
+        {hasMultipleWorkspaces ? (
+          <Link
+            href="/workspaces"
+            className="block rounded-[var(--radius-md)] px-3 py-2.5 text-sm font-medium text-[color:var(--color-muted)] transition hover:bg-[color:var(--color-surface-strong)] hover:text-[color:var(--color-foreground)] focus-visible:outline-2 focus-visible:outline-[color:var(--color-focus)]"
+          >
+            Switch workspace
+          </Link>
+        ) : null}
         <Link
           href="/account"
           className="block rounded-[var(--radius-md)] px-3 py-2.5 text-sm font-medium text-[color:var(--color-muted)] transition hover:bg-[color:var(--color-surface-strong)] hover:text-[color:var(--color-foreground)] focus-visible:outline-2 focus-visible:outline-[color:var(--color-focus)]"
@@ -101,6 +115,28 @@ export function AuthenticatedShell({
             <NavigationLinks items={navigationItems} />
           </nav>
           <div className="ml-auto flex items-center gap-3">
+            {availableWorkspaces.length > 1 ? (
+              <Link
+                href="/workspaces"
+                className="hidden items-center gap-1.5 rounded-[var(--radius-md)] border border-[color:var(--color-border)] bg-[color:var(--color-surface-raised)] px-3 py-1.5 text-xs font-semibold text-[color:var(--color-foreground)] transition hover:border-[color:var(--color-accent)] hover:text-[color:var(--color-accent)] md:inline-flex"
+              >
+                <svg
+                  aria-hidden="true"
+                  viewBox="0 0 20 20"
+                  className="size-3.5 opacity-70"
+                >
+                  <path
+                    d="M6.5 4.5l-3 3 3 3M13.5 15.5l3-3-3-3M3.5 7.5h10M16.5 12.5h-10"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth="1.5"
+                  />
+                </svg>
+                <span>Switch workspace</span>
+              </Link>
+            ) : null}
             <details
               name="shell-menu"
               className="app-popover group relative md:hidden"
@@ -136,7 +172,10 @@ export function AuthenticatedShell({
               </div>
             </details>
             <ThemeToggle />
-            <AccountMenu user={user} />
+            <AccountMenu
+              user={user}
+              hasMultipleWorkspaces={availableWorkspaces.length > 1}
+            />
           </div>
         </div>
       </header>

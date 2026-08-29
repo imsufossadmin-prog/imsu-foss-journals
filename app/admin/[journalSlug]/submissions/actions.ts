@@ -494,7 +494,7 @@ export async function publishArticleAction(
     }
     return errorState(error);
   }
-  redirect(`/admin/${journalSlug}/submissions/${submissionId}?published=true`);
+  redirect("/admin/articles?success=published");
 }
 
 export async function closeIssueAction(
