@@ -12,7 +12,9 @@ export async function GET(
     where: { slug: articleSlug },
     include: {
       files: {
+        where: { type: { in: ["PRODUCTION_FILE", "PUBLISHED_PDF"] } },
         include: { storedFile: true },
+        orderBy: { createdAt: "desc" },
         take: 1,
       },
     },

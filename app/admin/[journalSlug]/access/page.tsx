@@ -28,7 +28,7 @@ export default async function JournalAccessPage({
     <div className="mx-auto max-w-6xl">
       <header className="max-w-3xl">
         <p className="text-xs font-semibold tracking-[0.12em] text-[color:var(--color-accent)] uppercase">
-          {journal.department.name} access
+          {journal.department?.name ?? journal.name} access
         </p>
         <h1 className="mt-3 font-serif text-4xl font-medium tracking-[-0.035em] sm:text-5xl">
           Choose Editors.

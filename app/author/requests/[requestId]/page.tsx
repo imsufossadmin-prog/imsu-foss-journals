@@ -5,6 +5,8 @@ import {
   beginSubmissionAction,
   sendAuthorMessageAction,
 } from "@/app/author/requests/actions";
+import { submitAuthorCorrectionAction } from "@/app/author/submissions/actions";
+import { AuthorCorrectionTriggerButton } from "@/components/editorial/revision-upload-form";
 import { PendingButton } from "@/components/submissions/pending-button";
 import {
   RequestChatBox,
@@ -68,22 +70,34 @@ export default async function AuthorRequestPage({
               viewerId={user.id}
               messages={messages}
               action={sendAuthorMessageAction.bind(null, request.id)}
+              authorCorrectionAction={
+                request.submission
+                  ? submitAuthorCorrectionAction.bind(
+                      null,
+                      request.submission.id,
+                    )
+                  : undefined
+              }
             />
           </div>
         </section>
         <aside className="space-y-4">
-          {request.status === "SUBMISSION_ENABLED" ? (
+          {!request.submission ||
+          request.submission.status === "DRAFT" ||
+          request.status === "NEW" ||
+          request.status === "SUBMISSION_ENABLED" ? (
             <div className="rounded-[var(--radius-lg)] border border-[color:var(--color-accent)] bg-[color:var(--color-surface-raised)] p-5">
               <h2 className="text-sm font-semibold">Ready to submit</h2>
               <p className="mt-2 text-xs leading-5 text-[color:var(--color-muted)]">
-                Complete the short article form and upload your manuscript.
+                Complete the short article form and upload your Microsoft Word
+                manuscript (.doc or .docx).
               </p>
               <form
                 action={beginSubmissionAction.bind(null, request.id)}
                 className="mt-4"
               >
                 <PendingButton
-                  className="button-primary"
+                  className="button-primary w-full"
                   pendingLabel="Preparing form…"
                 >
                   Submit article
@@ -91,13 +105,29 @@ export default async function AuthorRequestPage({
               </form>
             </div>
           ) : null}
-          {request.submission && request.status !== "SUBMISSION_ENABLED" ? (
-            <Link
-              href={`/author/submissions/${request.submission.id}`}
-              className="button-secondary inline-flex"
-            >
-              View manuscript record
-            </Link>
+          {request.submission && request.submission.status !== "DRAFT" ? (
+            <div className="space-y-3 rounded-[var(--radius-lg)] border border-[color:var(--color-border)] bg-[color:var(--color-surface-raised)] p-5">
+              <h2 className="text-sm font-semibold">Manuscript Status</h2>
+              <p className="text-xs text-[color:var(--color-muted)]">
+                Status: {request.submission.status.replaceAll("_", " ")}
+              </p>
+              <div className="flex flex-col gap-2 pt-2">
+                <Link
+                  href={`/author/submissions/${request.submission.id}`}
+                  className="button-secondary inline-flex items-center justify-center text-center text-xs"
+                >
+                  View manuscript record
+                </Link>
+                {["CORRECTION_REQUESTED", "REVISION_REQUESTED"].includes(
+                  request.submission.status,
+                ) ? (
+                  <AuthorCorrectionTriggerButton
+                    submissionId={request.submission.id}
+                    className="w-full justify-center"
+                  />
+                ) : null}
+              </div>
+            </div>
           ) : null}
         </aside>
       </div>

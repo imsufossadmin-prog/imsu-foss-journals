@@ -81,7 +81,7 @@ async function resolveRoleChange(actorId: string, input: ManagedRoleInput) {
   if (!target)
     throw new RoleManagementError("The selected user was not found.");
   if (input.journalId && !journal) {
-    throw new RoleManagementError("The selected department was not found.");
+    throw new RoleManagementError("The selected journal was not found.");
   }
 
   const scope: RoleManagementScope = journal
@@ -89,7 +89,9 @@ async function resolveRoleChange(actorId: string, input: ManagedRoleInput) {
         journalId: journal.id,
         departmentId: journal.departmentId,
         isActive: journal.isActive,
-        departmentIsActive: journal.department.isActive,
+        departmentIsActive: journal.department
+          ? journal.department.isActive
+          : true,
       }
     : null;
   const denial = getRoleChangeDenialReason({

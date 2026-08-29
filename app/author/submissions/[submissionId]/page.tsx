@@ -2,6 +2,8 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 
 import { sendAuthorMessageAction } from "@/app/author/requests/actions";
+import { submitAuthorCorrectionAction } from "@/app/author/submissions/actions";
+import { AuthorCorrectionTriggerButton } from "@/components/editorial/revision-upload-form";
 import {
   RequestChatBox,
   type ConversationMessageDTO,
@@ -70,23 +72,22 @@ export default async function SubmissionDetailPage({
   }
 
   const draft = submission.status === "DRAFT";
+
   return (
-    <div className="mx-auto w-full max-w-5xl min-w-0 overflow-x-hidden px-4 sm:px-6 lg:px-8">
+    <div className="mx-auto max-w-5xl">
       <Link
         href="/author/submissions"
         className="text-xs font-semibold text-[color:var(--color-muted)] hover:text-[color:var(--color-foreground)]"
       >
-        ← All submissions
+        ← My Submissions
       </Link>
-      <div className="mt-6 flex flex-col gap-6 pb-6 sm:flex-row sm:items-end sm:justify-between">
-        <div className="min-w-0">
+
+      <div className="mt-6 flex flex-wrap items-start justify-between gap-4 border-b border-[color:var(--color-border)] pb-6">
+        <div>
           <SubmissionStatus status={submission.status} />
-          <h1 className="mt-3 font-serif text-2xl font-medium tracking-[-0.035em] break-words sm:text-4xl lg:text-5xl">
+          <h1 className="mt-3 font-serif text-3xl font-medium tracking-[-0.035em] sm:text-4xl">
             {submission.title ?? "Untitled manuscript"}
           </h1>
-          <p className="mt-2 text-sm text-[color:var(--color-muted)]">
-            {submission.journal.name}
-          </p>
           {submission.trackingNumber ? (
             <p className="mt-2 font-mono text-xs text-[color:var(--color-subtle)]">
               {submission.trackingNumber}
@@ -104,6 +105,13 @@ export default async function SubmissionDetailPage({
           >
             Continue editing
           </Link>
+        ) : ["CORRECTION_REQUESTED", "REVISION_REQUESTED"].includes(
+            submission.status,
+          ) ? (
+          <AuthorCorrectionTriggerButton
+            submissionId={submission.id}
+            className="shrink-0"
+          />
         ) : null}
       </div>
 
@@ -143,12 +151,72 @@ export default async function SubmissionDetailPage({
                   viewerId={user.id}
                   messages={messages}
                   action={sendAuthorMessageAction.bind(null, request.id)}
+                  authorCorrectionAction={submitAuthorCorrectionAction.bind(
+                    null,
+                    submission.id,
+                  )}
                 />
               </div>
             </DetailSection>
           ) : null}
         </div>
-        <aside className="min-w-0">
+        <aside className="min-w-0 space-y-4">
+          {submission.status === "ACCEPTED" ? (
+            <div className="rounded-[var(--radius-lg)] border border-emerald-500/40 bg-emerald-500/5 p-5">
+              <span className="rounded bg-emerald-500/20 px-2 py-0.5 text-[10px] font-semibold text-emerald-400">
+                PUBLISHED
+              </span>
+              <h2 className="mt-2 text-sm font-semibold text-[color:var(--color-foreground)]">
+                Publication Deliverables
+              </h2>
+              <p className="mt-1 text-xs leading-5 text-[color:var(--color-muted)]">
+                Your paper is officially published. You can download the final
+                publication deliverables below:
+              </p>
+              <div className="mt-4 flex flex-col gap-2">
+                <a
+                  href={`/api/articles/art-${submission.id.toLowerCase()}/pdf`}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="button-primary text-center text-xs"
+                >
+                  Download Published Article
+                </a>
+                <a
+                  href={`/api/articles/art-${submission.id.toLowerCase()}/cover`}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="button-secondary text-center text-xs"
+                >
+                  Download Article Cover
+                </a>
+                <Link
+                  href={`/articles/art-${submission.id.toLowerCase()}`}
+                  className="mt-1 text-center text-xs font-semibold text-[color:var(--color-accent)] hover:underline"
+                >
+                  View Public Article Page →
+                </Link>
+              </div>
+            </div>
+          ) : null}
+
+          {["CORRECTION_REQUESTED", "REVISION_REQUESTED"].includes(
+            submission.status,
+          ) ? (
+            <div className="rounded-[var(--radius-lg)] border border-[color:var(--color-accent)] bg-[color:var(--color-surface-raised)] p-5">
+              <h2 className="text-sm font-semibold">Correction Required</h2>
+              <p className="mt-2 text-xs leading-5 text-[color:var(--color-muted)]">
+                The editorial team has requested corrections. Upload your
+                revised manuscript file to continue.
+              </p>
+              <div className="mt-4">
+                <AuthorCorrectionTriggerButton
+                  submissionId={submission.id}
+                  className="w-full justify-center"
+                />
+              </div>
+            </div>
+          ) : null}
           <details className="group rounded-[var(--radius-lg)] border border-[color:var(--color-border)] bg-[color:var(--color-surface-raised)] p-4 sm:p-5">
             <summary className="flex cursor-pointer items-center justify-between text-xs font-semibold text-[color:var(--color-foreground)] select-none">
               <span>Timeline & Audit History</span>
@@ -175,12 +243,43 @@ export default async function SubmissionDetailPage({
                         },
                       ]
                     : []),
-                  ...(editorial?.events ?? []).map((event) => ({
-                    id: event.id,
-                    type: event.type.replaceAll("_", " ").toLowerCase(),
-                    message: event.message,
-                    createdAt: event.createdAt,
-                  })),
+                  ...(editorial?.events ?? []).map((event) => {
+                    let eventType = event.type
+                      .replaceAll("_", " ")
+                      .toLowerCase();
+                    let eventMessage = event.message;
+
+                    if (event.type === "CORRECTION_REQUESTED") {
+                      eventType = "Correction Requested";
+                      if (event.message?.includes("attachment")) {
+                        const match =
+                          event.message.match(/\d+\s+attachments?/i);
+                        eventMessage = match
+                          ? match[0].toLowerCase()
+                          : event.message;
+                      } else {
+                        eventMessage = null;
+                      }
+                    } else if (event.type === "REVISION_SUBMITTED") {
+                      eventType = "Correction Submitted";
+                      if (event.message?.includes("attachment")) {
+                        const match =
+                          event.message.match(/\d+\s+attachments?/i);
+                        eventMessage = match
+                          ? match[0].toLowerCase()
+                          : event.message;
+                      } else {
+                        eventMessage = null;
+                      }
+                    }
+
+                    return {
+                      id: event.id,
+                      type: eventType,
+                      message: eventMessage,
+                      createdAt: event.createdAt,
+                    };
+                  }),
                 ]
                   .sort((a, b) => a.createdAt.getTime() - b.createdAt.getTime())
                   .map((event) => (

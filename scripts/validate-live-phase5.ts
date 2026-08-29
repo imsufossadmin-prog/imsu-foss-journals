@@ -143,7 +143,7 @@ async function main() {
     where: { slug: "psychology" },
     include: { department: true },
   });
-  assert.equal(psychology.department.slug, "psychology");
+  assert.equal(psychology.department?.slug, "psychology");
   assert.equal(psychology.isActive, true);
   const legacy = await prisma.journal.findMany({
     where: { slug: { in: ["ajsbs", "gjsbr", "njsbr"] } },

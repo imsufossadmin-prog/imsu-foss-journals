@@ -2,7 +2,7 @@ import Link from "next/link";
 
 import { RequestStatus } from "@/components/requests/request-components";
 import { requireJournalWorkspace } from "@/lib/auth/workspace-context";
-import { listDepartmentRequests } from "@/lib/requests/data";
+import { listJournalRequests } from "@/lib/requests/data";
 
 const date = new Intl.DateTimeFormat("en-NG", {
   day: "numeric",
@@ -20,12 +20,13 @@ export default async function JournalAdminPage({
     "JOURNAL_ADMIN",
     journalSlug,
   );
-  const requests = await listDepartmentRequests(journal.department.id);
+  const requests = await listJournalRequests(journal.id);
+  const journalLabel = journal.department?.name ?? journal.name;
   return (
     <div className="mx-auto max-w-6xl">
       <header className="border-b border-[color:var(--color-border)] pb-8">
         <p className="text-xs font-semibold tracking-[0.12em] text-[color:var(--color-accent)] uppercase">
-          {journal.department.name} operations
+          {journalLabel} operations
         </p>
         <h1 className="mt-3 font-serif text-4xl font-medium tracking-[-0.035em] sm:text-5xl">
           Submission requests

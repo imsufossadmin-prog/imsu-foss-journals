@@ -11,12 +11,12 @@ export type WorkspaceJournal = {
   name: string;
   shortName: string | null;
   isActive: boolean;
-  department: {
+  department?: {
     id: string;
     slug: string;
     name: string;
     isActive: boolean;
-  };
+  } | null;
 };
 
 export type WorkspaceSubject = {
@@ -72,8 +72,12 @@ export function getAvailableWorkspaces(subject: WorkspaceSubject) {
         href: `/admin/${assignment.journal.slug}`,
         area: "journal-admin",
         roleLabel: "Journal Administrator",
-        title: `${assignment.journal.department.name} operations`,
-        description: "Manage journal activity for this department.",
+        title: assignment.journal.department
+          ? `${assignment.journal.department.name} operations`
+          : `${assignment.journal.name} operations`,
+        description: assignment.journal.department
+          ? "Manage journal activity for this department."
+          : "Manage faculty journal operations.",
         journal: assignment.journal,
       });
     } else {
@@ -82,7 +86,9 @@ export function getAvailableWorkspaces(subject: WorkspaceSubject) {
         href: `/editor/${assignment.journal.slug}`,
         area: "editor",
         roleLabel: "Editor",
-        title: `${assignment.journal.department.name} editor workspace`,
+        title: assignment.journal.department
+          ? `${assignment.journal.department.name} editor workspace`
+          : `${assignment.journal.name} editor workspace`,
         description: "Enter the editorial review workspace.",
         journal: assignment.journal,
       });

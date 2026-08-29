@@ -3,7 +3,7 @@ import type { ManagedRole } from "@prisma/client";
 type ScopedRole = {
   role: "JOURNAL_ADMIN" | "EDITOR";
   journalId: string;
-  departmentId: string;
+  departmentId?: string | null;
 };
 
 export type RoleManagementActor = {
@@ -20,9 +20,9 @@ export type RoleManagementTarget = {
 
 export type RoleManagementScope = {
   journalId: string;
-  departmentId: string;
+  departmentId?: string | null;
   isActive: boolean;
-  departmentIsActive: boolean;
+  departmentIsActive?: boolean;
 } | null;
 
 export type RoleChangePolicyInput = {
@@ -43,15 +43,15 @@ export function getRoleChangeDenialReason({
   if (actor.id === target.id) return "You cannot change your own access.";
 
   if (role === "SUPER_ADMIN") {
-    if (scope) return "Super Admin access cannot have a department scope.";
+    if (scope) return "Super Admin access cannot have a journal scope.";
     return actor.isSuperAdmin
       ? null
       : "Only a Super Admin can change Super Admin access.";
   }
 
-  if (!scope) return "Choose a department for this role.";
-  if (!scope.isActive || !scope.departmentIsActive) {
-    return "That department workspace is not active.";
+  if (!scope) return "Choose a journal for this role.";
+  if (!scope.isActive || scope.departmentIsActive === false) {
+    return "That journal workspace is not active.";
   }
   if (actor.isSuperAdmin) return null;
   if (role !== "EDITOR") {
@@ -61,8 +61,8 @@ export function getRoleChangeDenialReason({
   return actor.scopedRoles.some(
     (assignment) =>
       assignment.role === "JOURNAL_ADMIN" &&
-      assignment.departmentId === scope.departmentId,
+      assignment.journalId === scope.journalId,
   )
     ? null
-    : "You can only change Editor access in your own department.";
+    : "You can only change Editor access in your own journal.";
 }

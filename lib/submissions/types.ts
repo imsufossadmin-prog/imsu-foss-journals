@@ -38,7 +38,7 @@ export type AuthorSubmissionDTO = {
     slug: string;
     description: string | null;
     isActive: boolean;
-    department: { name: string; isActive: boolean };
+    department?: { name: string; isActive: boolean } | null;
   };
   request: { id: string } | null;
   authors: Array<SubmissionAuthorInput & { id: string; position: number }>;

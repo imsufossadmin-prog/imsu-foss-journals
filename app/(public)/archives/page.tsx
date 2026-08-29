@@ -87,7 +87,9 @@ export default async function ArchivesPage({
               </h1>
               <p className="mt-2 text-sm text-[color:var(--color-muted)]">
                 {activeJournalObj
-                  ? `Department: ${activeJournalObj.department.name}`
+                  ? activeJournalObj.department
+                    ? `Department: ${activeJournalObj.department.name}`
+                    : "Faculty of Social Sciences Journal"
                   : "Search across all volumes, issues, and peer-reviewed journals."}
               </p>
             </div>

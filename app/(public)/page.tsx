@@ -69,7 +69,7 @@ export default async function Home() {
       name: j.name,
       slug: j.slug,
       shortName: j.shortName,
-      departmentName: j.department.name,
+      departmentName: j.department?.name ?? j.name,
       description: j.description,
       articleCount,
     };
@@ -198,7 +198,9 @@ export default async function Home() {
                       Current Issue
                     </span>
                     <span className="text-[color:var(--color-subtle)]">
-                      {currentIssueArticle.issue.volume.journal.department.name}{" "}
+                      {currentIssueArticle.issue.volume.journal.department
+                        ?.name ??
+                        currentIssueArticle.issue.volume.journal.name}{" "}
                       · Vol. {currentIssueArticle.issue.volume.number}, Issue{" "}
                       {currentIssueArticle.issue.number}
                     </span>

@@ -58,8 +58,12 @@ export async function requireJournalWorkspace(
         href: `/${area === "journal-admin" ? "admin" : "editor"}/${journal.slug}`,
         area,
         roleLabel,
-        title: `${journal.department.name} operations`,
-        description: "Manage journal activity for this department.",
+        title: journal.department
+          ? `${journal.department.name} operations`
+          : `${journal.name} operations`,
+        description: journal.department
+          ? "Manage journal activity for this department."
+          : "Manage faculty journal operations.",
         journal,
       });
     }

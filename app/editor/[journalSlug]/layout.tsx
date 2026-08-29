@@ -37,6 +37,15 @@ export default async function JournalEditorLayout({
       workspace={workspace}
       workspaces={workspaces}
       journalWorkspaces={journalWorkspaces}
+      navigation={[
+        { href: `/editor/${journal.slug}`, label: "Assignments" },
+        {
+          href: `/editor/${journal.slug}/chat`,
+          label: "Team Chat",
+          matchSubtree: true,
+        },
+        { href: "/account", label: "Account" },
+      ]}
     >
       {children}
     </AuthenticatedShell>

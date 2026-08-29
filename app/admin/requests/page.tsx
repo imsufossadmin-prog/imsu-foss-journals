@@ -62,8 +62,8 @@ export default async function AdminRequestsPage({
             Submission Requests
           </h1>
           <p className="mt-3 max-w-xl text-sm leading-6 text-[color:var(--color-muted)]">
-            Review author inquiries, track payment receipts, enable manuscript
-            submissions, and route requests across all departments.
+            Review author inquiries, monitor incoming manuscripts, and
+            coordinate requests across all departments.
           </p>
         </div>
 
@@ -85,7 +85,7 @@ export default async function AdminRequestsPage({
                     <div className="min-w-0 space-y-1">
                       <div className="flex items-center gap-2">
                         <span className="rounded-md bg-[color:var(--color-accent-soft)] px-2 py-0.5 text-[10px] font-semibold text-[color:var(--color-accent)] uppercase">
-                          {request.department.name}
+                          {request.department?.name ?? request.journal.name}
                         </span>
                         <span className="text-xs font-medium text-[color:var(--color-muted)]">
                           {request.author.displayName}
@@ -93,7 +93,7 @@ export default async function AdminRequestsPage({
                       </div>
                       <p className="truncate text-sm font-semibold tracking-[-0.01em] text-[color:var(--color-foreground)]">
                         {request.submission?.title ??
-                          `${request.department.name} submission request`}
+                          `${request.department?.name ?? request.journal.name} submission request`}
                       </p>
                       <p className="text-xs text-[color:var(--color-subtle)]">
                         {request._count.messages} conversation updates · Updated{" "}

@@ -7,7 +7,12 @@ export function DepartmentFilterSelect({
   journals,
   totalCount,
 }: {
-  journals: Array<{ id: string; slug: string; department: { name: string } }>;
+  journals: Array<{
+    id: string;
+    slug: string;
+    name?: string;
+    department?: { name: string } | null;
+  }>;
   totalCount: number;
 }) {
   const router = useRouter();
@@ -32,7 +37,7 @@ export function DepartmentFilterSelect({
         htmlFor="department-filter"
         className="text-[10px] font-bold tracking-[0.14em] text-[color:var(--color-muted)] uppercase"
       >
-        Filter by Department:
+        Filter by Journal / Department:
       </label>
       <select
         id="department-filter"
@@ -41,10 +46,10 @@ export function DepartmentFilterSelect({
         onChange={handleChange}
         className="app-field max-w-xs cursor-pointer rounded-[var(--radius-md)] border border-[color:var(--color-border)] bg-[color:var(--color-surface-raised)] px-3 py-2 text-xs font-semibold text-[color:var(--color-foreground)] transition hover:border-[color:var(--color-accent)] focus:ring-1 focus:ring-[color:var(--color-accent)] focus:outline-none"
       >
-        <option value="all">All Departments ({totalCount})</option>
+        <option value="all">All Journals ({totalCount})</option>
         {journals.map((journal) => (
           <option key={journal.id} value={journal.slug}>
-            {journal.department.name}
+            {journal.department?.name ?? journal.name}
           </option>
         ))}
       </select>

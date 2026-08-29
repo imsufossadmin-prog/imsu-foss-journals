@@ -1,3 +1,6 @@
+"use client";
+
+import { useState } from "react";
 import Link from "next/link";
 
 type OperationalCounts = {
@@ -18,7 +21,7 @@ type ActiveJournal = {
   slug: string;
   name: string;
   shortName: string | null;
-  department: { id: string; name: string };
+  department?: { id: string; name: string } | null;
 };
 
 type SuperAdminDashboardProps = {
@@ -100,10 +103,10 @@ export function SuperAdminDashboard({
   staff,
   journals,
 }: SuperAdminDashboardProps) {
-  const totalItems =
-    operational.newRequests +
-    operational.pendingReceipts +
-    operational.awaitingTracking;
+  const [showAllJournals, setShowAllJournals] = useState(false);
+  const totalItems = operational.newRequests + operational.awaitingTracking;
+
+  const visibleJournals = showAllJournals ? journals : journals.slice(0, 4);
 
   return (
     <div className="mx-auto max-w-5xl space-y-12">
@@ -126,8 +129,8 @@ export function SuperAdminDashboard({
               : "Everything is up to date."}
           </h1>
           <p className="mt-3 max-w-xl text-sm leading-6 text-[color:var(--color-muted)]">
-            Live operational status across IMSU FOSS Journals. Click any action
-            item to manage department operations.
+            Live operational status across all 10 IMSU FOSS Journals. Click any
+            journal or action item to manage operations.
           </p>
         </div>
         <div className="shrink-0">
@@ -143,17 +146,7 @@ export function SuperAdminDashboard({
       {/* Operational queue */}
       <section>
         <SectionHeader>Operational queue</SectionHeader>
-        <div className="mt-5 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          <OperationalTile
-            count={operational.pendingReceipts}
-            label={pluralise(
-              operational.pendingReceipts,
-              "Receipt awaiting review",
-              "Receipts awaiting review",
-            )}
-            actionLabel="Review receipts"
-            href="/admin/requests"
-          />
+        <div className="mt-5 grid gap-4 sm:grid-cols-3">
           <OperationalTile
             count={operational.awaitingTracking}
             label={pluralise(
@@ -187,27 +180,45 @@ export function SuperAdminDashboard({
         </div>
       </section>
 
-      {/* Active departments */}
+      {/* Active journals */}
       {journals.length > 0 ? (
         <section>
-          <SectionHeader>
-            {pluralise(
-              journals.length,
-              "Active department",
-              "Active departments",
-            )}
-          </SectionHeader>
-          <div className="mt-5 rounded-[var(--radius-lg)] border border-[color:var(--color-border)] bg-[color:var(--color-surface-raised)] p-1">
+          <div className="flex items-center justify-between">
+            <SectionHeader>
+              {pluralise(journals.length, "Active journal", "Active journals")}
+            </SectionHeader>
+            {journals.length > 4 ? (
+              <button
+                type="button"
+                onClick={() => setShowAllJournals(!showAllJournals)}
+                className="text-xs font-semibold text-[color:var(--color-accent)] hover:underline"
+              >
+                {showAllJournals
+                  ? "Show fewer ↑"
+                  : `View all ${journals.length} journals ↓`}
+              </button>
+            ) : null}
+          </div>
+          <div className="mt-4 rounded-[var(--radius-lg)] border border-[color:var(--color-border)] bg-[color:var(--color-surface-raised)] p-1 transition-all">
             <ul className="divide-y divide-[color:var(--color-border)]/70">
-              {journals.map((journal) => (
+              {visibleJournals.map((journal) => (
                 <li key={journal.id} className="p-4 sm:px-5">
                   <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                     <div>
-                      <p className="text-sm font-semibold tracking-[-0.01em] text-[color:var(--color-foreground)]">
-                        {journal.department.name}
-                      </p>
+                      <div className="flex items-center gap-2">
+                        <p className="text-sm font-semibold tracking-[-0.01em] text-[color:var(--color-foreground)]">
+                          {journal.name}
+                        </p>
+                        {journal.shortName ? (
+                          <span className="rounded bg-[color:var(--color-accent-soft)] px-1.5 py-0.5 text-[10px] font-bold text-[color:var(--color-accent)]">
+                            {journal.shortName}
+                          </span>
+                        ) : null}
+                      </div>
                       <p className="mt-0.5 text-[12px] text-[color:var(--color-muted)]">
-                        {journal.name}
+                        {journal.department
+                          ? `Department: ${journal.department.name}`
+                          : "Faculty of Social Sciences Journal"}
                       </p>
                     </div>
                     <Link
@@ -221,6 +232,19 @@ export function SuperAdminDashboard({
                 </li>
               ))}
             </ul>
+            {journals.length > 4 ? (
+              <div className="border-t border-[color:var(--color-border)]/70 p-3 text-center">
+                <button
+                  type="button"
+                  onClick={() => setShowAllJournals(!showAllJournals)}
+                  className="text-xs font-semibold text-[color:var(--color-accent)] hover:underline"
+                >
+                  {showAllJournals
+                    ? "Show fewer journals ↑"
+                    : `View all ${journals.length} journals ↓`}
+                </button>
+              </div>
+            ) : null}
           </div>
         </section>
       ) : null}

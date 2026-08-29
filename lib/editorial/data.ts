@@ -220,14 +220,35 @@ export async function getEditorialSubmission(
               review: {
                 select: {
                   status: true,
-                  originality: true,
+                  titleAbstract: true,
+                  introductionThesis: true,
+                  literatureReview: true,
                   methodology: true,
+                  resultsDiscussion: true,
+                  conclusion: true,
+                  languageStyle: true,
+                  apaAdherence: true,
+                  generalReport: true,
+                  originality: true,
                   clarity: true,
                   relevance: true,
                   recommendation: true,
                   commentsToAuthor: true,
                   confidentialComments: true,
                   submittedAt: true,
+                  attachments: {
+                    select: {
+                      id: true,
+                      storedFile: {
+                        select: {
+                          id: true,
+                          originalFileName: true,
+                          sizeBytes: true,
+                          mimeType: true,
+                        },
+                      },
+                    },
+                  },
                 },
               },
             },
@@ -243,6 +264,17 @@ export async function getEditorialSubmission(
               decidedBy: { select: { displayName: true } },
             },
           },
+        },
+      },
+      adherenceReports: {
+        orderBy: { createdAt: "desc" },
+        select: {
+          id: true,
+          outcome: true,
+          report: true,
+          createdAt: true,
+          editor: { select: { id: true, displayName: true } },
+          submissionVersion: { select: { versionNumber: true } },
         },
       },
       events: {
@@ -338,16 +370,56 @@ export async function getBlindedAssignment(input: {
               title: true,
               abstract: true,
               keywords: true,
-              journal: { select: { id: true, name: true, shortName: true } },
+              status: true,
+              journal: {
+                select: { id: true, name: true, shortName: true, slug: true },
+              },
+              manuscriptVersions: {
+                orderBy: { versionNumber: "desc" },
+                select: {
+                  id: true,
+                  versionNumber: true,
+                  kind: true,
+                  authorNote: true,
+                  submittedAt: true,
+                  manuscriptStoredFile: {
+                    select: {
+                      id: true,
+                      originalFileName: true,
+                      sizeBytes: true,
+                    },
+                  },
+                },
+              },
+              adherenceReports: {
+                where: { editorId: input.editorId },
+                orderBy: { createdAt: "desc" },
+                select: {
+                  id: true,
+                  outcome: true,
+                  report: true,
+                  createdAt: true,
+                  submissionVersion: { select: { versionNumber: true } },
+                },
+              },
             },
           },
         },
       },
       review: {
         select: {
+          id: true,
           status: true,
-          originality: true,
+          titleAbstract: true,
+          introductionThesis: true,
+          literatureReview: true,
           methodology: true,
+          resultsDiscussion: true,
+          conclusion: true,
+          languageStyle: true,
+          apaAdherence: true,
+          generalReport: true,
+          originality: true,
           clarity: true,
           relevance: true,
           recommendation: true,
@@ -355,6 +427,19 @@ export async function getBlindedAssignment(input: {
           confidentialComments: true,
           submittedAt: true,
           version: true,
+          attachments: {
+            select: {
+              id: true,
+              storedFile: {
+                select: {
+                  id: true,
+                  originalFileName: true,
+                  sizeBytes: true,
+                  mimeType: true,
+                },
+              },
+            },
+          },
         },
       },
     },

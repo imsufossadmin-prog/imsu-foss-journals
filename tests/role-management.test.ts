@@ -60,7 +60,7 @@ test("normal Authors cannot promote themselves or another user", () => {
       role: "EDITOR",
       scope: scopeA,
     })!,
-    /own department/,
+    /own (department|journal)/,
   );
 });
 
@@ -81,7 +81,7 @@ test("Journal Admin can change Editor access only inside their department", () =
       role: "EDITOR",
       scope: scopeB,
     })!,
-    /own department/,
+    /own (department|journal)/,
   );
 });
 
@@ -153,7 +153,7 @@ test("inactive users and invalid role scopes are rejected", () => {
       role: "EDITOR",
       scope: null,
     })!,
-    /Choose a department/,
+    /Choose a (department|journal)/,
   );
   assert.match(
     getRoleChangeDenialReason({
@@ -162,7 +162,7 @@ test("inactive users and invalid role scopes are rejected", () => {
       role: "SUPER_ADMIN",
       scope: scopeA,
     })!,
-    /cannot have a department/,
+    /cannot have a (department|journal)/,
   );
 });
 

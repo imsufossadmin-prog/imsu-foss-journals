@@ -40,6 +40,33 @@ export const allowedSubmissionFiles = {
   "application/vnd.openxmlformats-officedocument.wordprocessingml.document": [
     "docx",
   ],
+  "application/msword": ["doc"],
+  "application/x-msword": ["doc"],
+  "application/vnd.ms-word": ["doc"],
+  "application/doc": ["doc"],
+} as const;
+
+export const allowedInitialManuscriptFiles = {
+  "application/vnd.openxmlformats-officedocument.wordprocessingml.document": [
+    "docx",
+  ],
+  "application/msword": ["doc"],
+  "application/x-msword": ["doc"],
+  "application/vnd.ms-word": ["doc"],
+  "application/doc": ["doc"],
+} as const;
+
+export const allowedGeneralSubmissionFiles = {
+  "application/pdf": ["pdf"],
+  "application/vnd.openxmlformats-officedocument.wordprocessingml.document": [
+    "docx",
+  ],
+  "application/msword": ["doc"],
+  "application/x-msword": ["doc"],
+  "application/vnd.ms-word": ["doc"],
+  "application/doc": ["doc"],
+  "image/jpeg": ["jpg", "jpeg"],
+  "image/png": ["png"],
 } as const;
 
 export function isSubmissionStep(value: string): value is SubmissionStep {

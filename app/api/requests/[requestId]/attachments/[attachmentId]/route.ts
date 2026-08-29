@@ -18,7 +18,7 @@ export async function GET(
     select: {
       storedFile: { select: { bucket: true, objectPath: true } },
       message: {
-        select: { request: { select: { authorId: true, departmentId: true } } },
+        select: { request: { select: { authorId: true, journalId: true } } },
       },
     },
   });
@@ -30,8 +30,7 @@ export async function GET(
     isSuperAdmin(user) ||
     user.journalRoles.some(
       ({ role, journal }) =>
-        role === "JOURNAL_ADMIN" &&
-        journal.department.id === scope.departmentId,
+        role === "JOURNAL_ADMIN" && journal.id === scope.journalId,
     );
   if (!allowed)
     return NextResponse.json({ error: "File unavailable." }, { status: 404 });

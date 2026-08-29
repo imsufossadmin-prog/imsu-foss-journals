@@ -2,7 +2,7 @@ import Link from "next/link";
 
 import { requireApplicationArea } from "@/lib/auth/authorization";
 import { prisma } from "@/lib/db/prisma";
-import { AdminArticleRowActions } from "./actions-client";
+import { AdminArticleRowActions, AdminIssueRowActions } from "./actions-client";
 
 export default async function AdminArticlesDirectoryPage({
   searchParams,
@@ -12,35 +12,63 @@ export default async function AdminArticlesDirectoryPage({
   await requireApplicationArea("admin");
   const { q, success } = await searchParams;
 
-  const articles = await prisma.article.findMany({
-    where: q
-      ? {
-          OR: [
-            { title: { contains: q, mode: "insensitive" } },
-            { abstract: { contains: q, mode: "insensitive" } },
-          ],
-        }
-      : undefined,
-    orderBy: { createdAt: "desc" },
-    include: {
-      authors: { orderBy: { position: "asc" } },
-      issue: {
-        include: {
-          volume: {
-            include: {
-              journal: {
-                select: {
-                  name: true,
-                  slug: true,
-                  department: { select: { name: true } },
+  const [articles, issues] = await Promise.all([
+    prisma.article.findMany({
+      where: q
+        ? {
+            OR: [
+              { title: { contains: q, mode: "insensitive" } },
+              { abstract: { contains: q, mode: "insensitive" } },
+            ],
+          }
+        : undefined,
+      orderBy: { createdAt: "desc" },
+      include: {
+        authors: { orderBy: { position: "asc" } },
+        issue: {
+          include: {
+            volume: {
+              include: {
+                journal: {
+                  select: {
+                    name: true,
+                    slug: true,
+                    department: { select: { name: true } },
+                  },
                 },
               },
             },
           },
         },
       },
-    },
-  });
+    }),
+    prisma.issue.findMany({
+      orderBy: [
+        { volume: { journal: { name: "asc" } } },
+        { volume: { year: "desc" } },
+        { volume: { number: "desc" } },
+        { number: "desc" },
+      ],
+      include: {
+        volume: {
+          include: {
+            journal: {
+              select: {
+                name: true,
+                slug: true,
+                department: { select: { name: true } },
+              },
+            },
+          },
+        },
+        _count: {
+          select: {
+            articles: { where: { isPublished: true } },
+          },
+        },
+      },
+    }),
+  ]);
 
   return (
     <div className="mx-auto max-w-6xl min-w-0 space-y-8 px-4 py-8 sm:px-6 lg:px-8">
@@ -62,11 +90,11 @@ export default async function AdminArticlesDirectoryPage({
             Platform Content Management
           </p>
           <h1 className="mt-1 font-serif text-3xl font-bold tracking-[-0.035em] text-[color:var(--color-foreground)] sm:text-4xl">
-            Published Articles &amp; Archives
+            Published Articles &amp; Issues
           </h1>
           <p className="mt-1 text-xs text-[color:var(--color-muted)]">
-            Manage, unpublish, or delete published content, or directly publish
-            manuscripts into the catalog.
+            Manage issues, publish Table of Contents, and manage published
+            articles in the catalog.
           </p>
         </div>
         <div>
@@ -85,6 +113,76 @@ export default async function AdminArticlesDirectoryPage({
           Manuscript successfully published to journal catalog.
         </div>
       ) : null}
+
+      {/* Issues & Table of Contents Section */}
+      <div className="rounded-[var(--radius-lg)] border border-[color:var(--color-border)] bg-[color:var(--color-surface-raised)] p-6">
+        <div className="flex items-center justify-between border-b border-[color:var(--color-border)] pb-4">
+          <div>
+            <h2 className="text-sm font-bold text-[color:var(--color-foreground)]">
+              Journal Issues &amp; Table of Contents ({issues.length})
+            </h2>
+            <p className="text-xs text-[color:var(--color-muted)]">
+              Open/close issues, publish updated TOCs, and download TOC in PDF
+              or HTML format.
+            </p>
+          </div>
+        </div>
+
+        {issues.length === 0 ? (
+          <div className="p-8 text-center">
+            <p className="text-xs text-[color:var(--color-muted)]">
+              No journal issues created yet. Published articles will
+              automatically populate issues here.
+            </p>
+          </div>
+        ) : (
+          <div className="mt-4 divide-y divide-[color:var(--color-border)]/70">
+            {issues.map((issue) => {
+              const journal = issue.volume.journal;
+              const journalLabel = journal.department?.name ?? journal.name;
+
+              return (
+                <div
+                  key={issue.id}
+                  className="flex flex-col gap-4 py-4 sm:flex-row sm:items-center sm:justify-between"
+                >
+                  <div className="space-y-1">
+                    <div className="flex items-center gap-2 text-xs font-semibold text-[color:var(--color-accent)] uppercase">
+                      <span>{journalLabel}</span>
+                      <span>·</span>
+                      <span>
+                        Vol. {issue.volume.number} · Issue {issue.number} (
+                        {issue.volume.year})
+                      </span>
+                      <span>
+                        {issue.isClosed ? (
+                          <span className="rounded bg-slate-500/20 px-2 py-0.5 text-[10px] text-slate-400">
+                            CLOSED
+                          </span>
+                        ) : (
+                          <span className="rounded bg-emerald-500/20 px-2 py-0.5 text-[10px] text-emerald-400">
+                            OPEN
+                          </span>
+                        )}
+                      </span>
+                    </div>
+                    <p className="text-xs text-[color:var(--color-subtle)]">
+                      {issue._count.articles}{" "}
+                      {issue._count.articles === 1 ? "article" : "articles"}{" "}
+                      published in this issue
+                    </p>
+                  </div>
+
+                  <AdminIssueRowActions
+                    issueId={issue.id}
+                    isClosed={issue.isClosed}
+                  />
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </div>
 
       {/* Directory Table */}
       <div className="rounded-[var(--radius-lg)] border border-[color:var(--color-border)] bg-[color:var(--color-surface-raised)] p-6">
@@ -115,7 +213,10 @@ export default async function AdminArticlesDirectoryPage({
               >
                 <div className="min-w-0 flex-1 space-y-1">
                   <div className="flex items-center gap-2 text-[11px] font-semibold text-[color:var(--color-accent)] uppercase">
-                    <span>{article.issue.volume.journal.department.name}</span>
+                    <span>
+                      {article.issue.volume.journal.department?.name ??
+                        article.issue.volume.journal.name}
+                    </span>
                     <span>·</span>
                     <span>
                       Vol. {article.issue.volume.number}, Issue{" "}

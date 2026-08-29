@@ -46,8 +46,8 @@ export default async function SubmissionInboxPage({
           Manuscripts
         </h1>
         <p className="mt-3 text-sm text-[color:var(--color-muted)]">
-          Submitted work for {journal.department.name}, including manuscripts
-          awaiting tracking IDs.
+          Submitted work for {journal.department?.name ?? journal.name},{" "}
+          including manuscripts awaiting tracking IDs.
         </p>
       </header>
       <form className="mt-7 grid gap-3 sm:grid-cols-[minmax(0,1fr)_14rem_auto]">

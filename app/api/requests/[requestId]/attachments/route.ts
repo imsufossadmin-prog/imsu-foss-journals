@@ -55,6 +55,7 @@ export async function POST(
     select: {
       id: true,
       authorId: true,
+      journalId: true,
       departmentId: true,
       status: true,
       submission: { select: { id: true, status: true } },
@@ -70,8 +71,7 @@ export async function POST(
     isSuperAdmin(user) ||
     user.journalRoles.some(
       ({ role, journal }) =>
-        role === "JOURNAL_ADMIN" &&
-        journal.department.id === record.departmentId,
+        role === "JOURNAL_ADMIN" && journal.id === record.journalId,
     );
   if (!author && !admin)
     return NextResponse.json(
@@ -106,16 +106,6 @@ export async function POST(
       { status: 400 },
     );
   }
-  if (
-    attachmentType === "PAYMENT_RECEIPT" &&
-    (!author || !["NEW", "AWAITING_PAYMENT"].includes(record.status))
-  ) {
-    return NextResponse.json(
-      { error: "A payment receipt is not expected for this request." },
-      { status: 409 },
-    );
-  }
-
   const objectPath = createRequestObjectPath({
     departmentId: record.departmentId,
     requestId,
@@ -134,17 +124,6 @@ export async function POST(
 
   try {
     await prisma.$transaction(async (transaction) => {
-      if (attachmentType === "PAYMENT_RECEIPT") {
-        const changed = await transaction.submissionRequest.updateMany({
-          where: {
-            id: requestId,
-            authorId: user.id,
-            status: { in: ["NEW", "AWAITING_PAYMENT"] },
-          },
-          data: { status: "RECEIPT_SUBMITTED", version: { increment: 1 } },
-        });
-        if (changed.count !== 1) throw new Error("STALE_RECEIPT");
-      }
       const stored = await transaction.storedFile.create({
         data: {
           bucket,
@@ -162,51 +141,17 @@ export async function POST(
           body:
             body ||
             (attachmentType === "PAYMENT_RECEIPT"
-              ? "Payment receipt"
+              ? "Attachment"
               : "Attachment"),
           attachments: {
             create: { storedFileId: stored.id, type: attachmentType },
           },
         },
       });
-      if (attachmentType === "PAYMENT_RECEIPT") {
-        await transaction.submissionConversationMessage.create({
-          data: {
-            requestId,
-            kind: "SYSTEM",
-            body: "Payment receipt sent. The journal will confirm it shortly.",
-          },
-        });
-      }
-
-      if (
-        author &&
-        record.submission &&
-        ["CORRECTION_REQUESTED", "REVISION_REQUESTED"].includes(
-          record.submission.status,
-        )
-      ) {
-        await transaction.submission.update({
-          where: { id: record.submission.id },
-          data: { status: "REVISED", version: { increment: 1 } },
-        });
-        await transaction.submissionEvent.create({
-          data: {
-            submissionId: record.submission.id,
-            actorId: user.id,
-            type: "REVISION_SUBMITTED",
-            authorVisible: true,
-            message: `Revised file '${file.name}' attached in chatbox by author.`,
-          },
-        });
-        await transaction.submissionConversationMessage.create({
-          data: {
-            requestId,
-            kind: "SYSTEM",
-            body: "Revised manuscript attached. The journal team will review your revision.",
-          },
-        });
-      }
+      await transaction.submissionRequest.update({
+        where: { id: requestId },
+        data: { updatedAt: new Date() },
+      });
     });
   } catch {
     await supabase.storage.from(bucket).remove([objectPath]);

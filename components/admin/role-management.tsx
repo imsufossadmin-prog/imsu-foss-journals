@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import type { ManagedRole } from "@prisma/client";
 
 type RoleAction = (formData: FormData) => Promise<void>;
 
@@ -18,7 +17,7 @@ type ManagedUser = {
     journal: {
       name: string;
       slug: string;
-      department: { id: string; name: string };
+      department?: { id: string; name: string } | null;
     };
   }>;
 };
@@ -26,13 +25,7 @@ type ManagedUser = {
 type ManagedJournal = {
   id: string;
   name: string;
-  department: { id: string; name: string };
-};
-
-const roleNames: Record<ManagedRole, string> = {
-  SUPER_ADMIN: "Super Admin",
-  JOURNAL_ADMIN: "Journal Admin",
-  EDITOR: "Editor",
+  department?: { id: string; name: string } | null;
 };
 
 export function UserSearch({
@@ -186,130 +179,60 @@ export function PlatformRoleManager({
                   </div>
                 </div>
 
-                {/* Role Badges */}
+                {/* Role Badges (Compact Summary) */}
                 <div className="flex flex-wrap items-center gap-2">
                   {isSuperAdmin && (
                     <div className="inline-flex items-center gap-1.5 rounded-full border border-emerald-500/30 bg-emerald-500/10 px-2.5 py-1 text-xs font-semibold text-emerald-400">
                       <span>Super Admin</span>
-                      <form action={removeAction} className="inline">
-                        <input
-                          type="hidden"
-                          name="targetUserId"
-                          value={user.id}
-                        />
-                        <input type="hidden" name="role" value="SUPER_ADMIN" />
-                        <button
-                          type="submit"
-                          aria-label="Remove Super Admin"
-                          className="ml-0.5 text-[10px] text-emerald-400/70 hover:text-emerald-300"
-                        >
-                          ✕
-                        </button>
-                      </form>
                     </div>
                   )}
 
-                  {isAllDeptJA ? (
+                  {jaRoles.length === 1 ? (
                     <div className="inline-flex items-center gap-1.5 rounded-full border border-[color:var(--color-border-strong)] bg-[color:var(--color-surface-strong)] px-2.5 py-1 text-xs font-semibold text-[color:var(--color-foreground)]">
-                      <span>Journal Admin (All 7 Departments)</span>
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setActiveModalUserId(user.id);
-                          setSelectedRole("JOURNAL_ADMIN");
-                        }}
-                        className="ml-0.5 text-[10px] text-[color:var(--color-muted)] hover:text-[color:var(--color-foreground)]"
-                      >
-                        ✎
-                      </button>
+                      <span>
+                        JA ·{" "}
+                        {jaRoles[0].journal.department?.name ??
+                          jaRoles[0].journal.name}
+                      </span>
                     </div>
-                  ) : (
-                    jaRoles.map((assignment) => (
-                      <div
-                        key={`ja:${assignment.journalId}`}
-                        className="inline-flex items-center gap-1.5 rounded-full border border-[color:var(--color-border-strong)] bg-[color:var(--color-surface-strong)] px-2.5 py-1 text-xs font-semibold text-[color:var(--color-foreground)]"
-                      >
-                        <span>JA · {assignment.journal.department.name}</span>
-                        <form action={removeAction} className="inline">
-                          <input
-                            type="hidden"
-                            name="targetUserId"
-                            value={user.id}
-                          />
-                          <input
-                            type="hidden"
-                            name="role"
-                            value="JOURNAL_ADMIN"
-                          />
-                          <input
-                            type="hidden"
-                            name="journalId"
-                            value={assignment.journalId}
-                          />
-                          <button
-                            type="submit"
-                            aria-label={`Remove JA for ${assignment.journal.department.name}`}
-                            className="ml-0.5 text-[10px] text-[color:var(--color-danger)] hover:opacity-80"
-                          >
-                            ✕
-                          </button>
-                        </form>
-                      </div>
-                    ))
-                  )}
+                  ) : jaRoles.length > 1 ? (
+                    <div className="inline-flex items-center gap-1.5 rounded-full border border-[color:var(--color-border-strong)] bg-[color:var(--color-surface-strong)] px-2.5 py-1 text-xs font-semibold text-[color:var(--color-foreground)]">
+                      <span>Journal Admin · {jaRoles.length} journals</span>
+                    </div>
+                  ) : null}
 
-                  {isAllDeptEditor ? (
+                  {editorRoles.length === 1 ? (
                     <div className="inline-flex items-center gap-1.5 rounded-full border border-[color:var(--color-border)] bg-[color:var(--color-surface)] px-2.5 py-1 text-xs font-medium text-[color:var(--color-muted)]">
-                      <span>Editor (All 7 Departments)</span>
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setActiveModalUserId(user.id);
-                          setSelectedRole("EDITOR");
-                        }}
-                        className="ml-0.5 text-[10px] text-[color:var(--color-muted)] hover:text-[color:var(--color-foreground)]"
-                      >
-                        ✎
-                      </button>
+                      <span>
+                        Editor ·{" "}
+                        {editorRoles[0].journal.department?.name ??
+                          editorRoles[0].journal.name}
+                      </span>
                     </div>
-                  ) : (
-                    editorRoles.map((assignment) => (
-                      <div
-                        key={`ed:${assignment.journalId}`}
-                        className="inline-flex items-center gap-1.5 rounded-full border border-[color:var(--color-border)] bg-[color:var(--color-surface)] px-2.5 py-1 text-xs font-medium text-[color:var(--color-muted)]"
-                      >
-                        <span>
-                          Editor · {assignment.journal.department.name}
-                        </span>
-                        <form action={removeAction} className="inline">
-                          <input
-                            type="hidden"
-                            name="targetUserId"
-                            value={user.id}
-                          />
-                          <input type="hidden" name="role" value="EDITOR" />
-                          <input
-                            type="hidden"
-                            name="journalId"
-                            value={assignment.journalId}
-                          />
-                          <button
-                            type="submit"
-                            aria-label={`Remove Editor for ${assignment.journal.department.name}`}
-                            className="ml-0.5 text-[10px] text-[color:var(--color-danger)] hover:opacity-80"
-                          >
-                            ✕
-                          </button>
-                        </form>
-                      </div>
-                    ))
-                  )}
+                  ) : editorRoles.length > 1 ? (
+                    <div className="inline-flex items-center gap-1.5 rounded-full border border-[color:var(--color-border)] bg-[color:var(--color-surface)] px-2.5 py-1 text-xs font-medium text-[color:var(--color-muted)]">
+                      <span>Editor · {editorRoles.length} journals</span>
+                    </div>
+                  ) : null}
 
                   {!hasStaffRole && (
                     <span className="rounded-full bg-[color:var(--color-surface-strong)] px-2.5 py-0.5 text-xs font-medium text-[color:var(--color-muted)]">
                       Author
                     </span>
                   )}
+
+                  {user.journalRoles.length > 1 ? (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setActiveModalUserId(user.id);
+                        setSelectedRole("EDITOR");
+                      }}
+                      className="rounded-full border border-[color:var(--color-border)] bg-[color:var(--color-surface)] px-2 py-0.5 text-[11px] font-semibold text-[color:var(--color-accent)] hover:underline"
+                    >
+                      View all {user.journalRoles.length} roles →
+                    </button>
+                  ) : null}
                 </div>
 
                 {/* Manage / Add Role CTA */}
@@ -322,7 +245,7 @@ export function PlatformRoleManager({
                     }}
                     className="inline-flex items-center gap-1.5 rounded-md border border-[color:var(--color-border)] bg-[color:var(--color-surface-strong)] px-3 py-1.5 text-xs font-semibold text-[color:var(--color-foreground)] transition hover:border-[color:var(--color-accent)] hover:text-[color:var(--color-accent)]"
                   >
-                    <span>+ Manage Role</span>
+                    <span>Manage Roles</span>
                   </button>
                 </div>
               </div>
@@ -331,13 +254,13 @@ export function PlatformRoleManager({
         </div>
       )}
 
-      {/* Interactive Role Assignment Modal with Granular Department Revocation */}
+      {/* Interactive Role Assignment Modal with Grouped Breakdown & Revocation */}
       {activeUser && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4 backdrop-blur-xs">
           <div className="max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-[var(--radius-lg)] border border-[color:var(--color-border-strong)] bg-[color:var(--color-surface-raised)] p-6 shadow-2xl">
             <div className="flex items-center justify-between">
               <h3 className="text-base font-semibold text-[color:var(--color-foreground)]">
-                Manage Access
+                User Roles &amp; Permissions
               </h3>
               <button
                 type="button"
@@ -349,15 +272,15 @@ export function PlatformRoleManager({
             </div>
 
             <p className="mt-1 text-xs text-[color:var(--color-muted)]">
-              Privileges for{" "}
+              Assigned permissions for{" "}
               <span className="font-semibold text-[color:var(--color-foreground)]">
                 {activeUser.displayName}
               </span>{" "}
-              ({activeUser.email}).
+              ({activeUser.email ?? "no email"}).
             </p>
 
-            {/* Current Active Privileges Breakdown with Granular Revocation */}
-            <div className="mt-5 space-y-2.5">
+            {/* Current Active Privileges Breakdown Grouped Cleanly */}
+            <div className="mt-5 space-y-4">
               <p className="text-[11px] font-bold tracking-wider text-[color:var(--color-muted)] uppercase">
                 Active Privileges (
                 {activeUser.globalRoles.filter((r) => r.role === "SUPER_ADMIN")
@@ -365,72 +288,139 @@ export function PlatformRoleManager({
                 )
               </p>
 
+              {/* Super Admin Section */}
               {activeUser.globalRoles.some((r) => r.role === "SUPER_ADMIN") && (
-                <div className="flex items-center justify-between rounded-md border border-emerald-500/30 bg-emerald-500/10 px-3 py-2 text-xs">
-                  <div>
-                    <span className="font-semibold text-emerald-400">
-                      Super Admin
-                    </span>
-                    <p className="text-[11px] text-emerald-400/70">
-                      Platform-wide full authority
-                    </p>
+                <div className="space-y-1.5">
+                  <p className="text-xs font-semibold text-emerald-400">
+                    Platform Administrator
+                  </p>
+                  <div className="flex items-center justify-between rounded-md border border-emerald-500/30 bg-emerald-500/10 px-3 py-2 text-xs">
+                    <div>
+                      <span className="font-semibold text-emerald-400">
+                        Super Admin
+                      </span>
+                      <p className="text-[11px] text-emerald-400/70">
+                        Platform-wide full authority across all journals
+                      </p>
+                    </div>
+                    <form action={removeAction}>
+                      <input
+                        type="hidden"
+                        name="targetUserId"
+                        value={activeUser.id}
+                      />
+                      <input type="hidden" name="role" value="SUPER_ADMIN" />
+                      <button
+                        type="submit"
+                        className="rounded border border-emerald-500/30 bg-emerald-500/20 px-2.5 py-1 text-[11px] font-semibold text-emerald-300 hover:bg-emerald-500/30"
+                      >
+                        Revoke
+                      </button>
+                    </form>
                   </div>
-                  <form action={removeAction}>
-                    <input
-                      type="hidden"
-                      name="targetUserId"
-                      value={activeUser.id}
-                    />
-                    <input type="hidden" name="role" value="SUPER_ADMIN" />
-                    <button
-                      type="submit"
-                      className="rounded border border-emerald-500/30 bg-emerald-500/20 px-2 py-1 text-[11px] font-semibold text-emerald-300 hover:bg-emerald-500/30"
-                    >
-                      Revoke
-                    </button>
-                  </form>
                 </div>
               )}
 
-              {activeUser.journalRoles.map((assignment) => (
-                <div
-                  key={`modal:${assignment.id}`}
-                  className="flex items-center justify-between rounded-md border border-[color:var(--color-border)] bg-[color:var(--color-surface)] px-3 py-2 text-xs"
-                >
-                  <div>
-                    <span className="font-semibold text-[color:var(--color-foreground)]">
-                      {assignment.role === "JOURNAL_ADMIN"
-                        ? "Journal Admin"
-                        : "Editor"}
-                    </span>
-                    <span className="mx-1.5 text-[color:var(--color-muted)]">
-                      ·
-                    </span>
-                    <span className="text-[color:var(--color-accent)]">
-                      {assignment.journal.department.name}
-                    </span>
+              {/* Journal Admin Group */}
+              {activeUser.journalRoles.filter((r) => r.role === "JOURNAL_ADMIN")
+                .length > 0 && (
+                <div className="space-y-1.5">
+                  <p className="text-xs font-semibold text-[color:var(--color-foreground)]">
+                    Journal Administrator (
+                    {
+                      activeUser.journalRoles.filter(
+                        (r) => r.role === "JOURNAL_ADMIN",
+                      ).length
+                    }
+                    )
+                  </p>
+                  <div className="space-y-1.5">
+                    {activeUser.journalRoles
+                      .filter((r) => r.role === "JOURNAL_ADMIN")
+                      .map((assignment) => (
+                        <div
+                          key={`modal-ja:${assignment.id}`}
+                          className="flex items-center justify-between rounded-md border border-[color:var(--color-border)] bg-[color:var(--color-surface)] px-3 py-2 text-xs"
+                        >
+                          <span className="font-medium text-[color:var(--color-foreground)]">
+                            {assignment.journal.name}
+                          </span>
+                          <form action={removeAction}>
+                            <input
+                              type="hidden"
+                              name="targetUserId"
+                              value={activeUser.id}
+                            />
+                            <input
+                              type="hidden"
+                              name="role"
+                              value="JOURNAL_ADMIN"
+                            />
+                            <input
+                              type="hidden"
+                              name="journalId"
+                              value={assignment.journalId}
+                            />
+                            <button
+                              type="submit"
+                              className="rounded border border-[color:var(--color-danger-border)] bg-[color:var(--color-danger-surface)] px-2 py-0.5 text-[11px] font-semibold text-[color:var(--color-danger)] transition hover:opacity-80"
+                            >
+                              Revoke
+                            </button>
+                          </form>
+                        </div>
+                      ))}
                   </div>
-                  <form action={removeAction}>
-                    <input
-                      type="hidden"
-                      name="targetUserId"
-                      value={activeUser.id}
-                    />
-                    <input type="hidden" name="role" value={assignment.role} />
-                    <input
-                      type="hidden"
-                      name="journalId"
-                      value={assignment.journalId}
-                    />
-                    <button
-                      type="submit"
-                      className="rounded border border-[color:var(--color-danger-border)] bg-[color:var(--color-danger-surface)] px-2 py-1 text-[11px] font-semibold text-[color:var(--color-danger)] transition hover:opacity-80"
-                    >
-                      Revoke
-                    </button>
-                  </form>
                 </div>
-              ))}
+              )}
+
+              {/* Editor Group */}
+              {activeUser.journalRoles.filter((r) => r.role === "EDITOR")
+                .length > 0 && (
+                <div className="space-y-1.5">
+                  <p className="text-xs font-semibold text-[color:var(--color-muted)]">
+                    Editor (
+                    {
+                      activeUser.journalRoles.filter((r) => r.role === "EDITOR")
+                        .length
+                    }
+                    )
+                  </p>
+                  <div className="space-y-1.5">
+                    {activeUser.journalRoles
+                      .filter((r) => r.role === "EDITOR")
+                      .map((assignment) => (
+                        <div
+                          key={`modal-ed:${assignment.id}`}
+                          className="flex items-center justify-between rounded-md border border-[color:var(--color-border)] bg-[color:var(--color-surface)] px-3 py-2 text-xs"
+                        >
+                          <span className="font-medium text-[color:var(--color-muted)]">
+                            {assignment.journal.name}
+                          </span>
+                          <form action={removeAction}>
+                            <input
+                              type="hidden"
+                              name="targetUserId"
+                              value={activeUser.id}
+                            />
+                            <input type="hidden" name="role" value="EDITOR" />
+                            <input
+                              type="hidden"
+                              name="journalId"
+                              value={assignment.journalId}
+                            />
+                            <button
+                              type="submit"
+                              className="rounded border border-[color:var(--color-danger-border)] bg-[color:var(--color-danger-surface)] px-2 py-0.5 text-[11px] font-semibold text-[color:var(--color-danger)] transition hover:opacity-80"
+                            >
+                              Revoke
+                            </button>
+                          </form>
+                        </div>
+                      ))}
+                  </div>
+                </div>
+              )}
 
               {!activeUser.globalRoles.some((r) => r.role === "SUPER_ADMIN") &&
                 activeUser.journalRoles.length === 0 && (
@@ -444,7 +434,7 @@ export function PlatformRoleManager({
             {/* Add / Grant New Department Assignment */}
             <div className="mt-6 border-t border-[color:var(--color-border)] pt-5">
               <p className="text-[11px] font-bold tracking-wider text-[color:var(--color-muted)] uppercase">
-                Grant New Role / Department
+                Grant New Role / Journal
               </p>
 
               <form
@@ -479,7 +469,7 @@ export function PlatformRoleManager({
                       Editor (Reviews assigned manuscripts)
                     </option>
                     <option value="JOURNAL_ADMIN">
-                      Journal Admin (Operates department)
+                      Journal Admin (Operates journal/department)
                     </option>
                     <option value="SUPER_ADMIN">
                       Super Admin (Platform-wide authority)
@@ -490,7 +480,7 @@ export function PlatformRoleManager({
                 {selectedRole !== "SUPER_ADMIN" && (
                   <div>
                     <label className="block text-xs font-semibold text-[color:var(--color-muted)]">
-                      Target Department
+                      Target Journal / Department
                     </label>
                     <select
                       name="journalId"
@@ -500,7 +490,8 @@ export function PlatformRoleManager({
                     >
                       {journals.map((journal) => (
                         <option key={journal.id} value={journal.id}>
-                          {journal.department.name} ({journal.name})
+                          {journal.department?.name ?? journal.name}{" "}
+                          {journal.department ? `(${journal.name})` : ""}
                         </option>
                       ))}
                     </select>

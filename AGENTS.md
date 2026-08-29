@@ -257,8 +257,8 @@ Before calling `revalidatePath()`, `revalidateTag()`, or `router.refresh()`:
 - **Never remove required invalidation for performance:** Publishing workflows must always reliably invalidate and refresh all affected public surfaces (e.g., homepage, current issue, archives, journal catalog, and article detail pages).
 
 #### 6. Polling Policy
-Frequent automated polling is strictly reserved for workflows requiring near-real-time collaborative communication (such as the active request chatbox).
-- **Request Chatbox Polling Standards:**
+Frequent automated polling is strictly reserved for genuine communication features (such as the active Author ↔ Admin request chatbox and the Editor ↔ Admin internal chat).
+- **Chat Communication Polling Standards:**
   - Visible/active tab: ~4-second polling cadence.
   - Hidden browser tab: Polling immediately paused.
   - Tab focus return: Immediate synchronization fetch.

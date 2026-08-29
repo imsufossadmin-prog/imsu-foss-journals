@@ -3,28 +3,36 @@ export type RequestActor = {
   active: boolean;
   superAdmin?: boolean;
   author: boolean;
-  adminDepartmentIds: string[];
+  adminDepartmentIds?: string[];
+  adminJournalIds?: string[];
 };
 
 export type RequestScope = {
   authorId: string;
-  departmentId: string;
+  journalId?: string;
+  departmentId?: string | null;
 };
 
 export function canAccessRequest(actor: RequestActor, request: RequestScope) {
-  return (
+  return Boolean(
     actor.active &&
-    (Boolean(actor.superAdmin) ||
+    (actor.superAdmin ||
       actor.id === request.authorId ||
-      actor.adminDepartmentIds.includes(request.departmentId))
+      (request.departmentId &&
+        actor.adminDepartmentIds?.includes(request.departmentId)) ||
+      (request.journalId &&
+        actor.adminJournalIds?.includes(request.journalId))),
   );
 }
 
 export function canManageRequest(actor: RequestActor, request: RequestScope) {
-  return (
+  return Boolean(
     actor.active &&
-    (Boolean(actor.superAdmin) ||
-      actor.adminDepartmentIds.includes(request.departmentId))
+    (actor.superAdmin ||
+      (request.departmentId &&
+        actor.adminDepartmentIds?.includes(request.departmentId)) ||
+      (request.journalId &&
+        actor.adminJournalIds?.includes(request.journalId))),
   );
 }
 
@@ -36,6 +44,6 @@ export function canUseSubmissionPermission(
     actor.active &&
     actor.author &&
     actor.id === request.authorId &&
-    request.status === "SUBMISSION_ENABLED"
+    request.status !== "TRACKING_ASSIGNED"
   );
 }

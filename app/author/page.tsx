@@ -35,9 +35,8 @@ export default async function AuthorPage() {
             Submit an article
           </h1>
           <p className="mt-3 max-w-2xl text-sm leading-6 text-[color:var(--color-muted)]">
-            Select your department and contact the journal team. Your
-            conversation, payment receipt, manuscript, and tracking ID stay
-            together.
+            Select your department and start your submission request. Your
+            conversation, manuscript, and tracking ID stay together.
           </p>
         </div>
         <StartSubmissionForm action={startRequestAction} journals={journals} />
@@ -57,7 +56,7 @@ export default async function AuthorPage() {
                 <div>
                   <p className="text-sm font-semibold group-hover:text-[color:var(--color-accent)]">
                     {request.submission?.title ??
-                      `${request.department.name} submission request`}
+                      `${request.department?.name ?? request.journal.name} submission request`}
                   </p>
                   <p className="mt-1 text-xs text-[color:var(--color-subtle)]">
                     {request._count.messages} conversation updates

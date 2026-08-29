@@ -38,7 +38,7 @@ type JournalOption = {
   name: string;
   shortName: string | null;
   description: string | null;
-  department: { name: string };
+  department?: { name: string } | null;
 };
 
 const initialActionState: ActionState = {};
@@ -48,24 +48,28 @@ function FormMessage({ state }: { state: ActionState }) {
   return (
     <p
       role="alert"
-      className="rounded-[var(--radius-md)] border border-[color:var(--color-danger-border)] bg-[color:var(--color-danger-surface)] px-4 py-3 text-sm leading-6 text-[color:var(--color-danger)]"
+      className="text-xs font-semibold text-[color:var(--color-danger)]"
     >
       {state.error}
     </p>
   );
 }
 
-export function NewSubmissionForm({ journals }: { journals: JournalOption[] }) {
+export function StartSubmissionForm({
+  journals,
+}: {
+  journals: JournalOption[];
+}) {
   const [state, action] = useActionState(createDraftAction, initialActionState);
   return (
-    <form action={action} className="mt-9">
+    <form action={action}>
       <fieldset>
         <legend className="sr-only">Choose a journal</legend>
-        <div className="divide-y divide-[color:var(--color-border)] border-y border-[color:var(--color-border)]">
+        <div className="space-y-4">
           {journals.map((journal, index) => (
             <label
               key={journal.id}
-              className="group grid cursor-pointer grid-cols-[auto_1fr] gap-4 px-1 py-5 sm:px-3"
+              className="flex cursor-pointer items-start gap-4 rounded-[var(--radius-lg)] border border-[color:var(--color-border)] bg-[color:var(--color-surface-raised)] p-5 transition hover:border-[color:var(--color-accent)] sm:p-6"
             >
               <input
                 type="radio"
@@ -80,7 +84,7 @@ export function NewSubmissionForm({ journals }: { journals: JournalOption[] }) {
                   {journal.name}
                 </span>
                 <span className="mt-1 block text-xs text-[color:var(--color-subtle)]">
-                  {journal.department.name}
+                  {journal.department?.name ?? "Faculty Journal"}
                 </span>
                 {journal.description ? (
                   <span className="mt-2 block max-w-2xl text-sm leading-6 text-[color:var(--color-muted)]">
@@ -139,7 +143,7 @@ export function JournalStepForm({
                 {journal.name}
               </span>
               <span className="mt-1 block text-xs text-[color:var(--color-subtle)]">
-                {journal.department.name}
+                {journal.department?.name ?? "Faculty Journal"}
               </span>
             </span>
           </label>

@@ -51,6 +51,14 @@ export function listDepartmentRequests(departmentId: string) {
   });
 }
 
+export function listJournalRequests(journalId: string) {
+  return prisma.submissionRequest.findMany({
+    where: { journalId },
+    orderBy: { updatedAt: "desc" },
+    select: requestListSelect,
+  });
+}
+
 export function listAllPlatformRequests(departmentSlug?: string) {
   return prisma.submissionRequest.findMany({
     where: departmentSlug ? { journal: { slug: departmentSlug } } : undefined,
@@ -93,6 +101,13 @@ export function getAuthorRequest(authorId: string, requestId: string) {
 export function getDepartmentRequest(departmentId: string, requestId: string) {
   return prisma.submissionRequest.findFirst({
     where: { id: requestId, departmentId },
+    include: requestDetailInclude,
+  });
+}
+
+export function getJournalRequest(journalId: string, requestId: string) {
+  return prisma.submissionRequest.findFirst({
+    where: { id: requestId, journalId },
     include: requestDetailInclude,
   });
 }
@@ -162,9 +177,12 @@ export async function getPlatformStaffCounts() {
   return { journalAdmins, editors };
 }
 
-export async function getActiveDepartmentJournals() {
+export async function getActiveJournals() {
   const journals = await prisma.journal.findMany({
-    where: { isActive: true, department: { isActive: true } },
+    where: {
+      isActive: true,
+      OR: [{ departmentId: null }, { department: { isActive: true } }],
+    },
     select: {
       id: true,
       slug: true,
@@ -172,12 +190,14 @@ export async function getActiveDepartmentJournals() {
       shortName: true,
       department: { select: { id: true, name: true } },
     },
-    orderBy: [{ department: { name: "asc" } }, { name: "asc" }],
+    orderBy: { name: "asc" },
   });
 
   return journals.sort((a, b) => {
     if (a.slug === "psychology") return -1;
     if (b.slug === "psychology") return 1;
-    return 0;
+    return a.name.localeCompare(b.name);
   });
 }
+
+export const getActiveDepartmentJournals = getActiveJournals;

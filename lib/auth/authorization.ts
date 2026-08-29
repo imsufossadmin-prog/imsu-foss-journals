@@ -115,8 +115,8 @@ export function hasDepartmentAdminAccess(
     user.journalRoles.some(
       ({ role, journal }) =>
         role === "JOURNAL_ADMIN" &&
-        journal.department.id === departmentId &&
-        journal.department.isActive,
+        journal.department?.id === departmentId &&
+        journal.department?.isActive,
     )
   );
 }

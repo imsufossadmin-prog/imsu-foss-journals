@@ -95,7 +95,10 @@ export async function getAuthorSubmission(ownerId: string, id: string) {
 
 export async function getEligibleJournals() {
   return prisma.journal.findMany({
-    where: { isActive: true, department: { isActive: true } },
+    where: {
+      isActive: true,
+      OR: [{ departmentId: null }, { department: { isActive: true } }],
+    },
     orderBy: { name: "asc" },
     select: {
       id: true,

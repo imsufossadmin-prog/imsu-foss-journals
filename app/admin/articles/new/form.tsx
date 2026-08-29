@@ -11,7 +11,7 @@ type JournalOption = {
   id: string;
   slug: string;
   name: string;
-  department: { name: string };
+  department?: { name: string } | null;
 };
 
 const initialState: AdminArticleFormState = {};
@@ -43,16 +43,21 @@ export function AdminLegacyUploadForm({
 
       <div className="grid gap-6 sm:grid-cols-2">
         <label className="text-xs font-semibold text-[color:var(--color-foreground)]">
-          Target Journal / Department *
+          Target Journal *
           <select
             name="journalSlug"
             className="app-field mt-1.5"
             required
-            disabled={journals.length === 0}
+            defaultValue=""
           >
+            <option value="" disabled>
+              Select Journal…
+            </option>
             {journals.map((j) => (
               <option key={j.id} value={j.slug}>
-                {j.department.name} — {j.name}
+                {j.department?.name
+                  ? `${j.name} (${j.department.name})`
+                  : j.name}
               </option>
             ))}
           </select>

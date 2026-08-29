@@ -112,55 +112,46 @@ async function main() {
 
   const journal = primaryJournal;
 
-  const references = await prisma.department.upsert({
-    where: { slug: "reference-materials" },
-    update: { name: "Reference Materials", isActive: false },
-    create: {
-      name: "Reference Materials",
-      slug: "reference-materials",
-      isActive: false,
-    },
-  });
-
   for (const item of [
     {
       slug: "ajsbs",
       name: "African Journal of Social and Behavioural Sciences",
       shortName: "AJSBS",
-      description: "Historical/reference material supplied to IMSU FOSS.",
+      description:
+        "Official interdisciplinary journal of the Faculty of Social Sciences, Imo State University, publishing cutting-edge peer-reviewed research across social and behavioural sciences.",
     },
     {
       slug: "gjsbr",
       name: "Global Journal of Social and Behavioural Research",
       shortName: "GJSBR",
       description:
-        "Global research and interdisciplinary inquiry in social and behavioural sciences.",
+        "Global research and interdisciplinary inquiry advancing knowledge across social, psychological, economic, and behavioural disciplines.",
     },
     {
       slug: "njsbr",
-      name: "Nwaebere Journal of Social and Behavioural Research",
+      name: "Nigerian Journal of Social and Behavioural Research",
       shortName: "NJSBR",
       description:
-        "Research advancing knowledge across social and behavioural disciplines.",
+        "Promoting rigorous empirical inquiry, theoretical advancements, and policy research in social and behavioural sciences.",
     },
   ]) {
     await prisma.journal.upsert({
       where: { slug: item.slug },
       update: {
-        departmentId: references.id,
+        departmentId: null,
         name: item.name,
         shortName: item.shortName,
         description: item.description,
         institution: "Imo State University",
         faculty: "Faculty of Social Sciences",
-        isActive: false,
+        isActive: true,
       },
       create: {
         ...item,
-        departmentId: references.id,
+        departmentId: null,
         institution: "Imo State University",
         faculty: "Faculty of Social Sciences",
-        isActive: false,
+        isActive: true,
       },
     });
   }

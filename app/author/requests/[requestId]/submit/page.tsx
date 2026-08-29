@@ -15,8 +15,13 @@ export default async function SimpleSubmissionPage({
   const { requestId } = await params;
   const request = await getRequestSubmission(user.id, requestId);
   if (!request) notFound();
-  if (request.status !== "SUBMISSION_ENABLED" || !request.submission)
+  if (
+    !request.submission ||
+    (request.submission.status !== "DRAFT" &&
+      request.status === "MANUSCRIPT_SUBMITTED")
+  ) {
     redirect(`/author/requests/${requestId}`);
+  }
   const submission = request.submission;
   const manuscript = submission.files.find(({ type }) => type === "MANUSCRIPT");
 
@@ -36,8 +41,8 @@ export default async function SimpleSubmissionPage({
           One simple form.
         </h1>
         <p className="mt-3 text-sm leading-6 text-[color:var(--color-muted)]">
-          Add the article information, upload the manuscript, then submit it to
-          the journal team.
+          Add the article information, upload your Microsoft Word manuscript
+          (.doc or .docx), then submit it to the journal team.
         </p>
       </header>
       <section className="mt-6 rounded-[var(--radius-lg)] bg-[color:var(--color-surface-raised)] p-5 sm:p-8">

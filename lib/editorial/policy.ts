@@ -83,6 +83,36 @@ export function canIssueDecision(
   return canManageSubmission(actor, submission) && completedReviews >= 2;
 }
 
+export function canSubmitAdherenceReport(
+  actor: EditorialActor,
+  submission: SubmissionScope,
+  assignedEditorIds: string[],
+) {
+  if (!actor.active) return false;
+  if (
+    actor.superAdmin ||
+    actor.adminJournalIds.includes(submission.journalId)
+  ) {
+    return true;
+  }
+  return (
+    actor.editorJournalIds.includes(submission.journalId) &&
+    assignedEditorIds.includes(actor.id)
+  );
+}
+
+export function canAccessInternalChat(
+  actor: EditorialActor,
+  journalId: string,
+) {
+  if (!actor.active) return false;
+  return (
+    Boolean(actor.superAdmin) ||
+    actor.adminJournalIds.includes(journalId) ||
+    actor.editorJournalIds.includes(journalId)
+  );
+}
+
 export function canSubmitRevision(
   actor: EditorialActor,
   submission: SubmissionScope,

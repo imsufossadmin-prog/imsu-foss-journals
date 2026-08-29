@@ -85,24 +85,6 @@ export default async function PublicArticlePage({
     notFound();
   }
 
-  const submissionId = article.slug.startsWith("art-")
-    ? article.slug.replace("art-", "")
-    : null;
-
-  const submission = submissionId
-    ? await prisma.submission.findUnique({
-        where: { id: submissionId },
-        include: {
-          manuscriptVersions: {
-            orderBy: { versionNumber: "desc" },
-            take: 1,
-          },
-        },
-      })
-    : null;
-
-  const latestVersion = submission?.manuscriptVersions[0];
-
   return (
     <Container className="py-10 sm:py-14">
       <div className="mx-auto max-w-4xl">
@@ -119,7 +101,10 @@ export default async function PublicArticlePage({
 
         <div className="rounded-[var(--radius-lg)] border border-[color:var(--color-border)] bg-[color:var(--color-surface-raised)] p-6 sm:p-8">
           <div className="flex flex-wrap items-center gap-3 text-xs font-bold text-[color:var(--color-accent)] uppercase">
-            <span>{article.issue.volume.journal.department.name}</span>
+            <span>
+              {article.issue.volume.journal.department?.name ??
+                article.issue.volume.journal.name}
+            </span>
             <span>·</span>
             <span>
               Volume {article.issue.volume.number}, Issue {article.issue.number}

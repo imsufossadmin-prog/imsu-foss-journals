@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 
 import { sendAdminMessageAction } from "@/app/admin/[journalSlug]/requests/actions";
+import { correctionAction } from "@/app/admin/[journalSlug]/submissions/actions";
 import {
   AssessmentAction,
   AssignmentForm,
@@ -13,6 +14,7 @@ import {
   RevisionReceivedForm,
   SkipToPublishingForm,
 } from "@/components/editorial/admin-forms";
+import { CopyReportButton } from "@/components/editorial/review-report-actions";
 import {
   RequestChatBox,
   type ConversationMessageDTO,
@@ -141,6 +143,11 @@ export default async function EditorialSubmissionPage({
                   journal.slug,
                   submission.request.id,
                 )}
+                correctionAction={correctionAction.bind(
+                  null,
+                  journal.slug,
+                  submission.id,
+                )}
               />
             </div>
           ) : null}
@@ -209,46 +216,189 @@ export default async function EditorialSubmissionPage({
                       />
                     ) : null}
                     {assignment.review?.status === "SUBMITTED" ? (
-                      <div className="rounded-[var(--radius-md)] bg-[color:var(--color-surface)] p-4 sm:col-span-2">
-                        <div className="grid grid-cols-2 gap-3 text-xs sm:grid-cols-5">
-                          <Metric
-                            label="Originality"
-                            value={assignment.review.originality}
-                          />
-                          <Metric
-                            label="Methodology"
-                            value={assignment.review.methodology}
-                          />
-                          <Metric
-                            label="Clarity"
-                            value={assignment.review.clarity}
-                          />
-                          <Metric
-                            label="Relevance"
-                            value={assignment.review.relevance}
-                          />
-                          <Metric
-                            label="Recommendation"
-                            value={
-                              assignment.review.recommendation?.replaceAll(
-                                "_",
-                                " ",
-                              ) ?? "—"
-                            }
-                          />
+                      <details
+                        className="group rounded-[var(--radius-md)] border border-[color:var(--color-border)] bg-[color:var(--color-surface)] sm:col-span-2"
+                        open
+                      >
+                        <summary className="flex cursor-pointer flex-wrap items-center justify-between gap-3 p-4 text-xs font-semibold text-[color:var(--color-foreground)] select-none">
+                          <div className="flex flex-wrap items-center gap-2.5">
+                            <span className="font-semibold text-[color:var(--color-accent)]">
+                              Final Review Submitted
+                            </span>
+                            <span className="rounded-full border border-[color:var(--color-accent)]/50 bg-[color:var(--color-surface-raised)] px-2.5 py-0.5 text-xs font-medium text-[color:var(--color-foreground)]">
+                              Recommendation:{" "}
+                              <span className="font-semibold text-[color:var(--color-accent)]">
+                                {assignment.review.recommendation
+                                  ?.replaceAll("_", " ")
+                                  .toLowerCase()
+                                  .replace(/\b\w/g, (c) => c.toUpperCase()) ??
+                                  "—"}
+                              </span>
+                            </span>
+                          </div>
+
+                          <div className="flex items-center gap-2.5">
+                            <span className="text-[10px] text-[color:var(--color-subtle)] transition-transform group-open:rotate-180">
+                              ▼
+                            </span>
+                          </div>
+                        </summary>
+
+                        <div className="space-y-4 border-t border-[color:var(--color-border)] p-4">
+                          {/* 1-10 Scorecard details */}
+                          <div className="grid grid-cols-2 gap-2 text-xs sm:grid-cols-4">
+                            {[
+                              {
+                                label: "Title & Abstract",
+                                val: assignment.review.titleAbstract,
+                              },
+                              {
+                                label: "Intro & Thesis",
+                                val: assignment.review.introductionThesis,
+                              },
+                              {
+                                label: "Literature Review",
+                                val: assignment.review.literatureReview,
+                              },
+                              {
+                                label: "Methodology",
+                                val: assignment.review.methodology,
+                              },
+                              {
+                                label: "Results & Discussion",
+                                val: assignment.review.resultsDiscussion,
+                              },
+                              {
+                                label: "Conclusion",
+                                val: assignment.review.conclusion,
+                              },
+                              {
+                                label: "Language & Style",
+                                val: assignment.review.languageStyle,
+                              },
+                              {
+                                label: "APA 7th Adherence",
+                                val: assignment.review.apaAdherence,
+                              },
+                            ].map((item) => (
+                              <div
+                                key={item.label}
+                                className="rounded bg-[color:var(--color-surface-raised)] p-2"
+                              >
+                                <p className="text-[10px] text-[color:var(--color-subtle)]">
+                                  {item.label}
+                                </p>
+                                <p className="font-mono text-xs font-bold text-[color:var(--color-accent)]">
+                                  {item.val ? `${item.val} / 10` : "—"}
+                                </p>
+                              </div>
+                            ))}
+                          </div>
+
+                          <div>
+                            <div className="flex flex-wrap items-center justify-between gap-2">
+                              <p className="text-xs font-semibold text-[color:var(--color-foreground)]">
+                                General Review Report:
+                              </p>
+                              {(assignment.review.generalReport ??
+                              assignment.review.commentsToAuthor) ? (
+                                <CopyReportButton
+                                  reportText={
+                                    assignment.review.generalReport ??
+                                    assignment.review.commentsToAuthor ??
+                                    ""
+                                  }
+                                />
+                              ) : null}
+                            </div>
+                            <p className="mt-1.5 text-xs leading-relaxed whitespace-pre-wrap text-[color:var(--color-muted)]">
+                              {assignment.review.generalReport ??
+                                assignment.review.commentsToAuthor ??
+                                "No written general report provided."}
+                            </p>
+                          </div>
+
+                          {assignment.review.attachments &&
+                          assignment.review.attachments.length > 0 ? (
+                            <div>
+                              <p className="text-xs font-semibold text-[color:var(--color-foreground)]">
+                                Review Attachments:
+                              </p>
+                              <div className="mt-2 flex flex-wrap gap-2">
+                                {assignment.review.attachments.map((att) => (
+                                  <a
+                                    key={att.id}
+                                    href={`/api/editor/${journal.slug}/assignments/${assignment.id}/attachments/${att.id}`}
+                                    target="_blank"
+                                    rel="noreferrer"
+                                    className="inline-flex items-center gap-1.5 rounded-full border border-[color:var(--color-border)] bg-[color:var(--color-surface-raised)] px-3 py-1 text-xs text-[color:var(--color-accent)] hover:underline"
+                                  >
+                                    <span>📎</span>
+                                    <span>
+                                      {att.storedFile.originalFileName}
+                                    </span>
+                                  </a>
+                                ))}
+                              </div>
+                            </div>
+                          ) : null}
+
+                          {assignment.review.confidentialComments ? (
+                            <div className="border-t border-[color:var(--color-border)] pt-3">
+                              <p className="text-xs font-semibold text-[color:var(--color-foreground)]">
+                                Confidential Comments:
+                              </p>
+                              <p className="mt-1 text-xs leading-relaxed whitespace-pre-wrap text-[color:var(--color-muted)]">
+                                {assignment.review.confidentialComments}
+                              </p>
+                            </div>
+                          ) : null}
                         </div>
-                        <p className="mt-4 text-sm leading-6 whitespace-pre-wrap">
-                          <span className="font-semibold">To author:</span>{" "}
-                          {assignment.review.commentsToAuthor}
-                        </p>
-                        {assignment.review.confidentialComments ? (
-                          <p className="mt-3 border-l-2 border-[color:var(--color-accent-secondary)] pl-3 text-sm leading-6 whitespace-pre-wrap">
-                            <span className="font-semibold">Confidential:</span>{" "}
-                            {assignment.review.confidentialComments}
-                          </p>
-                        ) : null}
-                      </div>
+                      </details>
                     ) : null}
+                  </div>
+                ))}
+              </div>
+            </Section>
+          ) : null}
+
+          {/* Adherence Reports Section */}
+          {submission.adherenceReports &&
+          submission.adherenceReports.length > 0 ? (
+            <Section title="Author Revision Adherence Reports">
+              <div className="space-y-3">
+                {submission.adherenceReports.map((report) => (
+                  <div
+                    key={report.id}
+                    className="rounded-[var(--radius-md)] border border-[color:var(--color-border)] bg-[color:var(--color-surface-raised)] p-4"
+                  >
+                    <div className="flex flex-wrap items-center justify-between gap-2 border-b border-[color:var(--color-border)] pb-2">
+                      <span
+                        className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold ${
+                          report.outcome === "ADHERED"
+                            ? "bg-[color:var(--color-accent)]/15 text-[color:var(--color-accent)]"
+                            : report.outcome === "PARTIALLY_ADHERED"
+                              ? "bg-amber-500/15 text-amber-400"
+                              : "bg-[color:var(--color-danger)]/15 text-[color:var(--color-danger)]"
+                        }`}
+                      >
+                        {report.outcome === "ADHERED"
+                          ? "Adhered"
+                          : report.outcome === "PARTIALLY_ADHERED"
+                            ? "Partially Adhered"
+                            : "Did Not Adhere"}
+                      </span>
+                      <span className="text-xs text-[color:var(--color-subtle)]">
+                        {date.format(report.createdAt)} ·{" "}
+                        {report.editor.displayName}
+                        {report.submissionVersion
+                          ? ` (Revision v${report.submissionVersion.versionNumber})`
+                          : ""}
+                      </span>
+                    </div>
+                    <p className="mt-3 text-xs leading-relaxed whitespace-pre-wrap text-[color:var(--color-foreground)]">
+                      {report.report}
+                    </p>
                   </div>
                 ))}
               </div>
@@ -263,10 +413,8 @@ export default async function EditorialSubmissionPage({
             <Section title="Publishing & Production">
               <div className="rounded-[var(--radius-lg)] border border-[color:var(--color-accent)] bg-[color:var(--color-surface-raised)] p-5 sm:p-6">
                 <h3 className="text-sm font-semibold">Publish Article</h3>
-                <p className="mt-2 text-xs leading-5 text-[color:var(--color-muted)]">
-                  This manuscript has been approved by the editorial team. Fill
-                  out the volume/issue details and upload the final PDF to
-                  publish it to the official journal archives.
+                <p className="mt-1 text-xs leading-5 text-[color:var(--color-muted)]">
+                  Upload the final formatted article and publication details.
                 </p>
                 <div className="mt-5">
                   <PublishArticleForm
@@ -425,13 +573,46 @@ export default async function EditorialSubmissionPage({
                       },
                     ]
                   : []),
-                ...submission.events.map((event) => ({
-                  id: event.id,
-                  type: event.type.replaceAll("_", " ").toLowerCase(),
-                  message: event.message,
-                  createdAt: event.createdAt,
-                  actorName: event.actor?.displayName,
-                })),
+                ...submission.events.map((event) => {
+                  let eventType = event.type.replaceAll("_", " ").toLowerCase();
+                  let eventMessage = event.message;
+
+                  if (event.type === "CORRECTION_REQUESTED") {
+                    eventType = "Correction Requested";
+                    if (event.message?.includes("attachment")) {
+                      const match = event.message.match(/\d+\s+attachments?/i);
+                      eventMessage = match
+                        ? match[0].toLowerCase()
+                        : event.message;
+                    } else {
+                      eventMessage = null;
+                    }
+                  } else if (event.type === "REVISION_SUBMITTED") {
+                    eventType = "Correction Submitted";
+                    if (event.message?.includes("attachment")) {
+                      const match = event.message.match(/\d+\s+attachments?/i);
+                      eventMessage = match
+                        ? match[0].toLowerCase()
+                        : event.message;
+                    } else {
+                      eventMessage = null;
+                    }
+                  } else if (event.type === "ADHERENCE_REPORT_SUBMITTED") {
+                    eventType = "Adherence Report Submitted";
+                    eventMessage = event.message ? `— ${event.message}` : null;
+                  } else if (event.type === "REVIEW_SUBMITTED") {
+                    eventType = "Final Review Submitted";
+                    eventMessage = event.message;
+                  }
+
+                  return {
+                    id: event.id,
+                    type: eventType,
+                    message: eventMessage,
+                    createdAt: event.createdAt,
+                    actorName: event.actor?.displayName,
+                  };
+                }),
               ]
                 .sort((a, b) => a.createdAt.getTime() - b.createdAt.getTime())
                 .map((event) => (
@@ -471,22 +652,5 @@ function Section({
       <h2 className="mb-4 text-sm font-semibold">{title}</h2>
       {children}
     </section>
-  );
-}
-
-function Metric({
-  label,
-  value,
-}: {
-  label: string;
-  value: string | number | null;
-}) {
-  return (
-    <div>
-      <p className="text-[10px] font-semibold tracking-[0.08em] text-[color:var(--color-subtle)] uppercase">
-        {label}
-      </p>
-      <p className="mt-1 text-sm font-semibold capitalize">{value ?? "—"}</p>
-    </div>
   );
 }

@@ -12,6 +12,7 @@ import {
   isRevisionDecision,
   minimumCompletedReviews,
   type ReviewFormInput,
+  validateAdherenceReport,
   validateReview,
 } from "@/lib/editorial/validation";
 
@@ -98,6 +99,13 @@ export async function returnForCorrection(input: {
   journalId: string;
   submissionId: string;
   message: string;
+  attachments?: Array<{
+    bucket: string;
+    objectPath: string;
+    originalFileName: string;
+    mimeType: string;
+    sizeBytes: number;
+  }>;
 }) {
   await assertJournalAdmin(input.adminId, input.journalId);
   const message = input.message.trim();
@@ -111,7 +119,15 @@ export async function returnForCorrection(input: {
       where: {
         id: input.submissionId,
         journalId: input.journalId,
-        status: "SCREENING",
+        status: {
+          in: [
+            "SCREENING",
+            "AWAITING_REVIEWERS",
+            "UNDER_REVIEW",
+            "REVIEWS_RECEIVED",
+            "CORRECTION_REQUESTED",
+          ],
+        },
       },
       select: {
         id: true,
@@ -132,7 +148,7 @@ export async function returnForCorrection(input: {
 
     if (!submission) {
       throw new EditorialMutationError(
-        "This manuscript is no longer in initial assessment.",
+        "This manuscript is not available for correction request.",
       );
     }
 
@@ -141,12 +157,32 @@ export async function returnForCorrection(input: {
       data: { status: "CORRECTION_REQUESTED", version: { increment: 1 } },
     });
 
+    // Create stored files for any attachments provided by admin
+    const storedAttachments: string[] = [];
+    if (input.attachments && input.attachments.length > 0) {
+      for (const att of input.attachments) {
+        const stored = await transaction.storedFile.create({
+          data: { ...att, uploaderId: input.adminId },
+          select: { id: true, originalFileName: true },
+        });
+        storedAttachments.push(stored.id);
+      }
+    }
+
+    const totalAttCount = storedAttachments.length;
+    const attLabel =
+      totalAttCount > 0
+        ? totalAttCount === 1
+          ? "1 attachment"
+          : `${totalAttCount} attachments`
+        : null;
+
     await transaction.submissionEvent.create({
       data: {
         submissionId: submission.id,
         actorId: input.adminId,
         type: "CORRECTION_REQUESTED",
-        message,
+        message: attLabel,
         authorVisible: true,
       },
     });
@@ -158,7 +194,7 @@ export async function returnForCorrection(input: {
 
       await transaction.submissionRequest.update({
         where: { id: submission.request.id },
-        data: { version: { increment: 1 } },
+        data: { version: { increment: 1 }, updatedAt: new Date() },
       });
 
       const conversationMessage =
@@ -171,11 +207,24 @@ export async function returnForCorrection(input: {
           },
         });
 
-      if (manuscriptFileId) {
+      if (
+        manuscriptFileId &&
+        (!input.attachments || input.attachments.length === 0)
+      ) {
         await transaction.conversationAttachment.create({
           data: {
             messageId: conversationMessage.id,
             storedFileId: manuscriptFileId,
+            type: "GENERAL",
+          },
+        });
+      }
+
+      for (const storedId of storedAttachments) {
+        await transaction.conversationAttachment.create({
+          data: {
+            messageId: conversationMessage.id,
+            storedFileId: storedId,
             type: "GENERAL",
           },
         });
@@ -492,6 +541,13 @@ export async function saveEditorReview(input: {
   reviewVersion: number;
   final: boolean;
   review: ReviewFormInput;
+  attachments?: Array<{
+    bucket: string;
+    objectPath: string;
+    originalFileName: string;
+    mimeType: string;
+    sizeBytes: number;
+  }>;
 }) {
   const validation = validateReview(input.review, input.final);
   if (!validation.valid) {
@@ -517,7 +573,12 @@ export async function saveEditorReview(input: {
           submission: {
             journalId: input.journalId,
             status: {
-              in: ["AWAITING_REVIEWERS", "UNDER_REVIEW", "REVIEWS_RECEIVED"],
+              in: [
+                "AWAITING_REVIEWERS",
+                "UNDER_REVIEW",
+                "REVIEWS_RECEIVED",
+                "REVISED",
+              ],
             },
           },
         },
@@ -571,28 +632,67 @@ export async function saveEditorReview(input: {
       });
     }
     const submittedAt = input.final ? new Date() : null;
+    const reportText = (
+      input.review.generalReport ||
+      input.review.commentsToAuthor ||
+      ""
+    ).trim();
+
     const data = {
       status: input.final ? ("SUBMITTED" as const) : ("DRAFT" as const),
-      originality: input.review.originality || null,
+      titleAbstract: input.review.titleAbstract || null,
+      introductionThesis: input.review.introductionThesis || null,
+      literatureReview: input.review.literatureReview || null,
       methodology: input.review.methodology || null,
-      clarity: input.review.clarity || null,
-      relevance: input.review.relevance || null,
+      resultsDiscussion: input.review.resultsDiscussion || null,
+      conclusion: input.review.conclusion || null,
+      languageStyle: input.review.languageStyle || null,
+      apaAdherence: input.review.apaAdherence || null,
+      generalReport: reportText || null,
+      commentsToAuthor: reportText || null,
+      confidentialComments: input.review.confidentialComments?.trim() || null,
       recommendation: (input.review.recommendation ||
         null) as ReviewRecommendation | null,
-      commentsToAuthor: input.review.commentsToAuthor.trim() || null,
-      confidentialComments: input.review.confidentialComments.trim() || null,
       submittedAt,
     };
+
+    let reviewId: string;
     if (assignment.review) {
+      reviewId = assignment.review.id;
       await transaction.review.update({
-        where: { id: assignment.review.id },
+        where: { id: reviewId },
         data: { ...data, version: { increment: 1 } },
       });
     } else {
-      await transaction.review.create({
+      const created = await transaction.review.create({
         data: { assignmentId: assignment.id, ...data },
+        select: { id: true },
       });
+      reviewId = created.id;
     }
+
+    if (input.attachments && input.attachments.length > 0) {
+      for (const att of input.attachments) {
+        const stored = await transaction.storedFile.create({
+          data: {
+            bucket: att.bucket,
+            objectPath: att.objectPath,
+            originalFileName: att.originalFileName,
+            mimeType: att.mimeType,
+            sizeBytes: BigInt(att.sizeBytes),
+            uploaderId: input.editorId,
+          },
+          select: { id: true },
+        });
+        await transaction.reviewAttachment.create({
+          data: {
+            reviewId,
+            storedFileId: stored.id,
+          },
+        });
+      }
+    }
+
     await transaction.reviewAssignment.update({
       where: { id: assignment.id },
       data: input.final
@@ -603,13 +703,23 @@ export async function saveEditorReview(input: {
           }
         : { status: "IN_REVIEW", respondedAt: new Date() },
     });
+
     if (input.final) {
+      const attCount = input.attachments?.length ?? 0;
+      const attLabel =
+        attCount > 0
+          ? attCount === 1
+            ? "1 attachment"
+            : `${attCount} attachments`
+          : null;
+
       await transaction.submissionEvent.create({
         data: {
           submissionId: assignment.reviewRound.submissionId,
           actorId: input.editorId,
           reviewRoundId: assignment.reviewRoundId,
           type: "REVIEW_SUBMITTED",
+          message: attLabel,
         },
       });
       const completedCount = await transaction.reviewAssignment.count({
@@ -625,6 +735,118 @@ export async function saveEditorReview(input: {
         });
       }
     }
+  });
+}
+
+export async function submitAdherenceReport(input: {
+  editorId: string;
+  journalId: string;
+  submissionId: string;
+  outcome: "ADHERED" | "PARTIALLY_ADHERED" | "DID_NOT_ADHERE";
+  report: string;
+}) {
+  const actor = await prisma.user.findUnique({
+    where: { id: input.editorId },
+    select: {
+      id: true,
+      isActive: true,
+      globalRoles: { select: { role: true } },
+      journalRoles: { select: { journalId: true, role: true } },
+    },
+  });
+  if (!actor || !actor.isActive) {
+    throw new EditorialMutationError("Unauthorized user.");
+  }
+
+  const isSuperAdmin = actor.globalRoles.some((r) => r.role === "SUPER_ADMIN");
+  const isJournalAdmin = actor.journalRoles.some(
+    (r) => r.journalId === input.journalId && r.role === "JOURNAL_ADMIN",
+  );
+  const isJournalEditor = actor.journalRoles.some(
+    (r) => r.journalId === input.journalId && r.role === "EDITOR",
+  );
+
+  const submission = await prisma.submission.findFirst({
+    where: { id: input.submissionId, journalId: input.journalId },
+    select: {
+      id: true,
+      journalId: true,
+      manuscriptVersions: {
+        orderBy: { versionNumber: "desc" },
+        take: 1,
+        select: { id: true, versionNumber: true },
+      },
+      reviewRounds: {
+        select: {
+          assignments: {
+            where: { editorId: input.editorId },
+            select: { id: true },
+          },
+        },
+      },
+    },
+  });
+
+  if (!submission) {
+    throw new EditorialMutationError("Manuscript not found.");
+  }
+
+  const hasAssignment = submission.reviewRounds.some(
+    (r) => r.assignments.length > 0,
+  );
+
+  const canSubmit =
+    isSuperAdmin || isJournalAdmin || (isJournalEditor && hasAssignment);
+
+  if (!canSubmit) {
+    throw new EditorialMutationError(
+      "Only assigned editors or journal administrators can submit an adherence report for this manuscript.",
+    );
+  }
+
+  const validation = validateAdherenceReport({
+    outcome: input.outcome,
+    report: input.report,
+  });
+  if (!validation.valid) {
+    throw new EditorialMutationError(
+      "Review the highlighted fields.",
+      validation.fieldErrors,
+    );
+  }
+
+  const latestVersion = submission.manuscriptVersions[0];
+
+  return prisma.$transaction(async (tx) => {
+    const adherence = await tx.adherenceReport.create({
+      data: {
+        submissionId: submission.id,
+        submissionVersionId: latestVersion?.id ?? null,
+        editorId: input.editorId,
+        outcome: input.outcome,
+        report: input.report.trim(),
+      },
+    });
+
+    const outcomeLabel =
+      input.outcome === "ADHERED"
+        ? "Adhered"
+        : input.outcome === "PARTIALLY_ADHERED"
+          ? "Partially Adhered"
+          : "Did Not Adhere";
+
+    await tx.submissionEvent.create({
+      data: {
+        submissionId: submission.id,
+        actorId: input.editorId,
+        submissionVersionId: latestVersion?.id ?? null,
+        type: "ADHERENCE_REPORT_SUBMITTED",
+        message: outcomeLabel,
+        authorVisible: false,
+      },
+    });
+
+    return adherence;
   });
 }
 
@@ -741,6 +963,7 @@ export async function recordRevision(input: {
   authorNote: string;
   manuscript: UploadedFileMetadata;
   response?: UploadedFileMetadata | null;
+  additionalAttachments?: UploadedFileMetadata[];
 }) {
   const note = input.authorNote.trim();
   if (!note) {
@@ -759,6 +982,7 @@ export async function recordRevision(input: {
         },
         select: {
           id: true,
+          request: { select: { id: true } },
           manuscriptVersions: {
             orderBy: { versionNumber: "desc" },
             take: 1,
@@ -781,11 +1005,27 @@ export async function recordRevision(input: {
             select: { id: true },
           })
         : null;
+
+      const additionalStored: Array<{ id: string }> = [];
+      if (
+        input.additionalAttachments &&
+        input.additionalAttachments.length > 0
+      ) {
+        for (const att of input.additionalAttachments) {
+          const stored = await transaction.storedFile.create({
+            data: { ...att, uploaderId: input.ownerId },
+            select: { id: true },
+          });
+          additionalStored.push(stored);
+        }
+      }
+
+      const nextVersionNumber =
+        (submission.manuscriptVersions[0]?.versionNumber ?? 0) + 1;
       const version = await transaction.submissionVersion.create({
         data: {
           submissionId: submission.id,
-          versionNumber:
-            (submission.manuscriptVersions[0]?.versionNumber ?? 0) + 1,
+          versionNumber: nextVersionNumber,
           kind: "REVISION",
           manuscriptStoredFileId: manuscript.id,
           responseStoredFileId: response?.id,
@@ -797,16 +1037,60 @@ export async function recordRevision(input: {
         where: { id: submission.id },
         data: { status: "REVISED", version: { increment: 1 } },
       });
+      const correctionNumber = Math.max(1, version.versionNumber - 1);
+      const totalAttCount = 1 + (response ? 1 : 0) + additionalStored.length;
+      const attLabel =
+        totalAttCount === 1 ? "1 attachment" : `${totalAttCount} attachments`;
+
       await transaction.submissionEvent.create({
         data: {
           submissionId: submission.id,
           actorId: input.ownerId,
           submissionVersionId: version.id,
           type: "REVISION_SUBMITTED",
-          message: `Manuscript version ${version.versionNumber}`,
+          message: attLabel,
           authorVisible: true,
         },
       });
+      if (submission.request) {
+        await transaction.submissionRequest.update({
+          where: { id: submission.request.id },
+          data: { version: { increment: 1 }, updatedAt: new Date() },
+        });
+        const msg = await transaction.submissionConversationMessage.create({
+          data: {
+            requestId: submission.request.id,
+            senderId: input.ownerId,
+            kind: "USER",
+            body: `📋 Correction #${correctionNumber} submitted.\n\nAuthor note: ${note}`,
+          },
+        });
+        await transaction.conversationAttachment.create({
+          data: {
+            messageId: msg.id,
+            storedFileId: manuscript.id,
+            type: "GENERAL",
+          },
+        });
+        if (response) {
+          await transaction.conversationAttachment.create({
+            data: {
+              messageId: msg.id,
+              storedFileId: response.id,
+              type: "GENERAL",
+            },
+          });
+        }
+        for (const extra of additionalStored) {
+          await transaction.conversationAttachment.create({
+            data: {
+              messageId: msg.id,
+              storedFileId: extra.id,
+              type: "GENERAL",
+            },
+          });
+        }
+      }
       return version;
     },
     {
@@ -862,6 +1146,21 @@ export async function publishArticle(input: {
   pageRange?: string;
   coverImageUrl?: string;
   doi?: string;
+  issueOrder?: number;
+  productionFile?: {
+    bucket: string;
+    objectPath: string;
+    originalFileName: string;
+    mimeType: string;
+    sizeBytes: number;
+  };
+  coverFile?: {
+    bucket: string;
+    objectPath: string;
+    originalFileName: string;
+    mimeType: string;
+    sizeBytes: number;
+  };
 }) {
   await assertJournalAdmin(input.adminId, input.journalId);
 
@@ -947,6 +1246,67 @@ export async function publishArticle(input: {
     });
 
     const articleSlug = `art-${submission.id.toLowerCase()}`;
+    const pageRangeParts = input.pageRange ? input.pageRange.split("-") : [];
+    const pageStart = pageRangeParts[0]?.trim() || null;
+    const pageEnd = pageRangeParts[1]?.trim() || null;
+
+    // 1. Check if this article already exists
+    const existingArticle = await tx.article.findUnique({
+      where: { slug: articleSlug },
+      select: { id: true, issueId: true, issueOrder: true },
+    });
+
+    // 2. Fetch other articles in the target issue
+    const otherArticlesInIssue = await tx.article.findMany({
+      where: {
+        issueId: issue.id,
+        NOT: existingArticle ? { id: existingArticle.id } : undefined,
+      },
+      select: { issueOrder: true },
+    });
+
+    const occupiedOrders = new Set(
+      otherArticlesInIssue
+        .map((a) => a.issueOrder)
+        .filter((o): o is number => o !== null && o !== undefined),
+    );
+
+    let finalOrder: number;
+
+    if (
+      input.issueOrder !== undefined &&
+      input.issueOrder !== null &&
+      !isNaN(input.issueOrder)
+    ) {
+      // Explicit order requested by admin
+      if (occupiedOrders.has(input.issueOrder)) {
+        throw new EditorialMutationError(
+          `Article order ${input.issueOrder} is already used in this issue. Choose another order.`,
+        );
+      }
+      finalOrder = input.issueOrder;
+    } else if (
+      existingArticle &&
+      existingArticle.issueId === issue.id &&
+      existingArticle.issueOrder !== null &&
+      existingArticle.issueOrder !== undefined &&
+      !occupiedOrders.has(existingArticle.issueOrder)
+    ) {
+      // Preserved existing order upon republishing to the same issue
+      finalOrder = existingArticle.issueOrder;
+    } else {
+      // Automatic next available order: max existing order in issue + 1
+      const maxOrder = otherArticlesInIssue.reduce(
+        (max, a) => (a.issueOrder && a.issueOrder > max ? a.issueOrder : max),
+        0,
+      );
+      let candidate = maxOrder + 1;
+      while (occupiedOrders.has(candidate)) {
+        candidate++;
+      }
+      finalOrder = candidate;
+    }
+
     const article = await tx.article.upsert({
       where: { slug: articleSlug },
       update: {
@@ -955,8 +1315,9 @@ export async function publishArticle(input: {
         keywords: submission.keywords,
         doi: input.doi?.trim() || null,
         coverImageUrl: input.coverImageUrl || null,
-        pageStart: input.pageRange?.split("-")[0]?.trim() || null,
-        pageEnd: input.pageRange?.split("-")[1]?.trim() || null,
+        pageStart,
+        pageEnd,
+        issueOrder: finalOrder,
         isPublished: true,
         publishedAt: new Date(),
         authors: {
@@ -976,8 +1337,9 @@ export async function publishArticle(input: {
         keywords: submission.keywords,
         doi: input.doi?.trim() || null,
         coverImageUrl: input.coverImageUrl || null,
-        pageStart: input.pageRange?.split("-")[0]?.trim() || null,
-        pageEnd: input.pageRange?.split("-")[1]?.trim() || null,
+        pageStart,
+        pageEnd,
+        issueOrder: finalOrder,
         isPublished: true,
         publishedAt: new Date(),
         authors: {
@@ -989,6 +1351,67 @@ export async function publishArticle(input: {
         },
       },
     });
+
+    if (input.productionFile) {
+      const stored = await tx.storedFile.create({
+        data: {
+          bucket: input.productionFile.bucket,
+          objectPath: input.productionFile.objectPath,
+          originalFileName: input.productionFile.originalFileName,
+          mimeType: input.productionFile.mimeType,
+          sizeBytes: BigInt(input.productionFile.sizeBytes),
+          uploaderId: input.adminId,
+        },
+      });
+
+      const fileType =
+        input.productionFile.mimeType === "application/pdf"
+          ? ("PUBLISHED_PDF" as const)
+          : ("PRODUCTION_FILE" as const);
+
+      await tx.articleFile.deleteMany({
+        where: {
+          articleId: article.id,
+          type: { in: ["PUBLISHED_PDF", "PRODUCTION_FILE"] },
+        },
+      });
+
+      await tx.articleFile.create({
+        data: {
+          articleId: article.id,
+          storedFileId: stored.id,
+          type: fileType,
+        },
+      });
+    }
+
+    if (input.coverFile) {
+      const storedCover = await tx.storedFile.create({
+        data: {
+          bucket: input.coverFile.bucket,
+          objectPath: input.coverFile.objectPath,
+          originalFileName: input.coverFile.originalFileName,
+          mimeType: input.coverFile.mimeType,
+          sizeBytes: BigInt(input.coverFile.sizeBytes),
+          uploaderId: input.adminId,
+        },
+      });
+
+      await tx.articleFile.deleteMany({
+        where: {
+          articleId: article.id,
+          type: "COVER_IMAGE",
+        },
+      });
+
+      await tx.articleFile.create({
+        data: {
+          articleId: article.id,
+          storedFileId: storedCover.id,
+          type: "COVER_IMAGE",
+        },
+      });
+    }
 
     return article;
   });

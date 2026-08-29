@@ -6,6 +6,14 @@ import { redirect } from "next/navigation";
 import { requireGlobalRole } from "@/lib/auth/authorization";
 import { prisma } from "@/lib/db/prisma";
 import {
+  EditorialMutationError,
+  recordRevision,
+} from "@/lib/editorial/mutations";
+import {
+  createSubmissionObjectPath,
+  storageBuckets,
+} from "@/lib/storage/paths";
+import {
   changeDraftJournal,
   deleteDraftFileRecord,
   deleteDraftRecord,
@@ -21,11 +29,18 @@ import type {
   ActionState,
   SubmissionAuthorInput,
 } from "@/lib/submissions/types";
-import { normalizeKeywords } from "@/lib/submissions/validation";
+import {
+  matchesUploadSignature,
+  normalizeKeywords,
+  validateUploadFile,
+} from "@/lib/submissions/validation";
 import { createClient } from "@/lib/supabase/server";
 
 function actionError(error: unknown): ActionState {
-  if (error instanceof SubmissionMutationError) {
+  if (
+    error instanceof SubmissionMutationError ||
+    error instanceof EditorialMutationError
+  ) {
     return { error: error.message, fieldErrors: error.fieldErrors };
   }
   return { error: "We couldn’t save that change. Please try again." };
@@ -232,5 +247,132 @@ export async function deleteDraftAction(
     redirect(`/author/requests/${linkedRequest.id}`);
   } else {
     redirect("/author");
+  }
+}
+
+export async function submitAuthorCorrectionAction(
+  submissionId: string,
+  _previousState: ActionState,
+  formData: FormData,
+): Promise<ActionState> {
+  const user = await requireGlobalRole("AUTHOR");
+  const authorNote = String(
+    formData.get("authorNote") ??
+      formData.get("message") ??
+      formData.get("body") ??
+      "",
+  ).trim();
+
+  if (!authorNote) {
+    return {
+      error: "Add a short note explaining the changes in this revision.",
+    };
+  }
+
+  const rawFiles = formData.getAll("attachments");
+  const files: File[] = rawFiles.filter(
+    (item): item is File => item instanceof File && item.size > 0,
+  );
+
+  if (files.length === 0) {
+    return { error: "Please attach your corrected manuscript file." };
+  }
+
+  for (const file of files) {
+    const error = validateUploadFile(file);
+    if (error) return { error };
+    const signature = new Uint8Array(await file.slice(0, 8).arrayBuffer());
+    if (!matchesUploadSignature(file.type, signature)) {
+      return {
+        error: `File '${file.name}' does not match its supported PDF or DOCX format.`,
+      };
+    }
+  }
+
+  const submission = await prisma.submission.findFirst({
+    where: {
+      id: submissionId,
+      ownerId: user.id,
+      status: { in: ["CORRECTION_REQUESTED", "REVISION_REQUESTED"] },
+    },
+    select: {
+      id: true,
+      journalId: true,
+      request: { select: { id: true } },
+      journal: { select: { slug: true } },
+    },
+  });
+
+  if (!submission) {
+    return { error: "This submission is not awaiting a revision." };
+  }
+
+  const primaryManuscript = files[0];
+  const responseFile = files.length > 1 ? files[1] : null;
+  const additionalFiles = files.slice(2);
+
+  const bucket = storageBuckets.privateAcademicFiles;
+  const paths = files.map((file) =>
+    createSubmissionObjectPath({
+      journalId: submission.journalId,
+      submissionId,
+      originalFileName: file.name,
+    }),
+  );
+
+  const supabase = await createClient();
+  const uploaded: string[] = [];
+
+  try {
+    for (const [index, file] of files.entries()) {
+      const { error } = await supabase.storage
+        .from(bucket)
+        .upload(paths[index], file, {
+          contentType: file.type,
+          upsert: false,
+        });
+      if (error) throw new Error("Upload failed. Try again.");
+      uploaded.push(paths[index]);
+    }
+
+    const metadata = (file: File, objectPath: string) => ({
+      bucket,
+      objectPath,
+      originalFileName: file.name,
+      mimeType: file.type,
+      sizeBytes: file.size,
+    });
+
+    const version = await recordRevision({
+      ownerId: user.id,
+      submissionId,
+      authorNote,
+      manuscript: metadata(primaryManuscript, paths[0]),
+      response: responseFile ? metadata(responseFile, paths[1]) : null,
+      additionalAttachments: additionalFiles.map((file, idx) =>
+        metadata(file, paths[2 + idx]),
+      ),
+    });
+
+    revalidatePath(`/author/submissions/${submissionId}`);
+    revalidatePath("/author/submissions");
+    if (submission.request) {
+      revalidatePath(`/author/requests/${submission.request.id}`);
+      revalidatePath(
+        `/admin/${submission.journal.slug}/requests/${submission.request.id}`,
+      );
+    }
+    revalidatePath(
+      `/admin/${submission.journal.slug}/submissions/${submissionId}`,
+    );
+
+    return {
+      message: `Correction submitted (Manuscript version ${version.versionNumber}).`,
+    };
+  } catch (error) {
+    if (uploaded.length > 0) {
+      await supabase.storage.from(bucket).remove(uploaded);
+    }
+    return actionError(error);
   }
 }

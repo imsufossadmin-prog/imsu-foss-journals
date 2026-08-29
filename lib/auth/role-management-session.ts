@@ -80,12 +80,16 @@ export async function listRoleManagementJournals() {
   }
 
   return prisma.journal.findMany({
-    where: { isActive: true, department: { isActive: true } },
+    where: {
+      isActive: true,
+      OR: [{ departmentId: null }, { department: { isActive: true } }],
+    },
     select: {
       id: true,
       name: true,
+      slug: true,
       department: { select: { id: true, name: true } },
     },
-    orderBy: [{ department: { name: "asc" } }, { name: "asc" }],
+    orderBy: { name: "asc" },
   });
 }

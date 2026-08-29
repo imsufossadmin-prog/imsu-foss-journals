@@ -10,6 +10,8 @@ import {
 } from "@/lib/submissions/constants";
 import {
   matchesUploadSignature,
+  matchesWordUploadSignature,
+  validateInitialManuscriptFile,
   validateUploadFile,
 } from "@/lib/submissions/validation";
 import {
@@ -54,16 +56,36 @@ export async function POST(
       { status: 400 },
     );
   }
-  const fileError = validateUploadFile(file);
-  if (fileError)
-    return NextResponse.json({ error: fileError }, { status: 400 });
-  const signature = new Uint8Array(await file.slice(0, 8).arrayBuffer());
-  if (!matchesUploadSignature(file.type, signature)) {
-    return NextResponse.json(
-      { error: "The file contents do not match its PDF or DOCX type." },
-      { status: 400 },
-    );
+  const extension = file.name.split(".").pop()?.toLowerCase() ?? "";
+
+  if (type === "MANUSCRIPT") {
+    const manuscriptError = validateInitialManuscriptFile(file);
+    if (manuscriptError) {
+      return NextResponse.json({ error: manuscriptError }, { status: 400 });
+    }
+    const signature = new Uint8Array(await file.slice(0, 8).arrayBuffer());
+    if (!matchesWordUploadSignature(file.type, signature, extension)) {
+      return NextResponse.json(
+        {
+          error:
+            "The file contents do not match a valid Microsoft Word document (.doc or .docx).",
+        },
+        { status: 400 },
+      );
+    }
+  } else {
+    const fileError = validateUploadFile(file);
+    if (fileError)
+      return NextResponse.json({ error: fileError }, { status: 400 });
+    const signature = new Uint8Array(await file.slice(0, 8).arrayBuffer());
+    if (!matchesUploadSignature(file.type, signature)) {
+      return NextResponse.json(
+        { error: "The file contents do not match its supported file type." },
+        { status: 400 },
+      );
+    }
   }
+
   if (!Number.isInteger(version) || version < 1) {
     return NextResponse.json(
       { error: "Refresh this draft before uploading." },
@@ -76,7 +98,7 @@ export async function POST(
       id: submissionId,
       ownerId: user.id,
       status: "DRAFT",
-      request: { authorId: user.id, status: "SUBMISSION_ENABLED" },
+      request: { authorId: user.id },
     },
     select: { id: true, journalId: true, request: { select: { id: true } } },
   });
@@ -113,7 +135,7 @@ export async function POST(
           ownerId: user.id,
           status: "DRAFT",
           version,
-          request: { authorId: user.id, status: "SUBMISSION_ENABLED" },
+          request: { authorId: user.id },
         },
         data: { version: { increment: 1 } },
       });

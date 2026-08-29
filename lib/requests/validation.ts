@@ -21,21 +21,22 @@ export function validateMessageBody(value: string) {
 
 export const requestStatusContent = {
   NEW: {
-    label: "New message",
-    authorGuidance: "Your request has reached the Psychology journal team.",
+    label: "Request active",
+    authorGuidance:
+      "Your submission request is active. You can submit your manuscript immediately.",
   },
   AWAITING_PAYMENT: {
-    label: "Payment required",
+    label: "Inquiry in progress",
     authorGuidance:
-      "Follow the payment instructions, then upload your receipt.",
+      "Your request is active. You can submit your manuscript at any time.",
   },
   RECEIPT_SUBMITTED: {
-    label: "Receipt sent",
-    authorGuidance: "The journal will confirm your receipt shortly.",
+    label: "Update sent",
+    authorGuidance: "Your conversation has been updated.",
   },
   SUBMISSION_ENABLED: {
-    label: "Payment confirmed",
-    authorGuidance: "You can now submit your article.",
+    label: "Ready for submission",
+    authorGuidance: "You can submit your article manuscript.",
   },
   MANUSCRIPT_SUBMITTED: {
     label: "Awaiting tracking ID",

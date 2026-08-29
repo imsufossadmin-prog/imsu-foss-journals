@@ -64,7 +64,14 @@ test("inactive users are denied even when otherwise scoped", () => {
   );
 });
 
-test("submission permission belongs only to the enabled request author", () => {
+test("submission permission belongs to the active request author", () => {
+  assert.equal(
+    canUseSubmissionPermission(author, {
+      ...request,
+      status: "NEW",
+    }),
+    true,
+  );
   assert.equal(
     canUseSubmissionPermission(author, {
       ...request,
@@ -75,26 +82,29 @@ test("submission permission belongs only to the enabled request author", () => {
   assert.equal(
     canUseSubmissionPermission(
       { ...author, id: "author-b" },
-      { ...request, status: "SUBMISSION_ENABLED" },
+      { ...request, status: "NEW" },
     ),
     false,
   );
   assert.equal(
     canUseSubmissionPermission(author, {
       ...request,
-      status: "RECEIPT_SUBMITTED",
+      status: "TRACKING_ASSIGNED",
     }),
     false,
   );
 });
 
 test("request statuses use plain operational language", () => {
-  assert.equal(requestStatusContent.NEW.label, "New message");
-  assert.equal(requestStatusContent.AWAITING_PAYMENT.label, "Payment required");
-  assert.equal(requestStatusContent.RECEIPT_SUBMITTED.label, "Receipt sent");
+  assert.equal(requestStatusContent.NEW.label, "Request active");
+  assert.equal(
+    requestStatusContent.AWAITING_PAYMENT.label,
+    "Inquiry in progress",
+  );
+  assert.equal(requestStatusContent.RECEIPT_SUBMITTED.label, "Update sent");
   assert.equal(
     requestStatusContent.SUBMISSION_ENABLED.label,
-    "Payment confirmed",
+    "Ready for submission",
   );
   assert.equal(
     requestStatusContent.MANUSCRIPT_SUBMITTED.label,

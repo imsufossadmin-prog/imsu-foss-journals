@@ -1,21 +1,14 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 
+import { sendAdminMessageAction } from "@/app/admin/[journalSlug]/requests/actions";
 import {
-  assignTrackingAction,
-  confirmPaymentAction,
-  sendAdminMessageAction,
-} from "@/app/admin/[journalSlug]/requests/actions";
-import {
-  AdminStateAction,
-  InlineEditableTrackingId,
   RequestChatBox,
   RequestStatus,
-  TrackingIdForm,
   type ConversationMessageDTO,
 } from "@/components/requests/request-components";
 import { requireJournalWorkspace } from "@/lib/auth/workspace-context";
-import { getDepartmentRequest } from "@/lib/requests/data";
+import { getJournalRequest } from "@/lib/requests/data";
 
 export default async function AdminRequestPage({
   params,
@@ -27,7 +20,7 @@ export default async function AdminRequestPage({
     "JOURNAL_ADMIN",
     journalSlug,
   );
-  const request = await getDepartmentRequest(journal.department.id, requestId);
+  const request = await getJournalRequest(journal.id, requestId);
   if (!request) notFound();
   const messages: ConversationMessageDTO[] = request.messages.map(
     (message) => ({
@@ -44,13 +37,7 @@ export default async function AdminRequestPage({
       })),
     }),
   );
-  const receipt = request.messages
-    .flatMap((message) => message.attachments)
-    .find((attachment) => attachment.type === "PAYMENT_RECEIPT");
-  const manuscript = request.submission?.files.find(
-    ({ type }) => type === "MANUSCRIPT",
-  );
-  const manuscriptVersion = request.submission?.manuscriptVersions[0];
+
   return (
     <div className="mx-auto w-full max-w-6xl min-w-0 px-1 sm:px-0">
       <div className="flex items-center gap-4">
@@ -78,10 +65,9 @@ export default async function AdminRequestPage({
           Author: {request.author.displayName}
         </p>
         {request.submission?.trackingNumber ? (
-          <InlineEditableTrackingId
-            trackingId={request.submission.trackingNumber}
-            action={assignTrackingAction.bind(null, journal.slug, request.id)}
-          />
+          <p className="mt-2 font-mono text-xs font-semibold text-[color:var(--color-accent)]">
+            Tracking ID: {request.submission.trackingNumber}
+          </p>
         ) : null}
       </header>
       <div className="mt-6 grid min-w-0 gap-6 lg:grid-cols-[minmax(0,1fr)_20rem]">
@@ -101,69 +87,23 @@ export default async function AdminRequestPage({
           </div>
         </section>
         <aside className="space-y-4">
-          {["NEW", "AWAITING_PAYMENT", "RECEIPT_SUBMITTED"].includes(
-            request.status,
-          ) ? (
-            <div className="rounded-[var(--radius-lg)] border border-[color:var(--color-border)] bg-[color:var(--color-surface-raised)] p-5">
-              <h2 className="text-sm font-semibold">Submission Activation</h2>
-              {receipt ? (
-                <a
-                  href={`/api/requests/${request.id}/attachments/${receipt.id}`}
-                  className="mt-2 block text-xs font-semibold text-[color:var(--color-accent)]"
-                >
-                  View uploaded receipt →
-                </a>
-              ) : (
-                <p className="mt-1 text-xs text-[color:var(--color-muted)]">
-                  Payment verified via WhatsApp or direct transfer? Click below
-                  to enable submission for this author.
-                </p>
-              )}
-              <div className="mt-4">
-                <AdminStateAction
-                  action={confirmPaymentAction.bind(
-                    null,
-                    journal.slug,
-                    request.id,
-                  )}
-                  label="Activate Submission for Author"
-                />
-              </div>
-            </div>
-          ) : null}
-          {request.status === "MANUSCRIPT_SUBMITTED" && request.submission ? (
-            <div className="rounded-[var(--radius-lg)] border border-[color:var(--color-accent)] p-5">
-              <h2 className="text-sm font-semibold">Manuscript received</h2>
-              {manuscript && manuscriptVersion ? (
-                <a
-                  href={`/api/admin/${journal.slug}/submissions/${request.submission.id}/versions/${manuscriptVersion.id}/manuscript`}
-                  className="mt-3 block text-xs font-semibold text-[color:var(--color-accent)]"
-                >
-                  Open manuscript
-                </a>
-              ) : null}
-              <div className="mt-5">
-                <TrackingIdForm
-                  action={assignTrackingAction.bind(
-                    null,
-                    journal.slug,
-                    request.id,
-                  )}
-                  currentTrackingId={request.submission.trackingNumber}
-                  isEditing={false}
-                />
-              </div>
-            </div>
-          ) : null}
           {request.submission ? (
             <Link
               href={`/admin/${journal.slug}/submissions/${request.submission.id}`}
               prefetch={true}
-              className="button-secondary inline-flex items-center justify-center gap-2"
+              className="button-secondary inline-flex w-full items-center justify-center gap-2 text-xs font-semibold"
             >
               Open manuscript record →
             </Link>
-          ) : null}
+          ) : (
+            <div className="rounded-[var(--radius-lg)] border border-[color:var(--color-border)] bg-[color:var(--color-surface-raised)] p-5">
+              <h2 className="text-sm font-semibold">Manuscript Intake</h2>
+              <p className="mt-2 text-xs leading-5 text-[color:var(--color-muted)]">
+                The author has an active submission request and can submit their
+                manuscript form at any time.
+              </p>
+            </div>
+          )}
         </aside>
       </div>
     </div>

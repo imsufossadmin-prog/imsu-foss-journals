@@ -252,9 +252,13 @@ export function ConversationThread({
 
 export function MessageComposer({
   action,
+  correctionAction,
+  authorCorrectionAction,
   requestId,
   viewerId = "",
-  receipt = false,
+  receipt: _receipt = false,
+  initialCorrectionMode = false,
+  initialAuthorCorrectionMode = false,
   onOptimisticAdd,
   onOptimisticUpdate,
 }: {
@@ -262,9 +266,19 @@ export function MessageComposer({
     state: RequestActionState,
     formData: FormData,
   ) => Promise<RequestActionState>;
+  correctionAction?: (
+    state: RequestActionState,
+    formData: FormData,
+  ) => Promise<RequestActionState>;
+  authorCorrectionAction?: (
+    state: RequestActionState,
+    formData: FormData,
+  ) => Promise<RequestActionState>;
   requestId?: string;
   viewerId?: string;
   receipt?: boolean;
+  initialCorrectionMode?: boolean;
+  initialAuthorCorrectionMode?: boolean;
   onOptimisticAdd?: (msg: ConversationMessageDTO) => void;
   onOptimisticUpdate?: (
     id: string,
@@ -272,22 +286,58 @@ export function MessageComposer({
   ) => void;
 }) {
   const router = useRouter();
+  const [mode, setMode] = useState<
+    "chat" | "admin-correction" | "author-correction"
+  >(() => {
+    if (initialAuthorCorrectionMode) return "author-correction";
+    if (initialCorrectionMode) return "admin-correction";
+    if (typeof window !== "undefined") {
+      const params = new URLSearchParams(window.location.search);
+      if (params.get("mode") === "correction") {
+        if (authorCorrectionAction) return "author-correction";
+        if (correctionAction) return "admin-correction";
+      }
+    }
+    return "chat";
+  });
   const [text, setText] = useState("");
+  const [attachments, setAttachments] = useState<File[]>([]);
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState("");
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const [attachmentType, setAttachmentType] = useState<
-    "GENERAL" | "PAYMENT_RECEIPT"
-  >(receipt ? "PAYMENT_RECEIPT" : "GENERAL");
-  const [showAttachMenu, setShowAttachMenu] = useState(false);
 
-  const triggerUpload = (type: "GENERAL" | "PAYMENT_RECEIPT") => {
-    setAttachmentType(type);
-    setShowAttachMenu(false);
-    fileInputRef.current?.click();
-  };
+  useEffect(() => {
+    const handleOpenAdminCorrection = () => {
+      setMode("admin-correction");
+      setError("");
+    };
+    const handleOpenAuthorCorrection = () => {
+      setMode("author-correction");
+      setError("");
+    };
 
-  const handleSend = async (e: React.FormEvent<HTMLFormElement>) => {
+    window.addEventListener(
+      "imsufoss:open-correction-mode",
+      handleOpenAdminCorrection,
+    );
+    window.addEventListener(
+      "imsufoss:open-author-correction-mode",
+      handleOpenAuthorCorrection,
+    );
+
+    return () => {
+      window.removeEventListener(
+        "imsufoss:open-correction-mode",
+        handleOpenAdminCorrection,
+      );
+      window.removeEventListener(
+        "imsufoss:open-author-correction-mode",
+        handleOpenAuthorCorrection,
+      );
+    };
+  }, []);
+
+  const handleSendChat = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     if (!text.trim() || pending) return;
 
@@ -322,9 +372,93 @@ export function MessageComposer({
     });
   };
 
-  const handleFileUpload = (file: File) => {
-    if (!requestId) return;
+  const handleSendAdminCorrection = async (
+    e: React.FormEvent<HTMLFormElement>,
+  ) => {
+    e.preventDefault();
+    if (!text.trim() || pending) return;
 
+    if (!correctionAction) {
+      setError("Correction action is not available in this context.");
+      return;
+    }
+
+    setError("");
+    const messageText = text.trim();
+    const attachedFiles = [...attachments];
+
+    const formData = new FormData();
+    formData.set("message", messageText);
+    formData.set("body", messageText);
+    for (const file of attachedFiles) {
+      formData.append("attachments", file);
+    }
+
+    startTransition(async () => {
+      const res = await correctionAction({}, formData);
+      if (res?.error) {
+        setError(res.error);
+      } else {
+        setText("");
+        setAttachments([]);
+        setMode("chat");
+        router.refresh();
+      }
+    });
+  };
+
+  const handleSendAuthorCorrection = async (
+    e: React.FormEvent<HTMLFormElement>,
+  ) => {
+    e.preventDefault();
+    if (!text.trim() || pending) return;
+
+    if (!authorCorrectionAction) {
+      setError("Correction submission is not available in this context.");
+      return;
+    }
+
+    if (attachments.length === 0) {
+      setError("Please attach your corrected manuscript file.");
+      return;
+    }
+
+    setError("");
+    const messageText = text.trim();
+    const attachedFiles = [...attachments];
+
+    const formData = new FormData();
+    formData.set("authorNote", messageText);
+    formData.set("message", messageText);
+    formData.set("body", messageText);
+    for (const file of attachedFiles) {
+      formData.append("attachments", file);
+    }
+
+    startTransition(async () => {
+      const res = await authorCorrectionAction({}, formData);
+      if (res?.error) {
+        setError(res.error);
+      } else {
+        setText("");
+        setAttachments([]);
+        setMode("chat");
+        router.refresh();
+      }
+    });
+  };
+
+  const handleFileUpload = (fileList: FileList | null) => {
+    if (!fileList || fileList.length === 0) return;
+
+    if (mode === "admin-correction" || mode === "author-correction") {
+      const newFiles = Array.from(fileList);
+      setAttachments((prev) => [...prev, ...newFiles]);
+      return;
+    }
+
+    if (!requestId) return;
+    const file = fileList[0];
     const tempId = `temp-file-${Date.now()}`;
     const tempFileMsg: ConversationMessageDTO = {
       id: tempId,
@@ -335,7 +469,7 @@ export function MessageComposer({
       attachments: [
         {
           id: `temp-att-${Date.now()}`,
-          type: attachmentType,
+          type: "GENERAL",
           originalFileName: file.name,
           sizeBytes: file.size,
         },
@@ -346,7 +480,7 @@ export function MessageComposer({
 
     const body = new FormData();
     body.set("file", file);
-    body.set("attachmentType", attachmentType);
+    body.set("attachmentType", "GENERAL");
 
     const xhr = new XMLHttpRequest();
     xhr.open("POST", `/api/requests/${requestId}/attachments`);
@@ -368,91 +502,316 @@ export function MessageComposer({
   };
 
   return (
-    <div className="relative border-t border-[color:var(--color-border)] pt-4">
-      {requestId ? (
-        <input
-          ref={fileInputRef}
-          type="file"
-          className="sr-only"
-          accept=".pdf,.docx,.jpg,.jpeg,.png,application/pdf,image/jpeg,image/png,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
-          onChange={(e) => {
-            const file = e.target.files?.[0];
-            if (file) handleFileUpload(file);
-            e.currentTarget.value = "";
-          }}
-        />
-      ) : null}
+    <div
+      id="request-composer"
+      className="relative scroll-mt-24 border-t border-[color:var(--color-border)] pt-4 transition-all duration-200 ease-in-out"
+    >
+      <input
+        ref={fileInputRef}
+        type="file"
+        multiple={mode !== "chat"}
+        className="sr-only"
+        accept=".pdf,.docx,.doc,.jpg,.jpeg,.png,application/pdf,image/jpeg,image/png,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/msword"
+        onChange={(e) => {
+          handleFileUpload(e.target.files);
+          e.currentTarget.value = "";
+        }}
+      />
 
-      {/* Attach Popover Menu */}
-      {showAttachMenu ? (
-        <div className="absolute bottom-16 left-0 z-50 w-64 rounded-[var(--radius-lg)] border border-[color:var(--color-border)] bg-[color:var(--color-surface-raised)] p-2 shadow-[var(--shadow-menu)]">
-          <p className="px-3 py-1.5 text-[10px] font-bold tracking-wider text-[color:var(--color-subtle)] uppercase">
-            Add attachment
-          </p>
-          <button
-            type="button"
-            onClick={() => triggerUpload("PAYMENT_RECEIPT")}
-            className="flex w-full items-center gap-2.5 rounded-[var(--radius-md)] px-3 py-2 text-left text-xs font-semibold text-[color:var(--color-foreground)] transition hover:bg-[color:var(--color-surface-strong)]"
-          >
-            <span>💳</span>
-            <span>Upload Payment Receipt</span>
-          </button>
-          <button
-            type="button"
-            onClick={() => triggerUpload("GENERAL")}
-            className="flex w-full items-center gap-2.5 rounded-[var(--radius-md)] px-3 py-2 text-left text-xs font-semibold text-[color:var(--color-foreground)] transition hover:bg-[color:var(--color-surface-strong)]"
-          >
-            <span>📄</span>
-            <span>Upload Document / Manuscript</span>
-          </button>
-        </div>
-      ) : null}
-
-      <form onSubmit={handleSend} className="flex w-full items-center gap-2">
-        {requestId ? (
-          <button
-            type="button"
-            title="Add attachment"
-            onClick={() => setShowAttachMenu(!showAttachMenu)}
-            className="flex size-10 shrink-0 items-center justify-center rounded-[var(--radius-md)] border border-[color:var(--color-border)] bg-[color:var(--color-surface)] text-lg font-semibold text-[color:var(--color-accent)] transition hover:border-[color:var(--color-accent)] hover:bg-[color:var(--color-accent-soft)] focus-visible:outline-2 focus-visible:outline-[color:var(--color-focus)]"
-          >
-            +
-          </button>
-        ) : null}
-
-        <div className="min-w-0 flex-1">
-          <input
-            type="text"
-            name="body"
-            value={text}
-            onChange={(e) => setText(e.target.value)}
-            placeholder="Type a message..."
-            className="app-field !w-full"
-            required
-          />
-        </div>
-
-        <button
-          type="submit"
-          disabled={pending || !text.trim()}
-          className="button-primary flex size-10 shrink-0 items-center justify-center rounded-[var(--radius-md)] !p-0"
-          title="Send message"
+      {mode === "admin-correction" ? (
+        <form
+          onSubmit={handleSendAdminCorrection}
+          className="space-y-3 transition-all duration-200 ease-in-out"
         >
-          <svg
-            className="size-4"
-            fill="none"
-            viewBox="0 0 24 24"
-            stroke="currentColor"
-          >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth="2.5"
-              d="M14 5l7 7m0 0l-7 7m7-7H3"
+          <div className="flex items-center justify-between rounded-[var(--radius-md)] border border-amber-500/40 bg-amber-500/10 px-3.5 py-2.5 text-xs text-[color:var(--color-foreground)]">
+            <div className="min-w-0 pr-2">
+              <p className="font-semibold text-amber-400">
+                📋 Correction Request Mode
+              </p>
+              <p className="mt-0.5 text-[11px] text-[color:var(--color-muted)]">
+                This instruction will be formally recorded in manuscript history
+                and the audit timeline.
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={() => {
+                setMode("chat");
+                setAttachments([]);
+                setError("");
+              }}
+              className="shrink-0 rounded-[var(--radius-sm)] border border-[color:var(--color-border)] bg-[color:var(--color-surface)] px-2.5 py-1 text-xs font-semibold text-[color:var(--color-muted)] transition hover:bg-[color:var(--color-surface-strong)] hover:text-[color:var(--color-foreground)]"
+            >
+              Cancel
+            </button>
+          </div>
+
+          <div>
+            <textarea
+              id="correction-instructions-input"
+              name="message"
+              value={text}
+              onChange={(e) => setText(e.target.value)}
+              placeholder="Detail all corrections required before reassessment or publication..."
+              className="app-field min-h-36 w-full text-xs leading-relaxed sm:min-h-44"
+              required
             />
-          </svg>
-        </button>
-      </form>
+          </div>
+
+          {attachments.length > 0 ? (
+            <div className="space-y-1.5">
+              <p className="text-[10px] font-bold tracking-wider text-[color:var(--color-subtle)] uppercase">
+                Attached files ({attachments.length})
+              </p>
+              <div className="flex flex-wrap gap-2">
+                {attachments.map((file, idx) => (
+                  <div
+                    key={`${file.name}-${idx}`}
+                    className="flex items-center gap-1.5 rounded-[var(--radius-sm)] border border-[color:var(--color-border)] bg-[color:var(--color-surface-strong)] px-2.5 py-1 text-xs text-[color:var(--color-foreground)]"
+                  >
+                    <span className="max-w-48 truncate">{file.name}</span>
+                    <span className="text-[10px] text-[color:var(--color-subtle)]">
+                      ({Math.round(file.size / 1024)} KB)
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setAttachments((prev) =>
+                          prev.filter((_, i) => i !== idx),
+                        )
+                      }
+                      className="ml-1 text-[color:var(--color-muted)] transition hover:text-[color:var(--color-danger)]"
+                      title="Remove file"
+                    >
+                      ✕
+                    </button>
+                  </div>
+                ))}
+              </div>
+            </div>
+          ) : null}
+
+          <div className="flex flex-wrap items-center justify-between gap-3 pt-1">
+            <button
+              type="button"
+              onClick={() => fileInputRef.current?.click()}
+              className="button-secondary flex items-center gap-1.5 text-xs font-semibold"
+            >
+              <span>+</span>
+              <span>
+                {attachments.length > 0
+                  ? "Add more attachments"
+                  : "Attach supporting files (optional)"}
+              </span>
+            </button>
+
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => {
+                  setMode("chat");
+                  setAttachments([]);
+                  setError("");
+                }}
+                className="button-secondary text-xs"
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                disabled={pending || !text.trim()}
+                className="button-primary text-xs font-semibold"
+              >
+                {pending ? (
+                  <span className="flex items-center gap-1.5">
+                    <SendingSpinner />
+                    <span>Sending Correction Request…</span>
+                  </span>
+                ) : (
+                  "Send Correction Request"
+                )}
+              </button>
+            </div>
+          </div>
+        </form>
+      ) : mode === "author-correction" ? (
+        <form
+          onSubmit={handleSendAuthorCorrection}
+          className="space-y-3 transition-all duration-200 ease-in-out"
+        >
+          <div className="flex items-center justify-between rounded-[var(--radius-md)] border border-emerald-500/40 bg-emerald-500/10 px-3.5 py-2.5 text-xs text-[color:var(--color-foreground)]">
+            <div className="min-w-0 pr-2">
+              <p className="font-semibold text-emerald-400">
+                📋 Correction Submission Mode
+              </p>
+              <p className="mt-0.5 text-[11px] text-[color:var(--color-muted)]">
+                This will create a new manuscript version and record your
+                revision in the official editorial history.
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={() => {
+                setMode("chat");
+                setAttachments([]);
+                setError("");
+              }}
+              className="shrink-0 rounded-[var(--radius-sm)] border border-[color:var(--color-border)] bg-[color:var(--color-surface)] px-2.5 py-1 text-xs font-semibold text-[color:var(--color-muted)] transition hover:bg-[color:var(--color-surface-strong)] hover:text-[color:var(--color-foreground)]"
+            >
+              Cancel
+            </button>
+          </div>
+
+          <div>
+            <textarea
+              id="author-correction-note-input"
+              name="authorNote"
+              value={text}
+              onChange={(e) => setText(e.target.value)}
+              placeholder="Summarize the changes and corrections made in this version..."
+              className="app-field min-h-36 w-full text-xs leading-relaxed sm:min-h-44"
+              required
+            />
+          </div>
+
+          {attachments.length > 0 ? (
+            <div className="space-y-1.5">
+              <p className="text-[10px] font-bold tracking-wider text-[color:var(--color-subtle)] uppercase">
+                Attached manuscript & files ({attachments.length})
+              </p>
+              <div className="flex flex-wrap gap-2">
+                {attachments.map((file, idx) => (
+                  <div
+                    key={`${file.name}-${idx}`}
+                    className={`flex items-center gap-2 rounded-[var(--radius-sm)] border px-2.5 py-1.5 text-xs ${
+                      idx === 0
+                        ? "border-[color:var(--color-accent)]/50 bg-[color:var(--color-accent-soft)] text-[color:var(--color-foreground)]"
+                        : "border-[color:var(--color-border)] bg-[color:var(--color-surface-strong)] text-[color:var(--color-foreground)]"
+                    }`}
+                  >
+                    <span className="max-w-44 truncate font-medium">
+                      {file.name}
+                    </span>
+                    <span className="rounded bg-[color:var(--color-surface)] px-1.5 py-0.5 text-[10px] text-[color:var(--color-subtle)]">
+                      {idx === 0 ? "Corrected Manuscript" : "Supporting File"} ·{" "}
+                      {Math.round(file.size / 1024)} KB
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setAttachments((prev) =>
+                          prev.filter((_, i) => i !== idx),
+                        )
+                      }
+                      className="ml-1 text-[color:var(--color-muted)] transition hover:text-[color:var(--color-danger)]"
+                      title="Remove file"
+                    >
+                      ✕
+                    </button>
+                  </div>
+                ))}
+              </div>
+            </div>
+          ) : (
+            <p className="text-[11px] text-[color:var(--color-muted)]">
+              Please attach your primary corrected manuscript (DOCX/PDF). You
+              can also attach optional response letters or rubrics.
+            </p>
+          )}
+
+          <div className="flex flex-wrap items-center justify-between gap-3 pt-1">
+            <button
+              type="button"
+              onClick={() => fileInputRef.current?.click()}
+              className="button-secondary flex items-center gap-1.5 text-xs font-semibold"
+            >
+              <span>+</span>
+              <span>
+                {attachments.length > 0
+                  ? "Add more files"
+                  : "Attach corrected manuscript & files"}
+              </span>
+            </button>
+
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => {
+                  setMode("chat");
+                  setAttachments([]);
+                  setError("");
+                }}
+                className="button-secondary text-xs"
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                disabled={pending || !text.trim() || attachments.length === 0}
+                className="button-primary text-xs font-semibold"
+              >
+                {pending ? (
+                  <span className="flex items-center gap-1.5">
+                    <SendingSpinner />
+                    <span>Submitting Correction…</span>
+                  </span>
+                ) : (
+                  "Submit Correction"
+                )}
+              </button>
+            </div>
+          </div>
+        </form>
+      ) : (
+        <form
+          onSubmit={handleSendChat}
+          className="flex w-full items-center gap-2"
+        >
+          {requestId ? (
+            <button
+              type="button"
+              title="Add attachment"
+              onClick={() => fileInputRef.current?.click()}
+              className="flex size-10 shrink-0 items-center justify-center rounded-[var(--radius-md)] border border-[color:var(--color-border)] bg-[color:var(--color-surface)] text-lg font-semibold text-[color:var(--color-accent)] transition hover:border-[color:var(--color-accent)] hover:bg-[color:var(--color-accent-soft)] focus-visible:outline-2 focus-visible:outline-[color:var(--color-focus)]"
+            >
+              +
+            </button>
+          ) : null}
+
+          <div className="min-w-0 flex-1">
+            <input
+              type="text"
+              name="body"
+              value={text}
+              onChange={(e) => setText(e.target.value)}
+              placeholder="Type a message..."
+              className="app-field !w-full"
+              required
+            />
+          </div>
+
+          <button
+            type="submit"
+            disabled={pending || !text.trim()}
+            className="button-primary flex size-10 shrink-0 items-center justify-center rounded-[var(--radius-md)] !p-0"
+            title="Send message"
+          >
+            <svg
+              className="size-4"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth="2.5"
+                d="M14 5l7 7m0 0l-7 7m7-7H3"
+              />
+            </svg>
+          </button>
+        </form>
+      )}
 
       {error ? (
         <p
@@ -468,7 +827,6 @@ export function MessageComposer({
 
 export function AttachmentUploader({
   requestId,
-  receipt = false,
 }: {
   requestId: string;
   receipt?: boolean;
@@ -480,7 +838,7 @@ export function AttachmentUploader({
   function upload(file: File) {
     const body = new FormData();
     body.set("file", file);
-    body.set("attachmentType", receipt ? "PAYMENT_RECEIPT" : "GENERAL");
+    body.set("attachmentType", "GENERAL");
     const xhr = new XMLHttpRequest();
     xhr.open("POST", `/api/requests/${requestId}/attachments`);
     xhr.addEventListener("load", () => {
@@ -497,7 +855,7 @@ export function AttachmentUploader({
         ref={input}
         type="file"
         className="sr-only"
-        accept=".pdf,.docx,.jpg,.jpeg,.png,application/pdf,image/jpeg,image/png,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+        accept=".pdf,.docx,.doc,.jpg,.jpeg,.png,application/pdf,image/jpeg,image/png,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/msword"
         onChange={(e) => {
           const file = e.target.files?.[0];
           if (file) upload(file);
@@ -506,10 +864,10 @@ export function AttachmentUploader({
       />
       <div>
         <p className="text-xs font-semibold text-[color:var(--color-foreground)]">
-          {receipt ? "Upload payment receipt" : "Upload document"}
+          Upload document
         </p>
         <p className="text-[11px] text-[color:var(--color-subtle)]">
-          PDF, DOCX, JPG or PNG (up to 20 MB)
+          PDF, DOCX, DOC, JPG or PNG (up to 20 MB)
         </p>
       </div>
       <button
@@ -529,6 +887,10 @@ export function RequestChatBox({
   viewerId,
   messages,
   action,
+  correctionAction,
+  authorCorrectionAction,
+  initialCorrectionMode = false,
+  initialAuthorCorrectionMode = false,
 }: {
   requestId: string;
   viewerId: string;
@@ -537,6 +899,16 @@ export function RequestChatBox({
     state: RequestActionState,
     formData: FormData,
   ) => Promise<RequestActionState>;
+  correctionAction?: (
+    state: RequestActionState,
+    formData: FormData,
+  ) => Promise<RequestActionState>;
+  authorCorrectionAction?: (
+    state: RequestActionState,
+    formData: FormData,
+  ) => Promise<RequestActionState>;
+  initialCorrectionMode?: boolean;
+  initialAuthorCorrectionMode?: boolean;
 }) {
   const router = useRouter();
   const [optimisticMessages, setOptimisticMessages] = useState<
@@ -619,6 +991,10 @@ export function RequestChatBox({
           requestId={requestId}
           viewerId={viewerId}
           action={action}
+          correctionAction={correctionAction}
+          authorCorrectionAction={authorCorrectionAction}
+          initialCorrectionMode={initialCorrectionMode}
+          initialAuthorCorrectionMode={initialAuthorCorrectionMode}
           onOptimisticAdd={(msg) =>
             setOptimisticMessages((prev) => [...prev, msg])
           }
@@ -839,7 +1215,11 @@ export function StartSubmissionForm({
   journals,
 }: {
   action: (formData?: FormData) => Promise<void>;
-  journals: Array<{ id: string; name: string; department: { name: string } }>;
+  journals: Array<{
+    id: string;
+    name: string;
+    department?: { name: string } | null;
+  }>;
 }) {
   const [journalId, setJournalId] = useState(journals[0]?.id ?? "");
   const [pending, startTransition] = useTransition();
@@ -862,7 +1242,7 @@ export function StartSubmissionForm({
         >
           {journals.map((j) => (
             <option key={j.id} value={j.id}>
-              {j.department.name}
+              {j.department?.name ?? j.name}
             </option>
           ))}
         </select>
@@ -953,10 +1333,27 @@ export function ManuscriptUpload({
         ref={input}
         type="file"
         className="sr-only"
-        accept=".pdf,.docx,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+        accept=".doc,.docx,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/x-msword"
         onChange={(event) => {
           const file = event.target.files?.[0];
-          if (file) upload(file);
+          if (file) {
+            const ext = file.name.split(".").pop()?.toLowerCase();
+            if (ext === "pdf" || file.type === "application/pdf") {
+              setStatus(
+                "Initial manuscript must be a Microsoft Word document (.doc or .docx). PDF is not accepted for initial submission.",
+              );
+              event.currentTarget.value = "";
+              return;
+            }
+            if (ext !== "doc" && ext !== "docx") {
+              setStatus(
+                "Initial manuscript must be a Microsoft Word document (.doc or .docx).",
+              );
+              event.currentTarget.value = "";
+              return;
+            }
+            upload(file);
+          }
           event.currentTarget.value = "";
         }}
       />
@@ -964,7 +1361,8 @@ export function ManuscriptUpload({
         <div>
           <h2 className="text-sm font-semibold">Manuscript</h2>
           <p className="mt-1 text-xs text-[color:var(--color-subtle)]">
-            {currentFileName ?? "PDF or DOCX · up to 20 MB"}
+            {currentFileName ??
+              "DOC or DOCX · up to 20 MB (Microsoft Word only)"}
           </p>
         </div>
         <button

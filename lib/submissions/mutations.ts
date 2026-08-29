@@ -18,7 +18,11 @@ export class SubmissionMutationError extends Error {
 
 async function assertActiveJournal(journalId: string) {
   const journal = await prisma.journal.findFirst({
-    where: { id: journalId, isActive: true, department: { isActive: true } },
+    where: {
+      id: journalId,
+      isActive: true,
+      OR: [{ departmentId: null }, { department: { isActive: true } }],
+    },
     select: { id: true },
   });
   if (!journal) {

@@ -88,6 +88,13 @@ enum SubmissionEventType {
   REVISION_SUBMITTED
   REVIEW_ROUND_OPENED
   TRACKING_ID_ASSIGNED
+  ADHERENCE_REPORT_SUBMITTED
+}
+
+enum AdherenceOutcome {
+  ADHERED
+  PARTIALLY_ADHERED
+  DID_NOT_ADHERE
 }
 
 enum SubmissionRequestStatus {
@@ -125,6 +132,7 @@ enum SubmissionFileType {
 
 enum ArticleFileType {
   PUBLISHED_PDF
+  PRODUCTION_FILE
   SUPPLEMENTARY
   COVER_IMAGE
 }
@@ -142,24 +150,25 @@ model Department {
 }
 
 model Journal {
-  id                 String                  @id @default(cuid())
-  name               String
-  slug               String                  @unique
-  shortName          String?
-  description        String?
-  institution        String?
-  faculty            String?
-  isActive           Boolean                 @default(true)
-  createdAt          DateTime                @default(now())
-  updatedAt          DateTime                @updatedAt
-  departmentId       String
-  department         Department              @relation(fields: [departmentId], references: [id], onDelete: Restrict)
-  volumes            Volume[]
-  submissions        Submission[]
-  submissionCounters SubmissionCounter[]
-  roleAssignments    JournalRoleAssignment[]
-  roleChangeEvents   RoleChangeEvent[]
-  submissionRequests SubmissionRequest[]
+  id                   String                  @id @default(cuid())
+  name                 String
+  slug                 String                  @unique
+  shortName            String?
+  description          String?
+  institution          String?
+  faculty              String?
+  isActive             Boolean                 @default(true)
+  createdAt            DateTime                @default(now())
+  updatedAt            DateTime                @updatedAt
+  departmentId         String?
+  department           Department?             @relation(fields: [departmentId], references: [id], onDelete: SetNull)
+  volumes              Volume[]
+  submissions          Submission[]
+  submissionCounters   SubmissionCounter[]
+  roleAssignments      JournalRoleAssignment[]
+  roleChangeEvents     RoleChangeEvent[]
+  submissionRequests   SubmissionRequest[]
+  internalChatMessages InternalChatMessage[]
 
   @@index([departmentId])
 }
@@ -188,6 +197,9 @@ model Issue {
   description String?
   publishedAt DateTime?
   isPublished Boolean   @default(false)
+  isClosed    Boolean   @default(false)
+  closedAt    DateTime?
+  closedById  String?   @db.Uuid
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
   volume      Volume    @relation(fields: [volumeId], references: [id], onDelete: Cascade)
@@ -198,25 +210,25 @@ model Issue {
 }
 
 model Article {
-  id          String          @id @default(cuid())
-  issueId     String
-  title       String
-  slug        String          @unique
-  abstract    String?
-  content     String?
-  doi         String?         @unique
-  pageStart   String?
-  pageEnd     String?
-  keywords    String[]        @default([])
+  id            String          @id @default(cuid())
+  issueId       String
+  title         String
+  slug          String          @unique
+  abstract      String?
+  content       String?
+  doi           String?         @unique
+  pageStart     String?
+  pageEnd       String?
+  keywords      String[]        @default([])
   coverImageUrl String?
-  issueOrder  Int?
-  publishedAt DateTime?
-  isPublished Boolean         @default(false)
-  createdAt   DateTime        @default(now())
-  updatedAt   DateTime        @updatedAt
-  issue       Issue           @relation(fields: [issueId], references: [id], onDelete: Cascade)
-  authors     ArticleAuthor[]
-  files       ArticleFile[]
+  issueOrder    Int?
+  publishedAt   DateTime?
+  isPublished   Boolean         @default(false)
+  createdAt     DateTime        @default(now())
+  updatedAt     DateTime        @updatedAt
+  issue         Issue           @relation(fields: [issueId], references: [id], onDelete: Cascade)
+  authors       ArticleAuthor[]
+  files         ArticleFile[]
 
   @@unique([issueId, issueOrder])
   @@index([issueId])
@@ -261,6 +273,8 @@ model User {
   trackingAssignments      SubmissionRequest[]             @relation("TrackingAssigner")
   roleChangesMade          RoleChangeEvent[]               @relation("RoleChangeActor")
   roleChangesReceived      RoleChangeEvent[]               @relation("RoleChangeTarget")
+  adherenceReports         AdherenceReport[]               @relation("AdherenceReportEditor")
+  internalChatMessagesSent InternalChatMessage[]           @relation("InternalMessageSender")
 }
 
 model UserGlobalRole {
@@ -329,6 +343,7 @@ model Submission {
   editorialDecisions   EditorialDecision[]
   manuscriptVersions   SubmissionVersion[]
   events               SubmissionEvent[]
+  adherenceReports     AdherenceReport[]
   request              SubmissionRequest?
 
   @@index([journalId, status])
@@ -338,7 +353,7 @@ model Submission {
 
 model SubmissionRequest {
   id                    String                          @id @default(cuid())
-  departmentId          String
+  departmentId          String?
   journalId             String
   authorId              String                          @db.Uuid
   submissionId          String?                         @unique
@@ -352,7 +367,7 @@ model SubmissionRequest {
   version               Int                             @default(1)
   createdAt             DateTime                        @default(now())
   updatedAt             DateTime                        @updatedAt
-  department            Department                      @relation(fields: [departmentId], references: [id], onDelete: Restrict)
+  department            Department?                     @relation(fields: [departmentId], references: [id], onDelete: SetNull)
   journal               Journal                         @relation(fields: [journalId], references: [id], onDelete: Restrict)
   author                User                            @relation("RequestAuthor", fields: [authorId], references: [id], onDelete: Restrict)
   submission            Submission?                     @relation(fields: [submissionId], references: [id], onDelete: SetNull)
@@ -411,6 +426,7 @@ model SubmissionVersion {
   responseStoredFile     StoredFile?           @relation("VersionResponse", fields: [responseStoredFileId], references: [id], onDelete: Restrict)
   reviewRounds           ReviewRound[]
   events                 SubmissionEvent[]
+  adherenceReports       AdherenceReport[]
 
   @@unique([submissionId, versionNumber])
   @@index([submissionId, submittedAt])
@@ -493,6 +509,14 @@ model Review {
   methodology          Int?
   clarity              Int?
   relevance            Int?
+  titleAbstract        Int?
+  introductionThesis   Int?
+  literatureReview     Int?
+  resultsDiscussion    Int?
+  conclusion           Int?
+  languageStyle        Int?
+  apaAdherence         Int?
+  generalReport        String?
   recommendation       ReviewRecommendation?
   commentsToAuthor     String?
   confidentialComments String?
@@ -501,6 +525,61 @@ model Review {
   createdAt            DateTime              @default(now())
   updatedAt            DateTime              @updatedAt
   assignment           ReviewAssignment      @relation(fields: [assignmentId], references: [id], onDelete: Cascade)
+  attachments          ReviewAttachment[]
+}
+
+model ReviewAttachment {
+  id           String     @id @default(cuid())
+  reviewId     String
+  storedFileId String     @unique
+  createdAt    DateTime   @default(now())
+  review       Review     @relation(fields: [reviewId], references: [id], onDelete: Cascade)
+  storedFile   StoredFile @relation(fields: [storedFileId], references: [id], onDelete: Restrict)
+
+  @@index([reviewId])
+}
+
+model AdherenceReport {
+  id                  String             @id @default(cuid())
+  submissionId        String
+  submissionVersionId String?
+  editorId            String             @db.Uuid
+  outcome             AdherenceOutcome
+  report              String
+  createdAt           DateTime           @default(now())
+  updatedAt           DateTime           @updatedAt
+  submission          Submission         @relation(fields: [submissionId], references: [id], onDelete: Cascade)
+  submissionVersion   SubmissionVersion? @relation(fields: [submissionVersionId], references: [id], onDelete: SetNull)
+  editor              User               @relation("AdherenceReportEditor", fields: [editorId], references: [id], onDelete: Restrict)
+
+  @@index([submissionId, createdAt])
+  @@index([editorId])
+}
+
+model InternalChatMessage {
+  id          String                   @id @default(cuid())
+  journalId   String
+  senderId    String                   @db.Uuid
+  body        String?
+  createdAt   DateTime                 @default(now())
+  updatedAt   DateTime                 @updatedAt
+  journal     Journal                  @relation(fields: [journalId], references: [id], onDelete: Cascade)
+  sender      User                     @relation("InternalMessageSender", fields: [senderId], references: [id], onDelete: Restrict)
+  attachments InternalChatAttachment[]
+
+  @@index([journalId, createdAt])
+  @@index([senderId])
+}
+
+model InternalChatAttachment {
+  id           String              @id @default(cuid())
+  messageId    String
+  storedFileId String              @unique
+  createdAt    DateTime            @default(now())
+  message      InternalChatMessage @relation(fields: [messageId], references: [id], onDelete: Cascade)
+  storedFile   StoredFile          @relation(fields: [storedFileId], references: [id], onDelete: Restrict)
+
+  @@index([messageId])
 }
 
 model EditorialDecision {
@@ -539,6 +618,8 @@ model StoredFile {
   manuscriptVersions      SubmissionVersion[]      @relation("VersionManuscript")
   responseVersions        SubmissionVersion[]      @relation("VersionResponse")
   conversationAttachments ConversationAttachment[]
+  reviewAttachments       ReviewAttachment[]
+  internalChatAttachments InternalChatAttachment[]
 
   @@unique([bucket, objectPath])
   @@index([uploaderId, createdAt])

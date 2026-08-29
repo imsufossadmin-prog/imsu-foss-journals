@@ -50,9 +50,8 @@ async function actorAccess(actorId: string, requestId: string) {
   const admin =
     isSuperAdmin(actor) ||
     actor.journalRoles.some(
-      ({ role, journal }) =>
-        role === "JOURNAL_ADMIN" &&
-        journal.departmentId === request.departmentId,
+      ({ role, journalId }) =>
+        role === "JOURNAL_ADMIN" && journalId === request.journalId,
     );
   if (!author && !admin)
     throw new RequestMutationError("This request is unavailable.");
@@ -63,21 +62,37 @@ async function requireAdmin(actorId: string, requestId: string) {
   const access = await actorAccess(actorId, requestId);
   if (!access.admin)
     throw new RequestMutationError(
-      "Only the department administrator can do that.",
+      "Only the journal administrator can do that.",
     );
   return access;
 }
 
 export async function createSubmissionRequest(
-  authorId: string,
-  journalSlug?: string,
+  authorIdOrInput: string | { authorId: string; journalSlug?: string },
+  maybeJournalSlug?: string,
 ) {
+  if (typeof authorIdOrInput === "string") {
+    return startSubmissionRequest({
+      authorId: authorIdOrInput,
+      journalSlug: maybeJournalSlug,
+    });
+  }
+  return startSubmissionRequest(authorIdOrInput);
+}
+
+export async function startSubmissionRequest({
+  authorId,
+  journalSlug,
+}: {
+  authorId: string;
+  journalSlug?: string;
+}) {
   const targetSlug = journalSlug?.trim() || "psychology";
   const operations = await prisma.journal.findFirst({
     where: {
       slug: targetSlug,
       isActive: true,
-      department: { isActive: true },
+      OR: [{ departmentId: null }, { department: { isActive: true } }],
     },
     select: {
       id: true,
@@ -88,13 +103,13 @@ export async function createSubmissionRequest(
   });
   if (!operations)
     throw new RequestMutationError(
-      "Journal operations for this department are not available yet.",
+      "Journal operations for this journal are not available yet.",
     );
 
   const existing = await prisma.submissionRequest.findFirst({
     where: {
       authorId,
-      departmentId: operations.departmentId,
+      journalId: operations.id,
       status: { not: "TRACKING_ASSIGNED" },
     },
     orderBy: { updatedAt: "desc" },
@@ -102,6 +117,7 @@ export async function createSubmissionRequest(
   });
   if (existing) return existing;
 
+  const teamName = operations.department?.name ?? operations.name;
   return prisma.submissionRequest.create({
     data: {
       authorId,
@@ -110,7 +126,7 @@ export async function createSubmissionRequest(
       messages: {
         create: {
           kind: "SYSTEM",
-          body: `Submission request started. The ${operations.department.name} journal team can now assist you here.`,
+          body: `Submission request started. The ${teamName} journal team can now assist you here.`,
         },
       },
     },
@@ -125,7 +141,7 @@ export async function sendRequestMessage(input: {
 }) {
   const error = validateMessageBody(input.body);
   if (error) throw new RequestMutationError(error, { body: error });
-  const { request, admin } = await actorAccess(input.actorId, input.requestId);
+  const { request } = await actorAccess(input.actorId, input.requestId);
   await prisma.$transaction(async (transaction) => {
     await transaction.submissionConversationMessage.create({
       data: {
@@ -134,17 +150,10 @@ export async function sendRequestMessage(input: {
         body: input.body.trim(),
       },
     });
-    if (admin && request.status === "NEW") {
-      await transaction.submissionRequest.update({
-        where: { id: request.id },
-        data: { status: "AWAITING_PAYMENT", version: { increment: 1 } },
-      });
-    } else {
-      await transaction.submissionRequest.update({
-        where: { id: request.id },
-        data: { updatedAt: new Date() },
-      });
-    }
+    await transaction.submissionRequest.update({
+      where: { id: request.id },
+      data: { updatedAt: new Date() },
+    });
   });
 }
 
@@ -180,7 +189,7 @@ export async function confirmPaymentAndEnableSubmission(
         messages: {
           create: {
             kind: "SYSTEM",
-            body: "Payment confirmed. Article submission is now available.",
+            body: "Submission request active. Article submission is available.",
           },
         },
       },
@@ -204,13 +213,11 @@ export async function beginRequestSubmission(
 ) {
   return prisma.$transaction(async (transaction) => {
     const request = await transaction.submissionRequest.findFirst({
-      where: { id: requestId, authorId, status: "SUBMISSION_ENABLED" },
+      where: { id: requestId, authorId },
       select: { id: true, journalId: true, submissionId: true },
     });
     if (!request)
-      throw new RequestMutationError(
-        "The journal has not enabled article submission for this request.",
-      );
+      throw new RequestMutationError("This submission request is unavailable.");
     if (request.submissionId) return { id: request.submissionId };
     const submission = await transaction.submission.create({
       data: { ownerId: authorId, journalId: request.journalId },
@@ -250,7 +257,6 @@ export async function saveSimpleArticle(input: {
         request: {
           id: input.requestId,
           authorId: input.authorId,
-          status: "SUBMISSION_ENABLED",
         },
       },
       data: {
@@ -292,7 +298,6 @@ export async function finalizeRequestSubmission(
         id: requestId,
         authorId,
         submissionId,
-        status: "SUBMISSION_ENABLED",
       },
       include: {
         submission: {

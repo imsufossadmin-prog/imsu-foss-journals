@@ -12,6 +12,11 @@ import {
   publishDirectLegacyArticle,
   unpublishArticle,
 } from "@/lib/editorial/legacy-mutations";
+import {
+  closeIssue,
+  reopenIssue,
+  publishIssueTOC,
+} from "@/lib/editorial/issue-mutations";
 import { createAdminClient } from "@/lib/supabase/admin";
 
 export type AdminArticleFormState = {
@@ -28,7 +33,7 @@ function manageableJournalIds(
       ({ role, journal }) =>
         role === "JOURNAL_ADMIN" &&
         journal.isActive &&
-        journal.department.isActive,
+        (!journal.department || journal.department.isActive),
     )
     .map(({ journalId }) => journalId);
 }
@@ -210,12 +215,23 @@ export async function createDirectLegacyArticleAction(
         .remove(uploadedPaths);
       if (error) console.error("Legacy upload cleanup failed:", error.message);
     }
-    return {
-      error:
-        err instanceof Error
-          ? err.message
-          : "Failed to publish legacy manuscript.",
-    };
+    let message = "Failed to publish legacy manuscript. Please try again.";
+    if (err instanceof Error) {
+      if (
+        err.message.includes("Unique constraint failed") ||
+        err.message.includes("invocation")
+      ) {
+        message =
+          "A unique record conflict was encountered. Please check the volume, issue, or DOI.";
+      } else if (
+        !err.message.includes("\n") &&
+        !err.message.includes("PrismaClient") &&
+        !err.message.includes("/")
+      ) {
+        message = err.message;
+      }
+    }
+    return { error: message };
   }
 
   revalidatePath("/admin/articles");
@@ -246,6 +262,42 @@ export async function toggleArticlePublicationAction(
 export async function deleteArticleAction(articleId: string) {
   const user = await requireApplicationArea("admin");
   await deleteArticle(articleId, manageableJournalIds(user));
+  revalidatePath("/admin/articles");
+  revalidatePath("/");
+  revalidatePath("/current-issue");
+  revalidatePath("/archives");
+}
+
+export async function closeIssueAdminAction(issueId: string) {
+  const user = await requireApplicationArea("admin");
+  await closeIssue({
+    adminId: user.id,
+    issueId,
+  });
+  revalidatePath("/admin/articles");
+  revalidatePath("/");
+  revalidatePath("/current-issue");
+  revalidatePath("/archives");
+}
+
+export async function reopenIssueAdminAction(issueId: string) {
+  const user = await requireApplicationArea("admin");
+  await reopenIssue({
+    adminId: user.id,
+    issueId,
+  });
+  revalidatePath("/admin/articles");
+  revalidatePath("/");
+  revalidatePath("/current-issue");
+  revalidatePath("/archives");
+}
+
+export async function publishIssueTOCAdminAction(issueId: string) {
+  const user = await requireApplicationArea("admin");
+  await publishIssueTOC({
+    adminId: user.id,
+    issueId,
+  });
   revalidatePath("/admin/articles");
   revalidatePath("/");
   revalidatePath("/current-issue");

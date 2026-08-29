@@ -98,29 +98,84 @@ export function validateUploadFile(file: Pick<File, "name" | "size" | "type">) {
   ] as readonly string[] | undefined;
 
   if (!extensions?.includes(extension)) {
-    return "Upload a PDF or DOCX file with a matching file extension.";
+    return "Upload a PDF, DOC, or DOCX file with a matching file extension.";
   }
 
   return null;
+}
+
+export function validateInitialManuscriptFile(
+  file: Pick<File, "name" | "size" | "type">,
+) {
+  if (file.size === 0) return "Choose a file that is not empty.";
+  if (file.size > maxSubmissionFileBytes) {
+    return "Choose a file no larger than 20 MB.";
+  }
+
+  const extension = file.name.split(".").pop()?.toLowerCase() ?? "";
+
+  if (extension === "pdf" || file.type === "application/pdf") {
+    return "Initial manuscript must be a Microsoft Word document (.doc or .docx). PDF is not accepted for initial submission.";
+  }
+
+  if (extension !== "doc" && extension !== "docx") {
+    return "Initial manuscript must be a Microsoft Word document (.doc or .docx).";
+  }
+
+  return null;
+}
+
+export function matchesWordUploadSignature(
+  mimeType: string,
+  bytes: Uint8Array,
+  extension?: string,
+) {
+  const isPkZip =
+    bytes[0] === 0x50 &&
+    bytes[1] === 0x4b &&
+    ((bytes[2] === 0x03 && bytes[3] === 0x04) ||
+      (bytes[2] === 0x05 && bytes[3] === 0x06) ||
+      (bytes[2] === 0x07 && bytes[3] === 0x08));
+
+  const isOle2Doc =
+    bytes[0] === 0xd0 &&
+    bytes[1] === 0xcf &&
+    bytes[2] === 0x11 &&
+    bytes[3] === 0xe0;
+
+  if (extension === "docx" && isPkZip) return true;
+  if (extension === "doc" && isOle2Doc) return true;
+
+  if (
+    mimeType ===
+      "application/vnd.openxmlformats-officedocument.wordprocessingml.document" &&
+    isPkZip
+  ) {
+    return true;
+  }
+
+  if (
+    (mimeType === "application/msword" ||
+      mimeType === "application/x-msword" ||
+      mimeType === "application/vnd.ms-word" ||
+      mimeType === "application/doc") &&
+    isOle2Doc
+  ) {
+    return true;
+  }
+
+  if ((extension === "docx" || extension === "doc") && (isPkZip || isOle2Doc)) {
+    return true;
+  }
+
+  return false;
 }
 
 export function matchesUploadSignature(mimeType: string, bytes: Uint8Array) {
   if (mimeType === "application/pdf") {
     return String.fromCharCode(...bytes.slice(0, 5)) === "%PDF-";
   }
-  if (
-    mimeType ===
-    "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
-  ) {
-    return (
-      bytes[0] === 0x50 &&
-      bytes[1] === 0x4b &&
-      ((bytes[2] === 0x03 && bytes[3] === 0x04) ||
-        (bytes[2] === 0x05 && bytes[3] === 0x06) ||
-        (bytes[2] === 0x07 && bytes[3] === 0x08))
-    );
-  }
-  return false;
+  return matchesWordUploadSignature(mimeType, bytes);
 }
 
 export function validateFinalSubmission(submission: AuthorSubmissionDTO) {
@@ -132,7 +187,10 @@ export function validateFinalSubmission(submission: AuthorSubmissionDTO) {
   });
   const authors = validateAuthors(submission.authors);
 
-  if (!submission.journal.isActive || !submission.journal.department.isActive) {
+  if (
+    !submission.journal.isActive ||
+    (submission.journal.department && !submission.journal.department.isActive)
+  ) {
     issues.push("The selected journal is no longer accepting submissions.");
   }
   if (!details.valid) issues.push(...Object.values(details.fieldErrors));

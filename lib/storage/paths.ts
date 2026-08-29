@@ -20,11 +20,14 @@ export function createSubmissionObjectPath(input: {
 }
 
 export function createRequestObjectPath(input: {
-  departmentId: string;
+  departmentId?: string | null;
   requestId: string;
   originalFileName: string;
 }) {
-  return `department/${input.departmentId}/request/${input.requestId}/${randomUUID()}${safeExtension(input.originalFileName)}`;
+  const prefix = input.departmentId
+    ? `department/${input.departmentId}`
+    : `request/${input.requestId}`;
+  return `${prefix}/request/${input.requestId}/${randomUUID()}${safeExtension(input.originalFileName)}`;
 }
 
 export function createArticleObjectPath(input: {
@@ -33,4 +36,19 @@ export function createArticleObjectPath(input: {
   originalFileName: string;
 }) {
   return `journal/${input.journalId}/article/${input.articleId}/${randomUUID()}${safeExtension(input.originalFileName)}`;
+}
+
+export function createReviewAttachmentObjectPath(input: {
+  journalId: string;
+  assignmentId: string;
+  originalFileName: string;
+}) {
+  return `journal/${input.journalId}/review/${input.assignmentId}/${randomUUID()}${safeExtension(input.originalFileName)}`;
+}
+
+export function createInternalChatObjectPath(input: {
+  journalId: string;
+  originalFileName: string;
+}) {
+  return `journal/${input.journalId}/internal-chat/${randomUUID()}${safeExtension(input.originalFileName)}`;
 }

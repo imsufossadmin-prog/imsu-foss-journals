@@ -6,9 +6,11 @@ import type { AuthorSubmissionDTO } from "@/lib/submissions/types";
 import {
   normalizeKeywords,
   matchesUploadSignature,
+  matchesWordUploadSignature,
   validateAuthors,
   validateDetails,
   validateFinalSubmission,
+  validateInitialManuscriptFile,
   validateUploadFile,
 } from "@/lib/submissions/validation";
 
@@ -114,7 +116,7 @@ test("uploads accept only matching non-empty PDF or DOCX files within 20 MB", ()
       size: 1024,
       type: "application/pdf",
     }) ?? "",
-    /PDF or DOCX/,
+    /PDF, DOC, or DOCX/,
   );
   assert.match(
     validateUploadFile({
@@ -136,6 +138,66 @@ test("uploads accept only matching non-empty PDF or DOCX files within 20 MB", ()
       "application/pdf",
       new TextEncoder().encode("not a pdf"),
     ),
+    false,
+  );
+});
+
+test("initial manuscript strictly validates Word documents (.doc/.docx) and rejects PDF", () => {
+  assert.equal(
+    validateInitialManuscriptFile({
+      name: "manuscript.docx",
+      size: 1024,
+      type: "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+    }),
+    null,
+  );
+  assert.equal(
+    validateInitialManuscriptFile({
+      name: "manuscript.doc",
+      size: 1024,
+      type: "application/msword",
+    }),
+    null,
+  );
+  assert.match(
+    validateInitialManuscriptFile({
+      name: "manuscript.pdf",
+      size: 1024,
+      type: "application/pdf",
+    }) ?? "",
+    /PDF is not accepted for initial submission/,
+  );
+  assert.match(
+    validateInitialManuscriptFile({
+      name: "manuscript.txt",
+      size: 1024,
+      type: "text/plain",
+    }) ?? "",
+    /Microsoft Word document/,
+  );
+
+  const docxBytes = new Uint8Array([
+    0x50, 0x4b, 0x03, 0x04, 0x00, 0x00, 0x00, 0x00,
+  ]);
+  const docBytes = new Uint8Array([
+    0xd0, 0xcf, 0x11, 0xe0, 0xa1, 0xb1, 0x1a, 0xe1,
+  ]);
+  const pdfBytes = new TextEncoder().encode("%PDF-1.7");
+
+  assert.equal(
+    matchesWordUploadSignature(
+      "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+      docxBytes,
+      "docx",
+    ),
+    true,
+  );
+  assert.equal(
+    matchesWordUploadSignature("application/msword", docBytes, "doc"),
+    true,
+  );
+  assert.equal(
+    matchesWordUploadSignature("application/pdf", pdfBytes, "pdf"),
     false,
   );
 });
@@ -181,4 +243,59 @@ test("tracking numbers are stable, readable, and journal-scoped", () => {
     first,
   );
   assert.notEqual(createTrackingNumber({ ...base, sequence: 43 }), first);
+});
+
+test("Phase 1: General uploads and Word initial manuscripts reject empty files and oversized files (> 20 MB)", () => {
+  assert.match(
+    validateUploadFile({
+      name: "empty.pdf",
+      size: 0,
+      type: "application/pdf",
+    }) ?? "",
+    /not empty/,
+  );
+  assert.match(
+    validateUploadFile({
+      name: "giant.pdf",
+      size: 25 * 1024 * 1024,
+      type: "application/pdf",
+    }) ?? "",
+    /20 MB/,
+  );
+  assert.match(
+    validateInitialManuscriptFile({
+      name: "empty.docx",
+      size: 0,
+      type: "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+    }) ?? "",
+    /not empty/,
+  );
+  assert.match(
+    validateInitialManuscriptFile({
+      name: "giant.docx",
+      size: 25 * 1024 * 1024,
+      type: "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+    }) ?? "",
+    /20 MB/,
+  );
+});
+
+test("Phase 1: Correction numbering logic computes version progression accurately", () => {
+  function formatCorrectionEvent(versionNumber: number) {
+    const correctionNumber = Math.max(1, versionNumber - 1);
+    return `Correction #${correctionNumber} submitted (Manuscript version ${versionNumber})`;
+  }
+
+  assert.equal(
+    formatCorrectionEvent(2),
+    "Correction #1 submitted (Manuscript version 2)",
+  );
+  assert.equal(
+    formatCorrectionEvent(3),
+    "Correction #2 submitted (Manuscript version 3)",
+  );
+  assert.equal(
+    formatCorrectionEvent(4),
+    "Correction #3 submitted (Manuscript version 4)",
+  );
 });

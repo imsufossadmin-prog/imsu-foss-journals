@@ -95,6 +95,16 @@ export async function publishDirectLegacyArticle(
     },
   });
 
+  const occupiedArticles = await prisma.article.findMany({
+    where: { issueId: issue.id },
+    select: { issueOrder: true },
+  });
+  const maxOrder = occupiedArticles.reduce(
+    (max, a) => (a.issueOrder && a.issueOrder > max ? a.issueOrder : max),
+    0,
+  );
+  const nextOrder = maxOrder + 1;
+
   const article = await prisma.article.create({
     data: {
       issueId: issue.id,
@@ -105,6 +115,7 @@ export async function publishDirectLegacyArticle(
       doi: input.doi || null,
       pageStart: input.pageStart,
       pageEnd: input.pageEnd,
+      issueOrder: nextOrder,
       coverImageUrl: input.coverImageUrl,
       isPublished: true,
       publishedAt: new Date(),

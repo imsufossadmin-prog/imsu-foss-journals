@@ -8,7 +8,6 @@ import {
   assignTrackingIdAction,
   beginAssessmentAction,
   cancelReviewerAction,
-  correctionAction,
   decisionAction,
   markRevisionReceivedAction,
   passAssessmentAction,
@@ -153,40 +152,45 @@ export function AssessmentAction({
   );
 }
 
-export function CorrectionForm({
-  journalSlug,
-  submissionId,
+export function CorrectionTriggerButton({
+  className = "",
 }: {
-  journalSlug: string;
-  submissionId: string;
+  journalSlug?: string;
+  submissionId?: string;
+  className?: string;
 }) {
-  const bound = correctionAction.bind(null, journalSlug, submissionId);
-  const [state, action] = useActionState(bound, initialState);
+  const activateCorrectionMode = () => {
+    window.dispatchEvent(new CustomEvent("imsufoss:open-correction-mode"));
+    const composer = document.getElementById("request-composer");
+    if (composer) {
+      composer.scrollIntoView({ behavior: "smooth", block: "center" });
+      setTimeout(() => {
+        const textarea = document.getElementById(
+          "correction-instructions-input",
+        );
+        textarea?.focus();
+      }, 200);
+    }
+  };
+
   return (
-    <form action={action} className="space-y-3">
-      <label
-        className="block text-xs font-semibold"
-        htmlFor="correction-message"
+    <div className={`space-y-2 ${className}`}>
+      <button
+        type="button"
+        onClick={activateCorrectionMode}
+        className="button-secondary flex w-full items-center justify-center gap-2 text-xs font-semibold"
       >
-        Return for correction
-      </label>
-      <textarea
-        id="correction-message"
-        name="message"
-        className="app-field min-h-28"
-        placeholder="Describe the exact correction required before peer review."
-        required
-      />
-      {state.fieldErrors?.message ? (
-        <p className="text-xs text-[color:var(--color-danger)]">
-          {state.fieldErrors.message}
-        </p>
-      ) : null}
-      <SubmitButton>Send correction request</SubmitButton>
-      <Message state={state} />
-    </form>
+        <span>📋</span>
+        <span>Request Author Corrections</span>
+      </button>
+      <p className="text-[11px] leading-4 text-[color:var(--color-muted)]">
+        Opens the conversation composer in formal correction request mode.
+      </p>
+    </div>
   );
 }
+
+export const CorrectionForm = CorrectionTriggerButton;
 
 export function AssignmentForm({
   journalSlug,
@@ -345,9 +349,30 @@ export function PublishArticleForm({
 
   return (
     <form action={action} className="space-y-4">
-      <div className="grid gap-3 sm:grid-cols-3">
+      <div className="grid gap-3 sm:grid-cols-2">
+        <label className="block text-xs font-semibold">
+          Final Production File (PDF / DOCX)
+          <input
+            name="productionFile"
+            type="file"
+            accept=".pdf,.docx,.doc,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/msword"
+            className="app-field mt-1.5 text-xs file:mr-3 file:rounded-md file:border-0 file:bg-[color:var(--color-surface-strong)] file:px-2.5 file:py-1 file:text-xs file:font-semibold file:text-[color:var(--color-accent)]"
+          />
+        </label>
+        <label className="block text-xs font-semibold">
+          Article Cover Page (Optional)
+          <input
+            name="coverImageFile"
+            type="file"
+            accept="image/png,image/jpeg,image/webp,.pdf,application/pdf"
+            className="app-field mt-1.5 text-xs file:mr-3 file:rounded-md file:border-0 file:bg-[color:var(--color-surface-strong)] file:px-2.5 file:py-1 file:text-xs file:font-semibold file:text-[color:var(--color-accent)]"
+          />
+        </label>
+      </div>
+
+      <div className="grid gap-3 sm:grid-cols-4">
         <label className="text-xs font-semibold">
-          Volume Number
+          Volume
           <input
             name="volume"
             type="text"
@@ -356,7 +381,7 @@ export function PublishArticleForm({
           />
         </label>
         <label className="text-xs font-semibold">
-          Issue Number
+          Issue
           <input
             name="issue"
             type="text"
@@ -373,10 +398,21 @@ export function PublishArticleForm({
             placeholder="e.g. 15–28"
           />
         </label>
+        <label className="text-xs font-semibold">
+          Article Order (TOC)
+          <input
+            name="issueOrder"
+            type="number"
+            min="1"
+            className="app-field mt-1.5"
+            placeholder="e.g. 1"
+          />
+        </label>
       </div>
-      <div className="grid gap-3 sm:grid-cols-2">
+
+      <div>
         <label className="block text-xs font-semibold">
-          Digital Object Identifier - DOI (Optional)
+          DOI (Optional)
           <input
             name="doi"
             type="text"
@@ -384,19 +420,9 @@ export function PublishArticleForm({
             placeholder="e.g. 10.4314/imsufoss.v1i1.1"
           />
         </label>
-        <label className="block text-xs font-semibold">
-          Upload Article Cover Image (Optional)
-          <input
-            name="coverImageFile"
-            type="file"
-            accept="image/png,image/jpeg,image/webp,image/gif"
-            className="app-field mt-1.5 text-xs file:mr-3 file:rounded-md file:border-0 file:bg-[color:var(--color-surface-strong)] file:px-2.5 file:py-1 file:text-xs file:font-semibold file:text-[color:var(--color-accent)]"
-          />
-        </label>
       </div>
-      <SubmitButton pendingLabel="Publishing article live…">
-        Publish Article to Journal
-      </SubmitButton>
+
+      <SubmitButton pendingLabel="Publishing…">Publish Article</SubmitButton>
       <Message state={state} />
     </form>
   );
