@@ -172,7 +172,7 @@ export default async function PublicArticlePage({
               rel="noopener noreferrer"
               className="button-primary ml-auto inline-flex items-center gap-2 px-4 py-2 text-xs font-semibold"
             >
-              <span>📄</span> Read & Download PDF
+              <span>Read & Download PDF</span>
             </a>
           </div>
 

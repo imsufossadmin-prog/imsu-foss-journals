@@ -36,7 +36,7 @@ export function TOCDownloadMenu({ issueId }: { issueId: string }) {
         aria-expanded={open}
         aria-haspopup="true"
       >
-        <span>📥 Download TOC</span>
+        <span>Download TOC</span>
         <span className="text-[10px] text-[color:var(--color-muted)]">▼</span>
       </button>
 

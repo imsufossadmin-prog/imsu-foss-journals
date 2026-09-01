@@ -177,7 +177,7 @@ export function IssueArchiveExplorer({
                   <div className="space-y-3 border-t border-[color:var(--color-border)]/60 pt-2">
                     <div className="flex items-center justify-between text-xs">
                       <span className="rounded-md bg-[color:var(--color-surface)] px-2.5 py-1 font-mono text-[11px] font-medium text-[color:var(--color-foreground)]">
-                        📄 {articles.length}{" "}
+                        {articles.length}{" "}
                         {articles.length === 1 ? "Paper" : "Papers"}
                       </span>
                       <TOCDownloadMenu issueId={issue.id} />
@@ -323,18 +323,18 @@ export function IssueArchiveExplorer({
                       <button
                         type="button"
                         onClick={() => setActivePdfArticle(article)}
-                        className="button-primary inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold shadow-xs"
+                        className="button-primary inline-flex items-center px-3 py-1.5 text-xs font-semibold shadow-xs"
                       >
-                        <span>👁️ Quick Read PDF</span>
+                        <span>Quick Read PDF</span>
                       </button>
 
                       <a
                         href={`/api/articles/${article.slug}/pdf`}
                         download
-                        className="button-secondary inline-flex items-center gap-1 px-2.5 py-1.5 text-xs font-semibold"
+                        className="button-secondary inline-flex items-center px-2.5 py-1.5 text-xs font-semibold"
                         title="Download PDF Document"
                       >
-                        <span>📥 PDF</span>
+                        <span>PDF</span>
                       </a>
 
                       <Link
@@ -342,7 +342,7 @@ export function IssueArchiveExplorer({
                         className="button-secondary inline-flex items-center px-2.5 py-1.5 text-xs font-semibold"
                         title="View Full Page"
                       >
-                        <span>🔗 Full</span>
+                        <span>Full Article</span>
                       </Link>
                     </div>
                   </div>
@@ -389,31 +389,23 @@ export function IssueArchiveExplorer({
                 </h3>
               </div>
 
-              {/* Viewer Actions */}
+              {/* Viewer Actions: Only New Window and Close Viewer */}
               <div className="flex items-center gap-2">
-                <a
-                  href={`/api/articles/${activePdfArticle.slug}/pdf`}
-                  download
-                  className="button-secondary inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold"
-                >
-                  <span>📥 Download File</span>
-                </a>
-
                 <a
                   href={`/api/articles/${activePdfArticle.slug}/pdf`}
                   target="_blank"
                   rel="noreferrer"
-                  className="button-secondary inline-flex items-center gap-1 px-3 py-1.5 text-xs font-semibold"
+                  className="button-secondary inline-flex items-center px-3 py-1.5 text-xs font-semibold"
                 >
-                  <span>↗ New Window</span>
+                  <span>New Window</span>
                 </a>
 
                 <button
                   type="button"
                   onClick={() => setActivePdfArticle(null)}
-                  className="button-primary inline-flex items-center gap-1 px-3 py-1.5 text-xs font-semibold"
+                  className="button-primary inline-flex items-center px-3 py-1.5 text-xs font-semibold"
                 >
-                  <span>✕ Close Viewer</span>
+                  <span>Close Viewer</span>
                 </button>
               </div>
             </div>

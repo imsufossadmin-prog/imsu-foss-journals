@@ -320,7 +320,7 @@ export default async function ArchivesPage({
                           download
                           className="button-secondary inline-flex items-center gap-1 px-3 py-2 text-xs font-semibold"
                         >
-                          <span>📥 Download PDF</span>
+                          <span>Download PDF</span>
                         </a>
                       </div>
                     </div>
