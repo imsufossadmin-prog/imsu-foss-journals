@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { Container } from "@/components/ui/container";
 import { PublicSearchBar } from "@/components/public-search-bar";
-import { TOCDownloadMenu } from "@/components/editorial/toc-download-menu";
+import { IssueArchiveExplorer } from "@/components/public/issue-archive-explorer";
 import { prisma } from "@/lib/db/prisma";
 
 export default async function ArchivesPage({
@@ -128,7 +128,7 @@ export default async function ArchivesPage({
           <div className="flex flex-col gap-6 md:flex-row md:items-end md:justify-between">
             <div>
               <p className="font-mono text-xs font-semibold tracking-wider text-[color:var(--color-accent)] uppercase">
-                Digital Archives & Catalogues
+                Digital Archives & Periodical Shelf
               </p>
               <h1 className="mt-2 font-serif text-3xl font-semibold tracking-tight text-[color:var(--color-foreground)] sm:text-4xl">
                 {activeJournalObj
@@ -140,7 +140,7 @@ export default async function ArchivesPage({
                   ? activeJournalObj.department
                     ? `Department: ${activeJournalObj.department.name}`
                     : "Faculty of Social Sciences Journal"
-                  : "Browse published journal volumes, editions, and peer-reviewed articles."}
+                  : "Explore peer-reviewed volumes, instant Tables of Contents, and in-page document readers."}
               </p>
             </div>
             <div className="w-full max-w-md">
@@ -251,7 +251,7 @@ export default async function ArchivesPage({
                   className="button-secondary inline-flex items-center gap-1.5 self-start px-3 py-1.5 text-xs font-semibold sm:self-auto"
                 >
                   <span>✕</span>
-                  <span>Clear Search & Browse Issues</span>
+                  <span>Clear Search & Browse Issue Shelf</span>
                 </Link>
               </div>
 
@@ -307,14 +307,21 @@ export default async function ArchivesPage({
                           {article.abstract}
                         </p>
                       ) : null}
-                      <div className="mt-5 flex items-center gap-4 text-xs font-medium">
+                      <div className="mt-5 flex flex-wrap items-center gap-3 text-xs font-medium">
                         <Link
                           href={`/articles/${article.slug}`}
-                          className="button-primary inline-flex items-center gap-2 px-4 py-2 text-xs font-semibold"
+                          className="button-primary inline-flex items-center gap-1.5 px-4 py-2 text-xs font-semibold"
                         >
-                          <span>Read Full Article & PDF</span>
+                          <span>Read Full Article</span>
                           <span>→</span>
                         </Link>
+                        <a
+                          href={`/api/articles/${article.slug}/pdf`}
+                          download
+                          className="button-secondary inline-flex items-center gap-1 px-3 py-2 text-xs font-semibold"
+                        >
+                          <span>📥 Download PDF</span>
+                        </a>
                       </div>
                     </div>
                   </div>
@@ -322,159 +329,8 @@ export default async function ArchivesPage({
               ))}
             </div>
           ) : (
-            /* Mode A: Issue Collection Mode with Embedded Table of Contents */
-            <div className="space-y-12">
-              <div className="font-mono text-xs text-[color:var(--color-subtle)]">
-                Showing{" "}
-                <span className="font-bold text-[color:var(--color-accent)]">
-                  {issueGroups.length}
-                </span>{" "}
-                published{" "}
-                {issueGroups.length === 1
-                  ? "issue collection"
-                  : "issue collections"}{" "}
-                ({articles.length} {articles.length === 1 ? "paper" : "papers"}{" "}
-                total)
-              </div>
-
-              {issueGroups.map(
-                ({ issue, coverImageUrl, articles: issueArticles }) => {
-                  const journal = issue.volume.journal;
-                  const journalLabel = journal.department?.name ?? journal.name;
-
-                  return (
-                    <section
-                      key={issue.id}
-                      className="rounded-[var(--radius-lg)] border border-[color:var(--color-border)] bg-[color:var(--color-surface-raised)] p-6 shadow-sm transition hover:border-[color:var(--color-accent)]/60 sm:p-8"
-                    >
-                      {/* Issue Header with Cover Image & Metadata */}
-                      <div className="flex flex-col justify-between gap-6 border-b border-[color:var(--color-border)] pb-6 lg:flex-row lg:items-start">
-                        <div className="flex flex-col gap-5 sm:flex-row sm:items-center">
-                          {coverImageUrl ? (
-                            <div className="flex h-36 w-28 shrink-0 items-center justify-center overflow-hidden rounded-[var(--radius-md)] border border-[color:var(--color-border)] bg-black/40 p-2">
-                              {/* eslint-disable-next-line @next/next/no-img-element */}
-                              <img
-                                src={coverImageUrl}
-                                alt={`${journal.name} Vol. ${issue.volume.number} Issue ${issue.number}`}
-                                className="max-h-32 w-auto object-contain transition-transform duration-300 hover:scale-105"
-                              />
-                            </div>
-                          ) : null}
-
-                          <div className="space-y-1.5">
-                            <div className="flex flex-wrap items-center gap-2 text-xs font-bold text-[color:var(--color-accent)] uppercase">
-                              <span>{journalLabel}</span>
-                              <span>·</span>
-                              <span>
-                                Vol. {issue.volume.number}, Issue {issue.number}{" "}
-                                ({issue.volume.year})
-                              </span>
-                              {issue.isClosed ? (
-                                <span className="rounded bg-slate-500/20 px-2 py-0.5 text-[10px] text-slate-400">
-                                  CLOSED
-                                </span>
-                              ) : (
-                                <span className="rounded bg-emerald-500/20 px-2 py-0.5 text-[10px] text-emerald-400">
-                                  CURRENT / OPEN
-                                </span>
-                              )}
-                            </div>
-
-                            <h2 className="font-serif text-2xl font-bold text-[color:var(--color-foreground)]">
-                              {journal.name}
-                            </h2>
-
-                            <p className="text-xs text-[color:var(--color-subtle)]">
-                              Table of Contents — {issueArticles.length}{" "}
-                              {issueArticles.length === 1
-                                ? "article"
-                                : "articles"}{" "}
-                              in this edition
-                            </p>
-                          </div>
-                        </div>
-
-                        <div className="shrink-0 self-start lg:self-center">
-                          <TOCDownloadMenu issueId={issue.id} />
-                        </div>
-                      </div>
-
-                      {/* Embedded Table of Contents */}
-                      <div className="mt-6 divide-y divide-[color:var(--color-border)]/70">
-                        {issueArticles.map((article, index) => (
-                          <article
-                            key={article.id}
-                            className="grid gap-6 py-5 first:pt-0 last:pb-0 md:grid-cols-[auto_minmax(0,1fr)_auto]"
-                          >
-                            <div className="font-mono text-sm font-bold text-[color:var(--color-accent)]">
-                              {article.issueOrder ?? index + 1}.
-                            </div>
-
-                            <div className="min-w-0 space-y-1.5">
-                              <h3 className="font-serif text-base font-bold text-[color:var(--color-foreground)] sm:text-lg">
-                                <Link
-                                  href={`/articles/${article.slug}`}
-                                  className="hover:text-[color:var(--color-accent)] hover:underline"
-                                >
-                                  {article.title}
-                                </Link>
-                              </h3>
-
-                              {article.authors.length ? (
-                                <p className="font-mono text-xs font-medium text-[color:var(--color-subtle)]">
-                                  Authors:{" "}
-                                  {article.authors
-                                    .map((a) => a.fullName)
-                                    .join(", ")}
-                                </p>
-                              ) : null}
-
-                              {article.doi ? (
-                                <p className="font-mono text-xs font-semibold text-[color:var(--color-accent)]">
-                                  DOI: https://doi.org/{article.doi}
-                                </p>
-                              ) : null}
-
-                              {article.abstract ? (
-                                <p className="line-clamp-2 text-xs leading-relaxed text-[color:var(--color-muted)]">
-                                  {article.abstract}
-                                </p>
-                              ) : null}
-                            </div>
-
-                            <div className="flex flex-col items-start gap-2.5 sm:items-end">
-                              {article.pageStart ? (
-                                <span className="font-mono text-xs font-semibold text-[color:var(--color-foreground)]">
-                                  pp. {article.pageStart}
-                                  {article.pageEnd ? `–${article.pageEnd}` : ""}
-                                </span>
-                              ) : null}
-
-                              <div className="flex items-center gap-2">
-                                <Link
-                                  href={`/articles/${article.slug}`}
-                                  className="button-secondary px-3 py-1.5 text-xs font-semibold"
-                                >
-                                  View
-                                </Link>
-                                <a
-                                  href={`/api/articles/${article.slug}/pdf`}
-                                  target="_blank"
-                                  rel="noreferrer"
-                                  className="button-primary px-3 py-1.5 text-xs font-semibold"
-                                >
-                                  PDF
-                                </a>
-                              </div>
-                            </div>
-                          </article>
-                        ))}
-                      </div>
-                    </section>
-                  );
-                },
-              )}
-            </div>
+            /* Mode A: Issue Periodicals Shelf Grid with Instant TOC & PDF Modal */
+            <IssueArchiveExplorer issueGroups={issueGroups} />
           )}
         </Container>
       </section>
