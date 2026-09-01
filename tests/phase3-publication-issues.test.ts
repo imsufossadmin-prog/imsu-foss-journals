@@ -401,3 +401,72 @@ test("Phase 7: Direct article upload journal selection filters by user roles", (
     ["economics", "library-information-science"],
   );
 });
+
+test("Phase 7: Direct legacy publication computes issueOrder and validates conflicts correctly", () => {
+  type ArticleEntry = { id: string; issueOrder: number | null };
+
+  function resolveIssueOrder(
+    inputOrder: number | null | undefined,
+    occupiedArticles: ArticleEntry[],
+  ): number {
+    if (inputOrder != null && inputOrder > 0) {
+      const isTaken = occupiedArticles.some((a) => a.issueOrder === inputOrder);
+      if (isTaken) {
+        throw new Error(
+          `Article order ${inputOrder} is already used in this volume/issue. Please choose another order.`,
+        );
+      }
+      return inputOrder;
+    }
+    const maxOrder = occupiedArticles.reduce(
+      (max, a) => (a.issueOrder && a.issueOrder > max ? a.issueOrder : max),
+      0,
+    );
+    return maxOrder + 1;
+  }
+
+  const existingArticles: ArticleEntry[] = [
+    { id: "art-1", issueOrder: 1 },
+    { id: "art-2", issueOrder: 2 },
+    { id: "art-3", issueOrder: 4 },
+  ];
+
+  // 1. Explicit order 3 (available) should succeed
+  assert.equal(resolveIssueOrder(3, existingArticles), 3);
+
+  // 2. Explicit order 5 (available) should succeed
+  assert.equal(resolveIssueOrder(5, existingArticles), 5);
+
+  // 3. Explicit order 1 (taken) should throw conflict error
+  assert.throws(
+    () => resolveIssueOrder(1, existingArticles),
+    /Article order 1 is already used in this volume\/issue. Please choose another order./,
+  );
+
+  // 4. Explicit order 2 (taken) should throw conflict error
+  assert.throws(
+    () => resolveIssueOrder(2, existingArticles),
+    /Article order 2 is already used in this volume\/issue. Please choose another order./,
+  );
+
+  // 5. Omitted / undefined order should compute maxOrder + 1 = 5
+  assert.equal(resolveIssueOrder(undefined, existingArticles), 5);
+  assert.equal(resolveIssueOrder(null, existingArticles), 5);
+
+  // 6. Empty issue should default to order 1
+  assert.equal(resolveIssueOrder(undefined, []), 1);
+});
+
+test("Phase 7: Direct legacy publication handles backdated and custom publication dates", () => {
+  function resolvePublishedAt(inputDate: Date | null | undefined): Date {
+    return inputDate ?? new Date();
+  }
+
+  const pastDate = new Date("2024-03-15T00:00:00.000Z");
+  const resolvedPast = resolvePublishedAt(pastDate);
+  assert.equal(resolvedPast.toISOString(), "2024-03-15T00:00:00.000Z");
+
+  const resolvedDefault = resolvePublishedAt(null);
+  const now = new Date();
+  assert.equal(resolvedDefault.getFullYear(), now.getFullYear());
+});

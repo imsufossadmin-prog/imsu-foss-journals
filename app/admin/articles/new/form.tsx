@@ -75,7 +75,7 @@ export function AdminLegacyUploadForm({
         </label>
       </div>
 
-      <div className="grid gap-6 sm:grid-cols-3">
+      <div className="grid gap-6 sm:grid-cols-4">
         <label className="text-xs font-semibold text-[color:var(--color-foreground)]">
           Volume Number *
           <input
@@ -112,9 +112,31 @@ export function AdminLegacyUploadForm({
             required
           />
         </label>
+
+        <label className="text-xs font-semibold text-[color:var(--color-foreground)]">
+          TOC Order (Optional)
+          <input
+            name="issueOrder"
+            type="number"
+            min="1"
+            placeholder="e.g. 1"
+            className="app-field mt-1.5"
+          />
+          <span className="mt-1 block text-[11px] font-normal text-[color:var(--color-muted)]">
+            Leave blank for auto-order
+          </span>
+        </label>
       </div>
 
-      <div className="grid gap-6 sm:grid-cols-2">
+      <div className="grid gap-6 sm:grid-cols-3">
+        <label className="text-xs font-semibold text-[color:var(--color-foreground)]">
+          Publication Date (Optional / Backdate)
+          <input name="publishedAt" type="date" className="app-field mt-1.5" />
+          <span className="mt-1 block text-[11px] font-normal text-[color:var(--color-muted)]">
+            Leave blank to use current date
+          </span>
+        </label>
+
         <label className="text-xs font-semibold text-[color:var(--color-foreground)]">
           Page Range (Optional)
           <input

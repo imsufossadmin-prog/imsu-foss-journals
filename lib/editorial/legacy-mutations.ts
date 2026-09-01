@@ -14,6 +14,8 @@ export type DirectLegacyArticleInput = {
   pageEnd?: string | null;
   doi?: string | null;
   coverImageUrl?: string | null;
+  publishedAt?: Date | null;
+  issueOrder?: number | null;
   manuscriptFile: {
     bucket: string;
     objectPath: string;
@@ -71,7 +73,7 @@ export async function publishDirectLegacyArticle(
       volumeId: volume.id,
       number: input.issue,
       isPublished: true,
-      publishedAt: new Date(),
+      publishedAt: input.publishedAt ?? new Date(),
     },
   });
 
@@ -99,11 +101,25 @@ export async function publishDirectLegacyArticle(
     where: { issueId: issue.id },
     select: { issueOrder: true },
   });
-  const maxOrder = occupiedArticles.reduce(
-    (max, a) => (a.issueOrder && a.issueOrder > max ? a.issueOrder : max),
-    0,
-  );
-  const nextOrder = maxOrder + 1;
+
+  let finalOrder: number;
+  if (input.issueOrder != null && input.issueOrder > 0) {
+    const isTaken = occupiedArticles.some(
+      (a) => a.issueOrder === input.issueOrder,
+    );
+    if (isTaken) {
+      throw new Error(
+        `Article order ${input.issueOrder} is already used in this volume/issue. Please choose another order.`,
+      );
+    }
+    finalOrder = input.issueOrder;
+  } else {
+    const maxOrder = occupiedArticles.reduce(
+      (max, a) => (a.issueOrder && a.issueOrder > max ? a.issueOrder : max),
+      0,
+    );
+    finalOrder = maxOrder + 1;
+  }
 
   const article = await prisma.article.create({
     data: {
@@ -115,10 +131,11 @@ export async function publishDirectLegacyArticle(
       doi: input.doi || null,
       pageStart: input.pageStart,
       pageEnd: input.pageEnd,
-      issueOrder: nextOrder,
+      issueOrder: finalOrder,
       coverImageUrl: input.coverImageUrl,
       isPublished: true,
-      publishedAt: new Date(),
+      publishedAt: input.publishedAt ?? new Date(),
+
       authors: {
         create: input.authors.map((author, index) => ({
           position: index + 1,

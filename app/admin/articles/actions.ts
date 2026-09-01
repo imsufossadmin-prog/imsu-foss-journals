@@ -53,6 +53,8 @@ export async function createDirectLegacyArticleAction(
   const volumeStr = formData.get("volume") as string;
   const issueStr = formData.get("issue") as string;
   const yearStr = formData.get("year") as string;
+  const issueOrderStr = (formData.get("issueOrder") as string)?.trim();
+  const publishedAtStr = (formData.get("publishedAt") as string)?.trim();
   const pageStart = (formData.get("pageStart") as string)?.trim() || null;
   const pageEnd = (formData.get("pageEnd") as string)?.trim() || null;
   const abstract = (formData.get("abstract") as string)?.trim() || null;
@@ -62,6 +64,22 @@ export async function createDirectLegacyArticleAction(
 
   const manuscriptPdf = formData.get("manuscriptPdf") as File | null;
   const coverImageFile = formData.get("coverImage") as File | null;
+
+  let publishedAt: Date | undefined = undefined;
+  if (publishedAtStr) {
+    const parsedDate = new Date(publishedAtStr);
+    if (!Number.isNaN(parsedDate.getTime())) {
+      publishedAt = parsedDate;
+    }
+  }
+
+  let issueOrder: number | undefined = undefined;
+  if (issueOrderStr) {
+    const parsedOrder = Number.parseInt(issueOrderStr, 10);
+    if (!Number.isNaN(parsedOrder) && parsedOrder > 0) {
+      issueOrder = parsedOrder;
+    }
+  }
 
   if (!title || !journalSlug || !volumeStr || !issueStr) {
     return {
@@ -198,6 +216,8 @@ export async function createDirectLegacyArticleAction(
       pageEnd,
       doi,
       coverImageUrl,
+      publishedAt,
+      issueOrder,
       manuscriptFile: {
         bucket: "published-articles",
         objectPath: pdfPath,

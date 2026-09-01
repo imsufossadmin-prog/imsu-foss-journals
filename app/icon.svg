@@ -1,0 +1,56 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" fill="none">
+  <defs>
+    <linearGradient id="bgGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#0a1412" />
+      <stop offset="100%" stop-color="#040807" />
+    </linearGradient>
+    <linearGradient id="emeraldGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#34d399" />
+      <stop offset="100%" stop-color="#059669" />
+    </linearGradient>
+    <linearGradient id="accentGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#6ee7b7" />
+      <stop offset="100%" stop-color="#10b981" />
+    </linearGradient>
+    <filter id="emeraldGlow" x="-20%" y="-20%" width="140%" height="140%">
+      <feGaussianBlur stdDeviation="12" result="blur" />
+      <feComposite in="SourceGraphic" in2="blur" operator="over" />
+    </filter>
+  </defs>
+
+  <!-- Background Squircle Container -->
+  <rect width="512" height="512" rx="120" fill="url(#bgGrad)" />
+  <rect x="12" y="12" width="488" height="488" rx="108" fill="none" stroke="#10b981" stroke-opacity="0.35" stroke-width="8" />
+
+  <!-- Academic Glow Behind Crest -->
+  <circle cx="256" cy="256" r="140" fill="#10b981" fill-opacity="0.08" filter="url(#emeraldGlow)" />
+
+  <!-- Upper Academic Star / Enlightenment Emblem -->
+  <path d="M256 96 L267 127 L298 138 L267 149 L256 180 L245 149 L214 138 L245 127 Z" fill="#6ee7b7" />
+  <circle cx="256" cy="138" r="4" fill="#f1f5f3" />
+
+  <!-- Open Academic Journal Pages (Left Wing) -->
+  <path d="M244 204 C196 190 142 196 92 216 C88 218 84 222 84 227 L84 366 C84 372 90 376 96 374 C142 356 192 352 244 368 Z" fill="url(#emeraldGrad)" />
+
+  <!-- Open Academic Journal Pages (Right Wing) -->
+  <path d="M268 204 C316 190 370 196 420 216 C424 218 428 222 428 227 L428 366 C428 372 422 376 416 374 C370 356 320 352 268 368 Z" fill="url(#emeraldGrad)" />
+
+  <!-- Left Page Inner Lines (Text Engraving) -->
+  <path d="M120 248 C156 236 196 234 232 242" stroke="#0a1412" stroke-width="7" stroke-linecap="round" stroke-opacity="0.4" />
+  <path d="M120 278 C156 266 196 264 232 272" stroke="#0a1412" stroke-width="7" stroke-linecap="round" stroke-opacity="0.4" />
+  <path d="M120 308 C156 296 196 294 232 302" stroke="#0a1412" stroke-width="7" stroke-linecap="round" stroke-opacity="0.4" />
+  <path d="M120 338 C156 326 196 324 232 332" stroke="#0a1412" stroke-width="7" stroke-linecap="round" stroke-opacity="0.4" />
+
+  <!-- Right Page Inner Lines (Text Engraving) -->
+  <path d="M280 242 C316 234 356 236 392 248" stroke="#0a1412" stroke-width="7" stroke-linecap="round" stroke-opacity="0.4" />
+  <path d="M280 272 C316 264 356 266 392 278" stroke="#0a1412" stroke-width="7" stroke-linecap="round" stroke-opacity="0.4" />
+  <path d="M280 302 C316 294 356 296 392 308" stroke="#0a1412" stroke-width="7" stroke-linecap="round" stroke-opacity="0.4" />
+  <path d="M280 332 C316 324 356 326 392 338" stroke="#0a1412" stroke-width="7" stroke-linecap="round" stroke-opacity="0.4" />
+
+  <!-- Spine / Center Bookmark Ribbon & Quill Pillar -->
+  <path d="M256 194 L264 380 L256 394 L248 380 Z" fill="#f1f5f3" />
+  <line x1="256" y1="194" x2="256" y2="394" stroke="#10b981" stroke-width="4" />
+
+  <!-- Academic Pillar / Base Pedestal -->
+  <path d="M172 398 C224 388 288 388 340 398 C346 399 350 404 348 410 L344 422 C342 426 338 428 334 428 C284 420 228 420 178 428 C174 428 170 426 168 422 L164 410 C162 404 166 399 172 398 Z" fill="url(#accentGrad)" />
+</svg>
