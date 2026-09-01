@@ -47,10 +47,15 @@ const applicationUserInclude = {
 export const getCurrentUser = cache(async () => {
   try {
     const supabase = await createClient();
-    const { data, error } = await supabase.auth.getClaims();
-    const userId = data?.claims?.sub;
+    const {
+      data: { user: authUser },
+      error,
+    } = await supabase.auth.getUser();
 
-    if (error || !userId) return null;
+    if (error || !authUser?.id) return null;
+
+    const userId = authUser.id;
+    const userEmail = authUser.email ?? null;
 
     const user = await prisma.user.findUnique({
       where: { id: userId },
@@ -59,24 +64,19 @@ export const getCurrentUser = cache(async () => {
 
     if (!user) return null;
 
-    const userEmail =
-      typeof data.claims.email === "string" ? data.claims.email : null;
-
     if (userEmail && isBreakGlassSuperAdminEmail(userEmail)) {
       if (
         !user.isActive ||
         !user.globalRoles.some((gr) => gr.role === "SUPER_ADMIN")
       ) {
-        await prisma.$transaction(async (tx) => {
-          await tx.user.update({
-            where: { id: userId },
-            data: { isActive: true },
-          });
-          await tx.userGlobalRole.upsert({
-            where: { userId_role: { userId, role: "SUPER_ADMIN" } },
-            update: {},
-            create: { userId, role: "SUPER_ADMIN" },
-          });
+        await prisma.user.update({
+          where: { id: userId },
+          data: { isActive: true },
+        });
+        await prisma.userGlobalRole.upsert({
+          where: { userId_role: { userId, role: "SUPER_ADMIN" } },
+          update: {},
+          create: { userId, role: "SUPER_ADMIN" },
         });
 
         const refreshed = await prisma.user.findUnique({

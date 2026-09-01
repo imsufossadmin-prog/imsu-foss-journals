@@ -89,35 +89,35 @@ const prismaAuthorProvisioningStore: AuthorProvisioningStore = {
     const { prisma } = await import("@/lib/db/prisma");
     const isBreakGlass = isBreakGlassSuperAdminEmail(input.email);
 
-    return prisma.$transaction(async (transaction) => {
-      await transaction.user.upsert({
-        where: { id: input.id },
-        update: {
-          email: input.email,
-          ...(isBreakGlass ? { isActive: true } : {}),
-        },
-        create: {
-          ...input,
-          isActive: true,
-        },
-      });
-      await transaction.userGlobalRole.upsert({
-        where: { userId_role: { userId: input.id, role: "AUTHOR" } },
-        update: {},
-        create: { userId: input.id, role: "AUTHOR" },
-      });
-      if (isBreakGlass) {
-        await transaction.userGlobalRole.upsert({
-          where: { userId_role: { userId: input.id, role: "SUPER_ADMIN" } },
-          update: {},
-          create: { userId: input.id, role: "SUPER_ADMIN" },
-        });
-      }
+    await prisma.user.upsert({
+      where: { id: input.id },
+      update: {
+        email: input.email,
+        ...(isBreakGlass ? { isActive: true } : {}),
+      },
+      create: {
+        ...input,
+        isActive: true,
+      },
+    });
 
-      return transaction.user.findUniqueOrThrow({
-        where: { id: input.id },
-        include: provisionedUserInclude,
+    await prisma.userGlobalRole.upsert({
+      where: { userId_role: { userId: input.id, role: "AUTHOR" } },
+      update: {},
+      create: { userId: input.id, role: "AUTHOR" },
+    });
+
+    if (isBreakGlass) {
+      await prisma.userGlobalRole.upsert({
+        where: { userId_role: { userId: input.id, role: "SUPER_ADMIN" } },
+        update: {},
+        create: { userId: input.id, role: "SUPER_ADMIN" },
       });
+    }
+
+    return prisma.user.findUniqueOrThrow({
+      where: { id: input.id },
+      include: provisionedUserInclude,
     });
   },
 };
