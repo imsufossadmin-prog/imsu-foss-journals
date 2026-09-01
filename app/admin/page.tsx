@@ -14,6 +14,11 @@ import {
   getAvailableWorkspaces,
   getJournalWorkspaces,
 } from "@/lib/auth/workspaces";
+import {
+  getJournalActivationMap,
+  isProtectedBreakGlassUser,
+} from "@/lib/editorial/journal-activation";
+import { setJournalOperationalStateAction } from "@/app/admin/journal-activation-actions";
 
 export default async function AdminPage() {
   const user = await requireApplicationArea("admin");
@@ -40,11 +45,19 @@ export default async function AdminPage() {
   const workspace = workspaces.find((item) => item.area === "platform");
   if (!workspace) redirect("/unauthorized?reason=workspace");
 
-  const [operational, staff, journals] = await Promise.all([
+  const [operational, staff, journals, activationMap] = await Promise.all([
     getPlatformOperationalCounts(),
     getPlatformStaffCounts(),
     getActiveDepartmentJournals(),
+    getJournalActivationMap(),
   ]);
+
+  const augmentedJournals = journals.map((j) => ({
+    ...j,
+    isActivated: Boolean(activationMap[j.slug]),
+  }));
+
+  const isBreakGlass = isProtectedBreakGlassUser(user);
 
   return (
     <AuthenticatedShell
@@ -62,7 +75,9 @@ export default async function AdminPage() {
       <SuperAdminDashboard
         operational={operational}
         staff={staff}
-        journals={journals}
+        journals={augmentedJournals}
+        isBreakGlass={isBreakGlass}
+        activateAction={setJournalOperationalStateAction}
       />
     </AuthenticatedShell>
   );

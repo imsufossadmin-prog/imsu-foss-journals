@@ -22,12 +22,18 @@ type ActiveJournal = {
   name: string;
   shortName: string | null;
   department?: { id: string; name: string } | null;
+  isActivated?: boolean;
 };
 
 type SuperAdminDashboardProps = {
   operational: OperationalCounts;
   staff: StaffCounts;
   journals: ActiveJournal[];
+  isBreakGlass?: boolean;
+  activateAction?: (
+    prevState: { error?: string; success?: boolean } | undefined,
+    formData: FormData,
+  ) => Promise<{ error?: string; success?: boolean }>;
 };
 
 function pluralise(count: number, singular: string, plural: string) {
@@ -102,6 +108,8 @@ export function SuperAdminDashboard({
   operational,
   staff,
   journals,
+  isBreakGlass = false,
+  activateAction,
 }: SuperAdminDashboardProps) {
   const [showAllJournals, setShowAllJournals] = useState(false);
   const totalItems = operational.newRequests + operational.awaitingTracking;
@@ -205,7 +213,7 @@ export function SuperAdminDashboard({
                 <li key={journal.id} className="p-4 sm:px-5">
                   <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                     <div>
-                      <div className="flex items-center gap-2">
+                      <div className="flex flex-wrap items-center gap-2">
                         <p className="text-sm font-semibold tracking-[-0.01em] text-[color:var(--color-foreground)]">
                           {journal.name}
                         </p>
@@ -214,20 +222,54 @@ export function SuperAdminDashboard({
                             {journal.shortName}
                           </span>
                         ) : null}
+                        {journal.isActivated === false ? (
+                          <span className="rounded border border-amber-500/20 bg-amber-500/10 px-1.5 py-0.5 text-[10px] font-medium text-amber-400">
+                            Configuration required
+                          </span>
+                        ) : isBreakGlass ? (
+                          <span className="rounded border border-emerald-500/20 bg-emerald-500/10 px-1.5 py-0.5 text-[10px] font-medium text-emerald-400">
+                            Operational
+                          </span>
+                        ) : null}
                       </div>
+
                       <p className="mt-0.5 text-[12px] text-[color:var(--color-muted)]">
                         {journal.department
                           ? `Department: ${journal.department.name}`
                           : "Faculty of Social Sciences Journal"}
                       </p>
                     </div>
-                    <Link
-                      href={`/admin/${journal.slug}`}
-                      prefetch={true}
-                      className="shrink-0 text-xs font-semibold text-[color:var(--color-accent)] underline-offset-4 hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[color:var(--color-focus)]"
-                    >
-                      Open operations →
-                    </Link>
+                    <div className="flex items-center gap-3">
+                      {isBreakGlass &&
+                      journal.isActivated === false &&
+                      activateAction ? (
+                        <form
+                          action={async (formData) => {
+                            await activateAction(undefined, formData);
+                          }}
+                        >
+                          <input
+                            type="hidden"
+                            name="journalSlug"
+                            value={journal.slug}
+                          />
+                          <input type="hidden" name="enabled" value="true" />
+                          <button
+                            type="submit"
+                            className="rounded border border-emerald-500/30 bg-emerald-500/10 px-2 py-1 text-xs font-semibold text-emerald-400 transition hover:bg-emerald-500/20"
+                          >
+                            Activate journal
+                          </button>
+                        </form>
+                      ) : null}
+                      <Link
+                        href={`/admin/${journal.slug}`}
+                        prefetch={true}
+                        className="shrink-0 text-xs font-semibold text-[color:var(--color-accent)] underline-offset-4 hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[color:var(--color-focus)]"
+                      >
+                        Open operations →
+                      </Link>
+                    </div>
                   </div>
                 </li>
               ))}

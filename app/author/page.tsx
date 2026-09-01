@@ -11,6 +11,8 @@ import {
   listAuthorRequests,
 } from "@/lib/requests/data";
 
+import { getJournalActivationMap } from "@/lib/editorial/journal-activation";
+
 const date = new Intl.DateTimeFormat("en-NG", {
   day: "numeric",
   month: "short",
@@ -19,10 +21,16 @@ const date = new Intl.DateTimeFormat("en-NG", {
 
 export default async function AuthorPage() {
   const user = await requireApplicationArea("author");
-  const [requests, journals] = await Promise.all([
+  const [requests, journals, activationMap] = await Promise.all([
     listAuthorRequests(user.id),
     getActiveDepartmentJournals(),
+    getJournalActivationMap(),
   ]);
+
+  const augmentedJournals = journals.map((j) => ({
+    ...j,
+    isActivated: Boolean(activationMap[j.slug]),
+  }));
 
   return (
     <div className="mx-auto max-w-5xl space-y-8">
@@ -39,7 +47,10 @@ export default async function AuthorPage() {
             conversation, manuscript, and tracking ID stay together.
           </p>
         </div>
-        <StartSubmissionForm action={startRequestAction} journals={journals} />
+        <StartSubmissionForm
+          action={startRequestAction}
+          journals={augmentedJournals}
+        />
       </header>
 
       <section>

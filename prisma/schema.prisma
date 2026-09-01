@@ -669,3 +669,10 @@ model ArticleFile {
 
   @@index([articleId, type])
 }
+
+model JournalActivation {
+  journalSlug String   @id
+  activatedAt DateTime @default(now())
+  activatedBy String?
+}
+

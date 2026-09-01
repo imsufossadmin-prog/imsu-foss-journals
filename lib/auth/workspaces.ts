@@ -36,6 +36,7 @@ export type ProductWorkspace = {
   title: string;
   description: string;
   journal: WorkspaceJournal | null;
+  badge?: string | null;
 };
 
 const workspaceOrder: ProductWorkspace["area"][] = [

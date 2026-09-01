@@ -12,6 +12,7 @@ import {
   validateTrackingId,
 } from "@/lib/requests/validation";
 import { createTrackingNumber } from "@/lib/submissions/tracking";
+import { isJournalActivated } from "@/lib/editorial/journal-activation";
 export class RequestMutationError extends Error {
   constructor(
     message: string,
@@ -96,6 +97,13 @@ export async function startSubmissionRequest({
   if (!targetSlug) {
     throw new RequestMutationError(
       "A valid journal must be selected for this submission request.",
+    );
+  }
+
+  const isActivated = await isJournalActivated(targetSlug);
+  if (!isActivated) {
+    throw new RequestMutationError(
+      "Submissions for this journal are not yet available.",
     );
   }
 

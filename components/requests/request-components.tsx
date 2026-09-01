@@ -1220,44 +1220,61 @@ export function StartSubmissionForm({
     slug: string;
     name: string;
     department?: { name: string } | null;
+    isActivated?: boolean;
   }>;
 }) {
-  const [journalSlug, setJournalSlug] = useState(journals[0]?.slug ?? "");
+  const [journalSlug, setJournalSlug] = useState(
+    journals.find((j) => j.isActivated !== false)?.slug ??
+      journals[0]?.slug ??
+      "",
+  );
   const [pending, startTransition] = useTransition();
 
+  const selectedJournal = journals.find((j) => j.slug === journalSlug);
+  const isSelectedLocked =
+    selectedJournal && selectedJournal.isActivated === false;
+
   return (
-    <form
-      action={(formData) => {
-        if (pending) return;
-        if (journalSlug) formData.set("journalSlug", journalSlug);
-        startTransition(() => action(formData));
-      }}
-      className="flex items-center gap-2"
-    >
-      {journals.length > 1 ? (
-        <select
-          name="journalSlug"
-          value={journalSlug}
-          onChange={(e) => setJournalSlug(e.target.value)}
-          disabled={pending}
-          className="app-field text-xs"
-        >
-          {journals.map((j) => (
-            <option key={j.id} value={j.slug}>
-              {j.department?.name ?? j.name}
-            </option>
-          ))}
-        </select>
-      ) : (
-        <input type="hidden" name="journalSlug" value={journalSlug} />
-      )}
-      <PendingButton
-        disabled={pending}
-        className="button-primary shrink-0 text-xs"
+    <div className="flex flex-col items-end gap-1.5">
+      <form
+        action={(formData) => {
+          if (pending || isSelectedLocked) return;
+          if (journalSlug) formData.set("journalSlug", journalSlug);
+          startTransition(() => action(formData));
+        }}
+        className="flex items-center gap-2"
       >
-        Start request
-      </PendingButton>
-    </form>
+        {journals.length > 1 ? (
+          <select
+            name="journalSlug"
+            value={journalSlug}
+            onChange={(e) => setJournalSlug(e.target.value)}
+            disabled={pending}
+            className="app-field text-xs"
+          >
+            {journals.map((j) => (
+              <option key={j.id} value={j.slug}>
+                {j.department?.name ?? j.name}
+                {j.isActivated === false ? " (Not yet available)" : ""}
+              </option>
+            ))}
+          </select>
+        ) : (
+          <input type="hidden" name="journalSlug" value={journalSlug} />
+        )}
+        <PendingButton
+          disabled={pending || Boolean(isSelectedLocked)}
+          className="button-primary shrink-0 text-xs disabled:opacity-50"
+        >
+          Start request
+        </PendingButton>
+      </form>
+      {isSelectedLocked ? (
+        <p className="text-[11px] font-medium text-amber-400">
+          Submissions for this journal are not yet available.
+        </p>
+      ) : null}
+    </div>
   );
 }
 

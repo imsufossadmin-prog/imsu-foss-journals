@@ -56,9 +56,16 @@ export function WorkspaceChooser({
             className="group grid min-h-28 grid-cols-[1fr_auto] items-center gap-5 py-5 transition focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[color:var(--color-focus)] sm:px-3 sm:hover:bg-[color:var(--color-surface-strong)]"
           >
             <span className="min-w-0">
-              <span className="block text-xs font-semibold text-[color:var(--color-accent)]">
-                {workspace.roleLabel}
-              </span>
+              <div className="flex flex-wrap items-center gap-2">
+                <span className="block text-xs font-semibold text-[color:var(--color-accent)]">
+                  {workspace.roleLabel}
+                </span>
+                {workspace.badge ? (
+                  <span className="rounded border border-amber-500/20 bg-amber-500/10 px-1.5 py-0.5 text-[10px] font-medium text-amber-400">
+                    {workspace.badge}
+                  </span>
+                ) : null}
+              </div>
               <span className="mt-1.5 block text-lg font-semibold tracking-[-0.02em] text-[color:var(--color-foreground)]">
                 {workspace.title}
               </span>
@@ -66,6 +73,7 @@ export function WorkspaceChooser({
                 {workspace.description}
               </span>
             </span>
+
             <span className="grid size-10 place-items-center rounded-full border border-[color:var(--color-border)] text-[color:var(--color-muted)] transition group-hover:border-[color:var(--color-accent)] group-hover:bg-[color:var(--color-accent)] group-hover:text-white">
               <ArrowIcon />
             </span>
