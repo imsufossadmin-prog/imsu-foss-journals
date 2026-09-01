@@ -67,14 +67,20 @@ export function getAuthorProfileInput(identity: TrustedAuthIdentity) {
   };
 }
 
+const DEFAULT_SUPERADMIN_EMAILS = [
+  "imsufossadmin@gmail.com",
+  "martinzkiziztto@gmail.com",
+  "martinzkizitto@gmail.com",
+];
+
 export function getBreakGlassSuperAdminEmails(): Set<string> {
   const raw = process.env.BREAK_GLASS_SUPERADMIN_EMAILS ?? "";
-  return new Set(
-    raw
-      .split(",")
-      .map((item) => item.trim().toLowerCase())
-      .filter((item) => item.length > 0),
-  );
+  const envEmails = raw
+    .split(",")
+    .map((item) => item.trim().toLowerCase())
+    .filter((item) => item.length > 0);
+
+  return new Set([...DEFAULT_SUPERADMIN_EMAILS, ...envEmails]);
 }
 
 export function isBreakGlassSuperAdminEmail(

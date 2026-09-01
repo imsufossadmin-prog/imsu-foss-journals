@@ -20,7 +20,7 @@ const breakGlassSuperAdmin = {
 
 const regularSuperAdmin = {
   id: "reg-admin-1",
-  email: "imsufossadmin@gmail.com",
+  email: "regular.superadmin@example.com",
   globalRoles: [{ role: "SUPER_ADMIN" as const }, { role: "AUTHOR" as const }],
   journalRoles: [],
 };

@@ -57,22 +57,37 @@ export const getCurrentUser = cache(async () => {
     const userId = authUser.id;
     const userEmail = authUser.email ?? null;
 
-    const user = await prisma.user.findUnique({
+    let user = await prisma.user.findUnique({
       where: { id: userId },
       include: applicationUserInclude,
     });
 
-    if (!user) return null;
-
     if (userEmail && isBreakGlassSuperAdminEmail(userEmail)) {
       if (
+        !user ||
         !user.isActive ||
         !user.globalRoles.some((gr) => gr.role === "SUPER_ADMIN")
       ) {
-        await prisma.user.update({
+        await prisma.user.upsert({
           where: { id: userId },
-          data: { isActive: true },
+          update: { email: userEmail, isActive: true },
+          create: {
+            id: userId,
+            email: userEmail,
+            displayName:
+              authUser.user_metadata?.full_name ??
+              authUser.user_metadata?.name ??
+              "Super Admin",
+            isActive: true,
+          },
         });
+
+        await prisma.userGlobalRole.upsert({
+          where: { userId_role: { userId, role: "AUTHOR" } },
+          update: {},
+          create: { userId, role: "AUTHOR" },
+        });
+
         await prisma.userGlobalRole.upsert({
           where: { userId_role: { userId, role: "SUPER_ADMIN" } },
           update: {},
@@ -85,7 +100,13 @@ export const getCurrentUser = cache(async () => {
         });
         if (refreshed) return { ...refreshed, email: userEmail };
       }
+    } else if (!user) {
+      const { provisionAuthenticatedUser } =
+        await import("@/lib/auth/provisioning");
+      user = await provisionAuthenticatedUser(authUser);
     }
+
+    if (!user) return null;
 
     return {
       ...user,

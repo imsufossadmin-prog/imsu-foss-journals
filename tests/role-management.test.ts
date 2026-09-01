@@ -248,8 +248,8 @@ test("break-glass account is protected against role management mutations", async
 
     const normalUser = {
       id: "normal-target",
-      email: "imsufossadmin@gmail.com",
-      displayName: "IMSU FOSS Admin",
+      email: "author.one@example.com",
+      displayName: "Normal Author",
       isActive: true,
     };
     assert.equal(isBreakGlassSuperAdminEmail(normalUser.email), false);
