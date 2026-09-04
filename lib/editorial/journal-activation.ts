@@ -23,7 +23,12 @@ export function normalizeJournalSlug(slug: string): string {
   return slug.trim().toLowerCase();
 }
 
-export function isProtectedBreakGlassUser(user: {
+export const LEAD_SYSTEM_OWNER_EMAILS = new Set([
+  "martinzkiziztto@gmail.com",
+  "martinzkizitto@gmail.com",
+]);
+
+export function isLeadSystemOwner(user: {
   email?: string | null;
   globalRoles?: Array<{ role: GlobalRole }>;
 }): boolean {
@@ -31,7 +36,20 @@ export function isProtectedBreakGlassUser(user: {
   const isSuper = user.globalRoles
     ? isSuperAdmin({ globalRoles: user.globalRoles, journalRoles: [] })
     : true;
-  return isSuper && isBreakGlassSuperAdminEmail(user.email);
+  const email = user.email.trim().toLowerCase();
+  const envEmails = (process.env.LEAD_SYSTEM_OWNER_EMAILS ?? "")
+    .split(",")
+    .map((item) => item.trim().toLowerCase())
+    .filter((item) => item.length > 0);
+  const allowed = new Set([...LEAD_SYSTEM_OWNER_EMAILS, ...envEmails]);
+  return isSuper && allowed.has(email);
+}
+
+export function isProtectedBreakGlassUser(user: {
+  email?: string | null;
+  globalRoles?: Array<{ role: GlobalRole }>;
+}): boolean {
+  return isLeadSystemOwner(user);
 }
 
 export interface JournalActivationStore {
@@ -175,12 +193,12 @@ export async function setJournalOperationalState({
 }): Promise<{ success: boolean; error?: string }> {
   const normalized = normalizeJournalSlug(journalSlug);
 
-  // 1. Authorization check: strictly protected break-glass Super Admin only
-  if (!isProtectedBreakGlassUser(actor)) {
+  // 1. Authorization check: strictly Lead System Owner only
+  if (!isLeadSystemOwner(actor)) {
     return {
       success: false,
       error:
-        "Unauthorized: Only the configured break-glass Super Admin may modify journal operational status.",
+        "Unauthorized: Only the Lead System Owner may modify journal operational status.",
     };
   }
 

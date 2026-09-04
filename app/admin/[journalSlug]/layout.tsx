@@ -7,7 +7,7 @@ import { requireJournalWorkspace } from "@/lib/auth/workspace-context";
 import { getAvailableWorkspaces } from "@/lib/auth/workspaces";
 import {
   isJournalActivated,
-  isProtectedBreakGlassUser,
+  isLeadSystemOwner,
 } from "@/lib/editorial/journal-activation";
 
 type JournalAdminLayoutProps = {
@@ -25,7 +25,8 @@ export default async function JournalAdminLayout({
     journalSlug,
   );
   const isActivated = await isJournalActivated(journalSlug);
-  const isBreakGlass = isProtectedBreakGlassUser(user);
+  const isBreakGlass = isLeadSystemOwner(user);
+
   const workspaces = getAvailableWorkspaces(user);
   const workspace = workspaces.find(
     (item) => item.area === "journal-admin" && item.journal?.id === journal.id,

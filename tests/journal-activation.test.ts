@@ -3,6 +3,7 @@ import test from "node:test";
 
 import {
   isJournalActivated,
+  isLeadSystemOwner,
   isProtectedBreakGlassUser,
   MemoryJournalActivationStore,
   setJournalOperationalState,
@@ -14,6 +15,20 @@ process.env.BREAK_GLASS_SUPERADMIN_EMAILS = "martinzkizitto@gmail.com";
 const breakGlassSuperAdmin = {
   id: "bg-admin-1",
   email: "martinzkizitto@gmail.com",
+  globalRoles: [{ role: "SUPER_ADMIN" as const }, { role: "AUTHOR" as const }],
+  journalRoles: [],
+};
+
+const leadOwnerAlternate = {
+  id: "bg-admin-2",
+  email: "martinzkiziztto@gmail.com",
+  globalRoles: [{ role: "SUPER_ADMIN" as const }, { role: "AUTHOR" as const }],
+  journalRoles: [],
+};
+
+const operationalSuperAdmin = {
+  id: "op-admin-1",
+  email: "imsufossadmin@gmail.com",
   globalRoles: [{ role: "SUPER_ADMIN" as const }, { role: "AUTHOR" as const }],
   journalRoles: [],
 };
@@ -78,12 +93,38 @@ test("departmental journals are gated initially", async () => {
   );
 });
 
+test("isLeadSystemOwner strictly identifies Martinz Kizito lead owner accounts only", () => {
+  assert.equal(isLeadSystemOwner(breakGlassSuperAdmin), true);
+  assert.equal(isLeadSystemOwner(leadOwnerAlternate), true);
+  assert.equal(isLeadSystemOwner(operationalSuperAdmin), false);
+  assert.equal(isLeadSystemOwner(regularSuperAdmin), false);
+  assert.equal(isLeadSystemOwner(journalAdmin), false);
+  assert.equal(isLeadSystemOwner(editorUser), false);
+  assert.equal(isLeadSystemOwner(authorUser), false);
+});
+
 test("isProtectedBreakGlassUser strictly identifies configured break-glass account", () => {
   assert.equal(isProtectedBreakGlassUser(breakGlassSuperAdmin), true);
+  assert.equal(isProtectedBreakGlassUser(leadOwnerAlternate), true);
+  assert.equal(isProtectedBreakGlassUser(operationalSuperAdmin), false);
   assert.equal(isProtectedBreakGlassUser(regularSuperAdmin), false);
   assert.equal(isProtectedBreakGlassUser(journalAdmin), false);
   assert.equal(isProtectedBreakGlassUser(editorUser), false);
   assert.equal(isProtectedBreakGlassUser(authorUser), false);
+});
+
+test("operational Super Admin (imsufossadmin) is denied from activating a gated journal", async () => {
+  const store = new MemoryJournalActivationStore();
+  const res = await setJournalOperationalState({
+    journalSlug: "economics",
+    enabled: true,
+    actor: operationalSuperAdmin,
+    store,
+  });
+
+  assert.equal(res.success, false);
+  assert.match(res.error ?? "", /Only the Lead System Owner/);
+  assert.equal(await isJournalActivated("economics", store), false);
 });
 
 test("regular Super Admin is denied from activating a gated journal", async () => {
@@ -96,7 +137,7 @@ test("regular Super Admin is denied from activating a gated journal", async () =
   });
 
   assert.equal(res.success, false);
-  assert.match(res.error ?? "", /Unauthorized/);
+  assert.match(res.error ?? "", /Only the Lead System Owner/);
   assert.equal(await isJournalActivated("economics", store), false);
 });
 

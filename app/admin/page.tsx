@@ -16,7 +16,7 @@ import {
 } from "@/lib/auth/workspaces";
 import {
   getJournalActivationMap,
-  isProtectedBreakGlassUser,
+  isLeadSystemOwner,
 } from "@/lib/editorial/journal-activation";
 import { setJournalOperationalStateAction } from "@/app/admin/journal-activation-actions";
 
@@ -57,7 +57,7 @@ export default async function AdminPage() {
     isActivated: Boolean(activationMap[j.slug]),
   }));
 
-  const isBreakGlass = isProtectedBreakGlassUser(user);
+  const isBreakGlass = isLeadSystemOwner(user);
 
   return (
     <AuthenticatedShell
