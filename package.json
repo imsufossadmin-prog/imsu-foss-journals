@@ -7,7 +7,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "test": "NODE_OPTIONS=--conditions=react-server node --import tsx --test tests/*.test.ts",
+    "test": "NODE_ENV=test NODE_OPTIONS=--conditions=react-server node --import tsx --test tests/*.test.ts",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "db:generate": "prisma generate",

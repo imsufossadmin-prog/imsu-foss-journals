@@ -36,7 +36,7 @@ export function DisciplinesMarquee({ journals }: { journals: Discipline[] }) {
             onClick={() => setShowAllModal(true)}
             className="button-secondary inline-flex items-center gap-2 px-3.5 py-1.5 text-xs font-semibold"
           >
-            <span>View All Disciplines</span>
+            <span>View All Journals</span>
             <span>({journals.length})</span>
           </button>
           <Link
@@ -56,11 +56,7 @@ export function DisciplinesMarquee({ journals }: { journals: Discipline[] }) {
             return (
               <Link
                 key={`${j.id}-${idx}`}
-                href={
-                  hasArticles
-                    ? `/archives?journal=${j.slug}`
-                    : `/archives?journal=${j.slug}&status=upcoming`
-                }
+                href={`/journals/${j.slug}`}
                 className="group relative flex w-72 shrink-0 flex-col justify-between rounded-[var(--radius-md)] border border-[color:var(--color-border)] bg-[color:var(--color-surface-raised)] p-5 transition-all duration-200 hover:border-[color:var(--color-accent)] hover:shadow-lg"
               >
                 <div>
@@ -74,11 +70,7 @@ export function DisciplinesMarquee({ journals }: { journals: Discipline[] }) {
                         {j.articleCount}{" "}
                         {j.articleCount === 1 ? "Paper" : "Papers"}
                       </span>
-                    ) : (
-                      <span className="rounded-full bg-amber-500/10 px-2 py-0.5 text-[10px] font-semibold text-amber-300">
-                        Coming Soon
-                      </span>
-                    )}
+                    ) : null}
                   </div>
                   <h3 className="mt-3 font-serif text-base leading-snug font-semibold text-[color:var(--color-foreground)] transition-colors group-hover:text-[color:var(--color-accent)]">
                     {j.name}
@@ -88,7 +80,7 @@ export function DisciplinesMarquee({ journals }: { journals: Discipline[] }) {
                   </p>
                 </div>
                 <div className="mt-4 flex items-center justify-between border-t border-[color:var(--color-border)] pt-3 text-[11px] font-semibold text-[color:var(--color-accent)]">
-                  <span>{hasArticles ? "Explore Papers" : "In Review"}</span>
+                  <span>Explore Journal</span>
                   <span className="transition-transform group-hover:translate-x-1">
                     →
                   </span>
@@ -106,7 +98,7 @@ export function DisciplinesMarquee({ journals }: { journals: Discipline[] }) {
             <div className="flex items-center justify-between border-b border-[color:var(--color-border)] pb-4">
               <div>
                 <h3 className="font-serif text-2xl font-semibold text-[color:var(--color-foreground)]">
-                  All Academic Disciplines & Journals
+                  Active Faculty Journals
                 </h3>
                 <p className="text-xs text-[color:var(--color-muted)]">
                   Faculty of Social Sciences, Imo State University
@@ -139,11 +131,7 @@ export function DisciplinesMarquee({ journals }: { journals: Discipline[] }) {
                 return (
                   <Link
                     key={j.id}
-                    href={
-                      hasArticles
-                        ? `/archives?journal=${j.slug}`
-                        : `/archives?journal=${j.slug}&status=upcoming`
-                    }
+                    href={`/journals/${j.slug}`}
                     onClick={() => setShowAllModal(false)}
                     className="flex flex-col justify-between rounded-[var(--radius-md)] border border-[color:var(--color-border)] bg-[color:var(--color-surface-raised)] p-5 transition hover:border-[color:var(--color-accent)]"
                   >
@@ -157,11 +145,7 @@ export function DisciplinesMarquee({ journals }: { journals: Discipline[] }) {
                             {j.articleCount}{" "}
                             {j.articleCount === 1 ? "Paper" : "Papers"}
                           </span>
-                        ) : (
-                          <span className="rounded-full bg-amber-500/10 px-2 py-0.5 font-semibold text-amber-300">
-                            Coming Soon
-                          </span>
-                        )}
+                        ) : null}
                       </div>
                       <h4 className="mt-3 font-serif text-lg font-semibold text-[color:var(--color-foreground)]">
                         {j.name}
@@ -177,11 +161,7 @@ export function DisciplinesMarquee({ journals }: { journals: Discipline[] }) {
                     </div>
 
                     <div className="mt-4 flex items-center justify-between border-t border-[color:var(--color-border)] pt-3 text-xs font-semibold text-[color:var(--color-accent)]">
-                      <span>
-                        {hasArticles
-                          ? "Explore Department Archives"
-                          : "In Review / Volume in Prep"}
-                      </span>
+                      <span>Explore Journal &amp; Submissions</span>
                       <span>→</span>
                     </div>
                   </Link>

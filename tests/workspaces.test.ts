@@ -3,7 +3,6 @@ import test from "node:test";
 
 import {
   getAvailableWorkspaces,
-  getJournalWorkspaces,
   getPostLoginDestination,
   type WorkspaceJournal,
   type WorkspaceSubject,

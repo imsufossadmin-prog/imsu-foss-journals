@@ -66,8 +66,6 @@ async function main() {
     },
   ];
 
-  let primaryJournal = null;
-
   for (const item of activeDepartments) {
     const dept = await prisma.department.upsert({
       where: { slug: item.slug },
@@ -84,13 +82,22 @@ async function main() {
       },
     });
 
-    const jnl = await prisma.journal.upsert({
+    const isPsychology = item.slug === "psychology";
+    const journalName = isPsychology
+      ? "Nigerian Journal of Contemporary Psychology (NJCP)"
+      : `${item.name} Journal Operations`;
+    const shortName = isPsychology ? "NJCP" : item.shortName;
+    const description = isPsychology
+      ? "Official peer-reviewed journal of the Department of Psychology, Faculty of Social Sciences, Imo State University."
+      : `Academic journal operations for the Department of ${item.name}.`;
+
+    await prisma.journal.upsert({
       where: { slug: item.slug },
       update: {
         departmentId: dept.id,
-        name: `${item.name} Journal Operations`,
-        shortName: item.shortName,
-        description: `Academic journal operations for the Department of ${item.name}.`,
+        name: journalName,
+        shortName: shortName,
+        description: description,
         institution: "Imo State University",
         faculty: "Faculty of Social Sciences",
         isActive: true,
@@ -98,41 +105,55 @@ async function main() {
       create: {
         slug: item.slug,
         departmentId: dept.id,
-        name: `${item.name} Journal Operations`,
-        shortName: item.shortName,
-        description: `Academic journal operations for the Department of ${item.name}.`,
+        name: journalName,
+        shortName: shortName,
+        description: description,
         institution: "Imo State University",
         faculty: "Faculty of Social Sciences",
         isActive: true,
       },
     });
-
-    if (item.slug === "psychology") primaryJournal = jnl;
   }
 
-  for (const item of [
+  const facultyJournals = [
     {
       slug: "ajsbs",
-      name: "African Journal of Social and Behavioural Sciences",
+      name: "African Journal of Social and Behavioural Sciences (AJSBS)",
       shortName: "AJSBS",
       description:
         "Official interdisciplinary journal of the Faculty of Social Sciences, Imo State University, publishing cutting-edge peer-reviewed research across social and behavioural sciences.",
     },
     {
-      slug: "gjsbr",
-      name: "Global Journal of Social and Behavioural Research",
-      shortName: "GJSBR",
+      slug: "gjcsr",
+      name: "Global Journal of Contemporary Social Research (GJCSR)",
+      shortName: "GJCSR",
       description:
-        "Global research and interdisciplinary inquiry advancing knowledge across social, psychological, economic, and behavioural disciplines.",
+        "Advancing global perspectives and multidisciplinary inquiry on contemporary social, economic, and behavioural developments.",
+    },
+    {
+      slug: "gjsbr",
+      name: "Global Journal of Contemporary Social Research (GJCSR)",
+      shortName: "GJCSR",
+      description:
+        "Advancing global perspectives and multidisciplinary inquiry on contemporary social, economic, and behavioural developments.",
+    },
+    {
+      slug: "njsr",
+      name: "Nwaebere Journal of Scientific Research (NJSR)",
+      shortName: "NJSR",
+      description:
+        "Named to honour IMSU heritage, focusing on innovative empirical and theoretical research inspired by African and global contexts.",
     },
     {
       slug: "njsbr",
-      name: "Nigerian Journal of Social and Behavioural Research",
-      shortName: "NJSBR",
+      name: "Nwaebere Journal of Scientific Research (NJSR)",
+      shortName: "NJSR",
       description:
-        "Promoting rigorous empirical inquiry, theoretical advancements, and policy research in social and behavioural sciences.",
+        "Named to honour IMSU heritage, focusing on innovative empirical and theoretical research inspired by African and global contexts.",
     },
-  ]) {
+  ];
+
+  for (const item of facultyJournals) {
     await prisma.journal.upsert({
       where: { slug: item.slug },
       update: {
@@ -154,9 +175,7 @@ async function main() {
     });
   }
 
-  console.log(
-    "✓ Seeded 7 departments and 10 active journals (3 Faculty, 7 Departmental).",
-  );
+  console.log("✓ Seeded departments and canonical active journals.");
 }
 
 main()

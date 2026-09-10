@@ -56,58 +56,72 @@ export default function AboutPage() {
 
               <div>
                 <h2 className="font-serif text-2xl font-semibold text-[color:var(--color-foreground)]">
-                  Key Faculty Journals
+                  Key Faculty & Departmental Journals
                 </h2>
                 <div className="mt-6 space-y-6">
                   <div className="rounded-[var(--radius-lg)] border border-[color:var(--color-border)] bg-[color:var(--color-surface-raised)] p-6">
                     <div className="flex items-center justify-between font-mono text-xs text-[color:var(--color-accent)]">
+                      <span className="font-bold">NJCP</span>
+                      <span>Departmental Journal</span>
+                    </div>
+                    <h3 className="mt-2 font-serif text-lg font-semibold text-[color:var(--color-foreground)]">
+                      Nigerian Journal of Contemporary Psychology
+                    </h3>
+                    <p className="mt-2 text-xs leading-relaxed text-[color:var(--color-muted)]">
+                      The official peer-reviewed journal of the Department of
+                      Psychology, advancing empirical, clinical, developmental,
+                      and social psychological research in Nigerian and African
+                      settings.
+                    </p>
+                  </div>
+
+                  <div className="rounded-[var(--radius-lg)] border border-[color:var(--color-border)] bg-[color:var(--color-surface-raised)] p-6">
+                    <div className="flex items-center justify-between font-mono text-xs text-[color:var(--color-accent)]">
                       <span className="font-bold">AJSBS (Est. 2009)</span>
-                      <span>Flagship Journal</span>
+                      <span>Faculty Flagship Journal</span>
                     </div>
                     <h3 className="mt-2 font-serif text-lg font-semibold text-[color:var(--color-foreground)]">
                       African Journal of Social and Behavioural Sciences
                     </h3>
                     <p className="mt-2 text-xs leading-relaxed text-[color:var(--color-muted)]">
-                      Launched in 2009, AJSBS has become a trusted source of
+                      Launched in 2009, AJSBS is a trusted source of
                       peer-reviewed articles spanning political science, public
                       administration, public relations, communication,
-                      geography, environmental management, information sciences,
-                      sociology, psychology, psychotherapy, crime and
-                      delinquency, economics, and financial management. AJSBS is
-                      well-regarded for its high academic standards and
-                      contributions to interdisciplinary research.
+                      geography, environmental management, sociology,
+                      psychology, crime and delinquency, economics, and
+                      financial management.
                     </p>
                   </div>
 
                   <div className="rounded-[var(--radius-lg)] border border-[color:var(--color-border)] bg-[color:var(--color-surface-raised)] p-6">
                     <div className="flex items-center justify-between font-mono text-xs text-[color:var(--color-accent)]">
-                      <span className="font-bold">GJSBR</span>
-                      <span>Global Research</span>
+                      <span className="font-bold">NJSR</span>
+                      <span>Heritage & Scientific Inquiry</span>
                     </div>
                     <h3 className="mt-2 font-serif text-lg font-semibold text-[color:var(--color-foreground)]">
-                      Global Journal of Social and Behavioural Research
-                    </h3>
-                    <p className="mt-2 text-xs leading-relaxed text-[color:var(--color-muted)]">
-                      Designed to serve as a platform for global perspectives on
-                      social and behavioural research. It encourages submissions
-                      that explore the interconnected nature of human behaviour
-                      and societal changes worldwide.
-                    </p>
-                  </div>
-
-                  <div className="rounded-[var(--radius-lg)] border border-[color:var(--color-border)] bg-[color:var(--color-surface-raised)] p-6">
-                    <div className="flex items-center justify-between font-mono text-xs text-[color:var(--color-accent)]">
-                      <span className="font-bold">NJSBR</span>
-                      <span>Heritage & Regional Studies</span>
-                    </div>
-                    <h3 className="mt-2 font-serif text-lg font-semibold text-[color:var(--color-foreground)]">
-                      Nwaebere Journal of Social and Behavioural Research
+                      Nwaebere Journal of Scientific Research
                     </h3>
                     <p className="mt-2 text-xs leading-relaxed text-[color:var(--color-muted)]">
                       Named to honour IMSU heritage, this journal focuses on
-                      innovative research inspired by African contexts while
-                      remaining relevant to global audiences, bridging regional
-                      insights with broader academic discussions.
+                      innovative empirical and scientific research inspired by
+                      African contexts while remaining relevant to global
+                      audiences.
+                    </p>
+                  </div>
+
+                  <div className="rounded-[var(--radius-lg)] border border-[color:var(--color-border)] bg-[color:var(--color-surface-raised)] p-6">
+                    <div className="flex items-center justify-between font-mono text-xs text-[color:var(--color-accent)]">
+                      <span className="font-bold">GJCSR</span>
+                      <span>Global Research</span>
+                    </div>
+                    <h3 className="mt-2 font-serif text-lg font-semibold text-[color:var(--color-foreground)]">
+                      Global Journal of Contemporary Social Research
+                    </h3>
+                    <p className="mt-2 text-xs leading-relaxed text-[color:var(--color-muted)]">
+                      Serving as a platform for global perspectives on
+                      contemporary social, behavioural, and policy research,
+                      exploring human behaviour and societal developments
+                      worldwide.
                     </p>
                   </div>
                 </div>
@@ -162,12 +176,25 @@ export default function AboutPage() {
                   </div>
                   <div>
                     <dt className="font-mono text-[10px] text-[color:var(--color-subtle)] uppercase">
-                      Contact Emails
+                      Official Email
                     </dt>
                     <dd className="mt-0.5 font-mono text-[color:var(--color-accent)]">
                       fossjournals@gmail.com
-                      <br />
-                      ajsbs2016@gmail.com
+                    </dd>
+                  </div>
+                  <div>
+                    <dt className="font-mono text-[10px] text-[color:var(--color-subtle)] uppercase">
+                      Secretariat WhatsApp (WhatsApp Only)
+                    </dt>
+                    <dd className="mt-0.5 font-mono text-[color:var(--color-accent)]">
+                      <a
+                        href="https://wa.me/2348033689174"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="hover:underline"
+                      >
+                        +234 803 368 9174
+                      </a>
                     </dd>
                   </div>
                 </dl>

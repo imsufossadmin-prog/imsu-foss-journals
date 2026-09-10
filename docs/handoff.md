@@ -2,9 +2,9 @@
 
 **Project:** IMSU FOSS Journals  
 **Institution:** Faculty of Social Sciences, Imo State University (IMSU)  
-**Current Development Stage:** Phase 7 Complete (Publishing, Production & Admin Content Management Center)  
-**Current Status:** All core author workflows, super admin operating center, user role management, instant chatbox, direct legacy manuscript publishing, public PDF reader API, and responsive mobile layouts complete with 72/72 tests passing.  
-**Last Updated:** August 2026
+**Current Development Stage:** Phase 8 Complete (Dedicated Per-Journal Portals, Governance Management, Public Archives Filtering, Admin Metadata Visibility Controls, Reviewer Applications & Pre-Production Hardening)  
+**Current Status:** All core author workflows, super admin operating center, user role management, instant chatbox, direct legacy manuscript publishing, public PDF reader API, 4 canonical journal portals, dynamic editorial board manager, reviewer applications, announcements center, WhatsApp secretariat contact, and admin metadata display toggles complete with 131/131 tests passing (0 ESLint errors/warnings, Prettier clean, clean Turbopack production build).  
+**Last Updated:** September 2026
 
 ---
 
@@ -1816,19 +1816,58 @@ ADD MORE PHASES
 
 ---
 
-# 41. NORTH STAR SUMMARY
+---
 
-When uncertain about a product decision, ask:
+# 42. PHASE 2: DEDICATED PER-JOURNAL HOMEPAGES & EDITORIAL BOARD MANAGEMENT
 
-"Would this make IMSU FOSS easier for an older, non-technical academic administrator to operate every day?"
+### Overview
 
-If yes, it is probably aligned.
+Phase 2 created dedicated per-journal landing pages at `/journals/[journalSlug]` for all 4 canonical journals:
 
-If it adds technical sophistication without making the client's work easier, it is probably unnecessary.
+1. `njcp` (Nigerian Journal of Contemporary Psychology, alias `psychology`)
+2. `ajsbs` (African Journal of Social and Behavioural Sciences)
+3. `njsr` (Nwaebere Journal of Scientific Research, alias `njsbr`)
+4. `gjcsr` (Global Journal of Contemporary Social Research, alias `gjsbr`)
 
-The final product should feel like the digital operating center of IMSU Faculty of Social Sciences journal publishing:
+### Core Features Delivered:
 
-simple enough to learn quickly,
-powerful enough to run the real workflow,
-secure enough for academic manuscripts,
-and structured enough to serve additional departments later.
+- **Dedicated Public Landing Pages (`/journals/[journalSlug]`)**:
+  - Full Dark Green Theme branding matching the IMSU FOSS design system.
+  - Hero banner with full title, acronym badge, department/faculty attribution, ISSNs, and direct "Submit to this Journal" CTA linking to `/author?journal=${slug}`.
+  - Tabbed/structured content sections:
+    1. **Overview & Scope**: Detailed aims and research scope.
+    2. **Editorial Board**: Institutional board hierarchy with Chief Editor, Deputy/Associate/Managing Editors, Board Members, and Consulting Editors.
+    3. **Current Issue**: Latest published volume/issue with Table of Contents and PDF downloads.
+    4. **Archives**: Historic publication issues and article repository.
+- **Dynamic Editorial Board Management (`/admin/editorial-board`)**:
+  - Full admin management interface allowing Super Admins and Journal Admins to add, edit, categorize, delete, and reset board members.
+  - Server-side validation with role-based authorization and targeted cache revalidation (`revalidatePath`).
+- **Complete Test Coverage**:
+  - 122/122 tests passing across unit tests, slug resolution, security roles, navigation consistency, and editorial mutations.
+
+---
+
+# 43. PUBLIC UI POLISH, NAVBAR STREAMLINING & ADMIN PRIORITIZATION
+
+### Overview
+
+Polish pass across the public-facing navigation, homepage marquee, publication fees schedule, dedicated journal landing pages, and super admin dashboard journal prioritization.
+
+### Key Enhancements Delivered:
+
+1. **Homepage Disciplines & Journals Marquee**:
+   - Filtered marquee items to active journals using `getJournalActivationMap()`.
+   - Header action dynamically displays `View All Journals (${journals.length})`.
+   - Updated modal and cards to link directly to `/journals/${slug}` dedicated landing pages.
+2. **Navbar Streamlining & Non-Wrapping Badges**:
+   - Streamlined top desktop and mobile navigation to `Home`, `Journals` (dropdown), `Archives`, and `Submissions`.
+   - Secondary pages (`About`, `Editorial Board`, `Current Issue`, `Contact`) preserved in `footerNavigation`.
+   - Fixed acronym badge wrapping with `whitespace-nowrap px-2 py-0.5 min-w-[56px] text-center shrink-0`.
+3. **Publication Fees Minimalist Redesign**:
+   - Compact card heights and reduced padding.
+   - Clean single-line pricing breakdown with emerald green accents for Nigerian (₦10,000 review / ₦25,000 publication) and Foreign ($50) authors.
+4. **Dedicated Journal Landing Page Metadata Cleanliness**:
+   - Streamlined ISSN/eISSN bar typography (`text-xs font-mono text-[color:var(--color-muted)]`).
+   - Clean, uncluttered "Submit to this Journal" CTA.
+5. **Super Admin Dashboard Journal Prioritization**:
+   - Prioritized 4 canonical journals (`njcp`, `ajsbs`, `njsr`, `gjcsr`) at top of active journals list with collapsible "View all journals" toggle.

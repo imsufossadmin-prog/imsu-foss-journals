@@ -77,6 +77,11 @@ export default async function JournalAdminLayout({
           matchSubtree: true,
         },
         {
+          href: "/admin/editorial-board",
+          label: "Editorial Board",
+          matchSubtree: true,
+        },
+        {
           href: `/admin/${journal.slug}/chat`,
           label: "Team Chat",
           matchSubtree: true,

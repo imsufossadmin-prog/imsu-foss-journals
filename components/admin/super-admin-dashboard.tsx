@@ -137,8 +137,8 @@ export function SuperAdminDashboard({
               : "Everything is up to date."}
           </h1>
           <p className="mt-3 max-w-xl text-sm leading-6 text-[color:var(--color-muted)]">
-            Live operational status across all 10 IMSU FOSS Journals. Click any
-            journal or action item to manage operations.
+            Live operational status across IMSU FOSS Journals. Click any journal
+            or action item to manage operations.
           </p>
         </div>
         <div className="shrink-0">

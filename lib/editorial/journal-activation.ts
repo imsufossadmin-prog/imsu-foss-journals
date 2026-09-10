@@ -1,19 +1,22 @@
 import "server-only";
 
 import type { GlobalRole } from "@prisma/client";
-import { isBreakGlassSuperAdminEmail } from "@/lib/auth/provisioning";
 import { isSuperAdmin } from "@/lib/auth/permissions";
 
 export const DEFAULT_ACTIVE_JOURNAL_SLUGS = new Set([
   "psychology",
+  "njcp",
   "ajsbs",
-  "gjsbr",
+  "njsr",
   "njsbr",
+  "gjcsr",
+  "gjsbr",
 ]);
 
 export const GATED_DEPARTMENTAL_JOURNAL_SLUGS = new Set([
   "economics",
   "sociology",
+  "political-science",
   "public-administration",
   "criminology-security-studies",
   "library-information-science",

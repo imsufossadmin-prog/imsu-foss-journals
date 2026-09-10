@@ -4,6 +4,7 @@ import { useActionState } from "react";
 import { useFormStatus } from "react-dom";
 
 import { submitAdherenceReportAction } from "@/app/editor/[journalSlug]/assignments/actions";
+import { formatDayMonthDate } from "@/lib/formatting/dates";
 import type { ActionState } from "@/lib/submissions/types";
 
 export type PastAdherenceReport = {
@@ -70,11 +71,11 @@ export function AdherenceReportForm({
                         ? "Partially Adhered"
                         : "Did Not Adhere"}
                   </span>
-                  <span className="text-[11px] text-[color:var(--color-subtle)]">
-                    {new Date(item.createdAt).toLocaleDateString("en-NG", {
-                      day: "numeric",
-                      month: "short",
-                    })}
+                  <span
+                    suppressHydrationWarning
+                    className="text-[11px] text-[color:var(--color-subtle)]"
+                  >
+                    {formatDayMonthDate(item.createdAt)}
                     {item.editor ? ` · ${item.editor.displayName}` : ""}
                     {item.submissionVersion
                       ? ` · v${item.submissionVersion.versionNumber}`

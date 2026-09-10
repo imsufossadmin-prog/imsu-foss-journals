@@ -3,6 +3,24 @@ import { Container } from "@/components/ui/container";
 import { PublicSearchBar } from "@/components/public-search-bar";
 import { IssueArchiveExplorer } from "@/components/public/issue-archive-explorer";
 import { prisma } from "@/lib/db/prisma";
+import { getJournalActivationMap } from "@/lib/editorial/journal-activation";
+
+export const dynamic = "force-dynamic";
+
+const CANONICAL_ORDER = [
+  "njcp",
+  "psychology",
+  "ajsbs",
+  "njsr",
+  "njsbr",
+  "gjcsr",
+  "gjsbr",
+];
+
+function getJournalPriority(slug: string): number {
+  const index = CANONICAL_ORDER.indexOf(slug.toLowerCase());
+  return index === -1 ? 999 : index;
+}
 
 export default async function ArchivesPage({
   searchParams,
@@ -13,68 +31,7 @@ export default async function ArchivesPage({
   const trimmedQ = q?.trim() || "";
   const isSearchMode = trimmedQ.length > 0;
 
-  const [articles, activeJournals] = await Promise.all([
-    prisma.article.findMany({
-      where: {
-        isPublished: true,
-        ...(journal
-          ? { issue: { volume: { journal: { slug: journal } } } }
-          : {}),
-        ...(isSearchMode
-          ? {
-              OR: [
-                { title: { contains: trimmedQ, mode: "insensitive" as const } },
-                {
-                  abstract: {
-                    contains: trimmedQ,
-                    mode: "insensitive" as const,
-                  },
-                },
-                { doi: { contains: trimmedQ, mode: "insensitive" as const } },
-                {
-                  authors: {
-                    some: {
-                      fullName: {
-                        contains: trimmedQ,
-                        mode: "insensitive" as const,
-                      },
-                    },
-                  },
-                },
-              ],
-            }
-          : {}),
-      },
-      orderBy: isSearchMode
-        ? [{ publishedAt: "desc" }, { title: "asc" }]
-        : [
-            { issue: { volume: { year: "desc" } } },
-            { issue: { volume: { number: "desc" } } },
-            { issue: { number: "desc" } },
-            { issueOrder: "asc" },
-            { pageStart: "asc" },
-            { publishedAt: "desc" },
-          ],
-      include: {
-        issue: {
-          include: {
-            volume: {
-              include: {
-                journal: {
-                  select: {
-                    name: true,
-                    slug: true,
-                    shortName: true,
-                    department: { select: { name: true } },
-                  },
-                },
-              },
-            },
-          },
-        },
-        authors: { orderBy: { position: "asc" } },
-      },
-    }),
+  const [allActiveJournals, activationMap] = await Promise.all([
     prisma.journal.findMany({
       where: { isActive: true },
       select: {
@@ -86,7 +43,84 @@ export default async function ArchivesPage({
       },
       orderBy: { name: "asc" },
     }),
+    getJournalActivationMap(),
   ]);
+
+  const activeJournals = allActiveJournals
+    .filter((j) => activationMap[j.slug] === true)
+    .sort((a, b) => {
+      const diff = getJournalPriority(a.slug) - getJournalPriority(b.slug);
+      if (diff !== 0) return diff;
+      return a.name.localeCompare(b.name);
+    });
+
+  const activeJournalSlugs = activeJournals.map((j) => j.slug);
+
+  const articles = await prisma.article.findMany({
+    where: {
+      isPublished: true,
+      ...(journal
+        ? { issue: { volume: { journal: { slug: journal } } } }
+        : {
+            issue: {
+              volume: { journal: { slug: { in: activeJournalSlugs } } },
+            },
+          }),
+      ...(isSearchMode
+        ? {
+            OR: [
+              { title: { contains: trimmedQ, mode: "insensitive" as const } },
+              {
+                abstract: {
+                  contains: trimmedQ,
+                  mode: "insensitive" as const,
+                },
+              },
+              { doi: { contains: trimmedQ, mode: "insensitive" as const } },
+              {
+                authors: {
+                  some: {
+                    fullName: {
+                      contains: trimmedQ,
+                      mode: "insensitive" as const,
+                    },
+                  },
+                },
+              },
+            ],
+          }
+        : {}),
+    },
+    orderBy: isSearchMode
+      ? [{ publishedAt: "desc" }, { title: "asc" }]
+      : [
+          { issue: { volume: { year: "desc" } } },
+          { issue: { volume: { number: "desc" } } },
+          { issue: { number: "desc" } },
+          { issueOrder: "asc" },
+          { pageStart: "asc" },
+          { publishedAt: "desc" },
+        ],
+    include: {
+      issue: {
+        include: {
+          volume: {
+            include: {
+              journal: {
+                select: {
+                  name: true,
+                  slug: true,
+                  shortName: true,
+                  department: { select: { name: true } },
+                },
+              },
+            },
+          },
+        },
+      },
+      authors: { orderBy: { position: "asc" } },
+    },
+  });
 
   const activeJournalObj = activeJournals.find((j) => j.slug === journal);
 

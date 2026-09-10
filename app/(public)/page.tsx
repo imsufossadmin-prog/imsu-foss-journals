@@ -5,75 +5,105 @@ import { PublicSearchBar } from "@/components/public-search-bar";
 import { Container } from "@/components/ui/container";
 import { publicSubmissionEntryPath } from "@/lib/auth/submission-entry";
 import { prisma } from "@/lib/db/prisma";
+import { getJournalActivationMap } from "@/lib/editorial/journal-activation";
+
+export const dynamic = "force-dynamic";
+
+const CANONICAL_ORDER = [
+  "njcp",
+  "psychology",
+  "ajsbs",
+  "njsr",
+  "njsbr",
+  "gjcsr",
+  "gjsbr",
+];
+
+function getJournalPriority(slug: string): number {
+  const index = CANONICAL_ORDER.indexOf(slug.toLowerCase());
+  return index === -1 ? 999 : index;
+}
 
 export default async function Home() {
-  const [publishedArticles, activeJournals] = await Promise.all([
-    prisma.article.findMany({
-      where: { isPublished: true },
-      orderBy: { publishedAt: "desc" },
-      include: {
-        issue: {
-          include: {
-            volume: {
-              include: {
-                journal: {
-                  select: {
-                    name: true,
-                    slug: true,
-                    department: { select: { name: true } },
+  const [publishedArticles, allActiveJournals, activationMap] =
+    await Promise.all([
+      prisma.article.findMany({
+        where: { isPublished: true },
+        orderBy: { publishedAt: "desc" },
+        include: {
+          issue: {
+            include: {
+              volume: {
+                include: {
+                  journal: {
+                    select: {
+                      name: true,
+                      slug: true,
+                      department: { select: { name: true } },
+                    },
+                  },
+                },
+              },
+            },
+          },
+          authors: { orderBy: { position: "asc" } },
+        },
+      }),
+      prisma.journal.findMany({
+        where: { isActive: true },
+        select: {
+          id: true,
+          name: true,
+          slug: true,
+          shortName: true,
+          description: true,
+          department: { select: { name: true } },
+          volumes: {
+            select: {
+              issues: {
+                select: {
+                  _count: {
+                    select: { articles: { where: { isPublished: true } } },
                   },
                 },
               },
             },
           },
         },
-        authors: { orderBy: { position: "asc" } },
-      },
-    }),
-    prisma.journal.findMany({
-      where: { isActive: true },
-      select: {
-        id: true,
-        name: true,
-        slug: true,
-        shortName: true,
-        description: true,
-        department: { select: { name: true } },
-        volumes: {
-          select: {
-            issues: {
-              select: {
-                _count: {
-                  select: { articles: { where: { isPublished: true } } },
-                },
-              },
-            },
-          },
-        },
-      },
-      orderBy: { name: "asc" },
-    }),
-  ]);
+        orderBy: { name: "asc" },
+      }),
+      getJournalActivationMap(),
+    ]);
+
+  const activeJournals = allActiveJournals.filter(
+    (j) => activationMap[j.slug] === true,
+  );
 
   const currentIssueArticle = publishedArticles[0] || null;
 
-  const disciplines = activeJournals.map((j) => {
-    let articleCount = 0;
-    for (const vol of j.volumes) {
-      for (const issue of vol.issues) {
-        articleCount += issue._count.articles;
+  const disciplines = activeJournals
+    .map((j) => {
+      let articleCount = 0;
+      for (const vol of j.volumes) {
+        for (const issue of vol.issues) {
+          articleCount += issue._count.articles;
+        }
       }
-    }
-    return {
-      id: j.id,
-      name: j.name,
-      slug: j.slug,
-      shortName: j.shortName,
-      departmentName: j.department?.name ?? j.name,
-      description: j.description,
-      articleCount,
-    };
-  });
+      return {
+        id: j.id,
+        name: j.name,
+        slug: j.slug,
+        shortName: j.shortName,
+        departmentName: j.department?.name ?? j.name,
+        description: j.description,
+        articleCount,
+      };
+    })
+    .sort((a, b) => {
+      const diff = getJournalPriority(a.slug) - getJournalPriority(b.slug);
+      if (diff !== 0) return diff;
+      return a.name.localeCompare(b.name);
+    });
 
   return (
     <div className="space-y-20 pb-24">
@@ -89,12 +119,6 @@ export default async function Home() {
           <div className="grid items-center gap-10 lg:grid-cols-[1.15fr_0.85fr] lg:gap-14">
             {/* Left: Statement & Direct Actions */}
             <div className="space-y-6 text-left">
-              {/* Institutional badge */}
-              <div className="inline-flex items-center gap-2 rounded-full border border-[color:var(--color-border-strong)] bg-[color:var(--color-surface)] px-3.5 py-1 text-xs font-semibold tracking-wider text-[color:var(--color-accent)] uppercase shadow-xs">
-                <span className="size-1.5 animate-pulse rounded-full bg-[color:var(--color-accent)]" />
-                <span>IMSU Faculty of Social Sciences</span>
-              </div>
-
               {/* Main Headline */}
               <h1 className="font-serif text-3xl leading-[1.15] font-semibold tracking-[-0.035em] text-[color:var(--color-foreground)] sm:text-4xl lg:text-5xl">
                 Advancing Social &amp; Behavioural Research in{" "}
@@ -106,9 +130,8 @@ export default async function Home() {
               {/* Subtitle */}
               <p className="font-serif text-base leading-relaxed text-[color:var(--color-muted)] sm:text-lg">
                 The official peer-reviewed open-access publishing portal of Imo
-                State University. Home to the African Journal of Social and
-                Behavioural Sciences (AJSBS) and departmental journals across 7
-                social disciplines.
+                State University, hosting departmental and faculty journals
+                across the Faculty of Social Sciences.
               </p>
 
               {/* Search & Actions */}
@@ -155,7 +178,7 @@ export default async function Home() {
                     </p>
                     <p className="mt-1 text-[11px] leading-relaxed text-[color:var(--color-muted)]">
                       Rigorous blind assessments by subject specialists across
-                      all 7 departments.
+                      all faculty journals.
                     </p>
                   </div>
 
@@ -171,11 +194,14 @@ export default async function Home() {
 
                   <div className="group rounded-md border border-[color:var(--color-border)] bg-[color:var(--color-surface-raised)] p-3.5 transition hover:border-[color:var(--color-accent)]">
                     <p className="text-xs font-bold text-[color:var(--color-foreground)]">
-                      7 Active Academic Disciplines
+                      4 Faculty Journals
                     </p>
                     <p className="mt-1 text-[11px] leading-relaxed text-[color:var(--color-muted)]">
-                      Psychology, Economics, Political Science, Sociology,
-                      Public Admin, CSS, &amp; LIS.
+                      Nigerian Journal of Contemporary Psychology (NJCP),
+                      African Journal of Social and Behavioural Sciences
+                      (AJSBS), Nwaebere Journal of Scientific Research (NJSR),
+                      and Global Journal of Contemporary Social Research
+                      (GJCSR).
                     </p>
                   </div>
                 </div>
@@ -288,7 +314,7 @@ export default async function Home() {
       <section className="border-t border-[color:var(--color-border)] bg-[color:var(--color-surface)]/40 py-16">
         <Container>
           <div className="mx-auto max-w-2xl text-center">
-            <p className="font-mono text-[10px] tracking-widest text-[color:var(--color-accent)] uppercase">
+            <p className="text-xs font-semibold tracking-wider text-[color:var(--color-accent)] uppercase">
               Author Publishing Pathway
             </p>
             <h2 className="mt-2 font-serif text-3xl font-semibold tracking-tight text-[color:var(--color-foreground)]">

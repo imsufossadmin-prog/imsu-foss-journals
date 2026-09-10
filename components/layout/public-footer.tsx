@@ -22,7 +22,7 @@ export function PublicFooter() {
             aria-label="Footer navigation"
             className="flex flex-wrap gap-x-5 gap-y-3"
           >
-            {siteConfig.publicNavigation.map((item) => (
+            {siteConfig.footerNavigation.map((item) => (
               <Link
                 key={item.href}
                 href={item.href}

@@ -239,7 +239,9 @@ export function ConversationThread({
                 ))}
               </div>
               <div className="mt-1 flex items-center gap-1 px-1 text-[10px] text-[color:var(--color-subtle)]">
-                <span>{time.format(new Date(message.createdAt))}</span>
+                <span suppressHydrationWarning>
+                  {time.format(new Date(message.createdAt))}
+                </span>
                 {mine ? <StatusIndicator status={status} /> : null}
               </div>
             </li>
@@ -256,7 +258,6 @@ export function MessageComposer({
   authorCorrectionAction,
   requestId,
   viewerId = "",
-  receipt: _receipt = false,
   initialCorrectionMode = false,
   initialAuthorCorrectionMode = false,
   onOptimisticAdd,
@@ -1223,10 +1224,9 @@ export function StartSubmissionForm({
     isActivated?: boolean;
   }>;
 }) {
+  const activeJournals = journals.filter((j) => j.isActivated !== false);
   const [journalSlug, setJournalSlug] = useState(
-    journals.find((j) => j.isActivated !== false)?.slug ??
-      journals[0]?.slug ??
-      "",
+    activeJournals[0]?.slug ?? journals[0]?.slug ?? "",
   );
   const [pending, startTransition] = useTransition();
 
@@ -1244,7 +1244,7 @@ export function StartSubmissionForm({
         }}
         className="flex items-center gap-2"
       >
-        {journals.length > 1 ? (
+        {activeJournals.length > 1 ? (
           <select
             name="journalSlug"
             value={journalSlug}
@@ -1252,10 +1252,9 @@ export function StartSubmissionForm({
             disabled={pending}
             className="app-field text-xs"
           >
-            {journals.map((j) => (
+            {activeJournals.map((j) => (
               <option key={j.id} value={j.slug}>
-                {j.department?.name ?? j.name}
-                {j.isActivated === false ? " (Not yet available)" : ""}
+                {j.name}
               </option>
             ))}
           </select>

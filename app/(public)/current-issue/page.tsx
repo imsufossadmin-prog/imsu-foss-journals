@@ -6,6 +6,8 @@ import {
 } from "@/components/public/issue-archive-explorer";
 import { prisma } from "@/lib/db/prisma";
 
+export const dynamic = "force-dynamic";
+
 export default async function CurrentIssuePage() {
   const publishedArticles = await prisma.article.findMany({
     where: {

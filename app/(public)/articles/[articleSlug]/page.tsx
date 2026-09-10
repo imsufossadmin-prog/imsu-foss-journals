@@ -4,6 +4,7 @@ import { notFound } from "next/navigation";
 
 import { Container } from "@/components/ui/container";
 import { prisma } from "@/lib/db/prisma";
+import { formatLongDate } from "@/lib/formatting/dates";
 
 export async function generateMetadata({
   params,
@@ -34,14 +35,27 @@ export async function generateMetadata({
     ? article.publishedAt.toISOString().split("T")[0].replaceAll("-", "/")
     : new Date().toISOString().split("T")[0].replaceAll("-", "/");
 
-  const otherMeta: Record<string, string> = {
+  const baseUrl = (
+    process.env.NEXT_PUBLIC_APP_URL || "https://imsu-foss.ng"
+  ).replace(/\/$/, "");
+  const pdfUrl = `${baseUrl}/api/articles/${article.slug}/pdf`;
+
+  const authorNames = article.authors.length
+    ? article.authors.map((a) => a.fullName)
+    : [];
+
+  const otherMeta: Record<string, string | string[]> = {
     citation_title: article.title,
     citation_publication_date: pubDate,
     citation_journal_title: journalName,
     citation_volume: String(article.issue.volume.number),
     citation_issue: String(article.issue.number),
+    citation_pdf_url: pdfUrl,
   };
 
+  if (authorNames.length > 0) {
+    otherMeta.citation_author = authorNames;
+  }
   if (article.pageStart) otherMeta.citation_firstpage = article.pageStart;
   if (article.pageEnd) otherMeta.citation_lastpage = article.pageEnd;
   if (article.doi) otherMeta.citation_doi = article.doi;
@@ -188,14 +202,10 @@ export default async function PublicArticlePage({
           ) : null}
 
           <div className="mt-8 flex items-center justify-between border-t border-[color:var(--color-border)] pt-4 text-xs text-[color:var(--color-subtle)]">
-            <span>
+            <span suppressHydrationWarning>
               Published:{" "}
               {article.publishedAt
-                ? new Date(article.publishedAt).toLocaleDateString("en-NG", {
-                    day: "numeric",
-                    month: "long",
-                    year: "numeric",
-                  })
+                ? formatLongDate(article.publishedAt)
                 : "Recently"}
             </span>
             <span className="font-semibold text-[color:var(--color-accent)]">

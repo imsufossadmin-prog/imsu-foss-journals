@@ -23,7 +23,7 @@ const SUPER_ADMINS = [
 async function syncSuperAdmins() {
   console.log("Syncing Super Admin accounts in database...");
 
-  for (const { email, name } of SUPER_ADMINS) {
+  for (const { email } of SUPER_ADMINS) {
     const user = await prisma.user.findUnique({
       where: { email },
       include: { globalRoles: true },

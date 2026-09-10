@@ -23,7 +23,7 @@ This version has breaking changes — APIs, conventions, and file structure may 
 **Name:** IMSU FOSS Journals  
 **Institution:** Faculty of Social Sciences, Imo State University (IMSU)  
 **Purpose:** Digital operating center for academic journal publishing operations  
-**Current Stage:** Phase 6 complete → Phase 7 (Publishing, Production & Admin Content Management Center) complete  
+**Current Stage:** Phase 8 Complete (Dedicated Per-Journal Portals, Governance Management, Public Archives Filtering, Reviewer Applications & Pre-Production Hardening)  
 **Primary active department:** Psychology  
 **Design philosophy:** Simple. Modern SaaS Aesthetic. Minimalist. Dark Green Theme. Fully Mobile Responsive. For non-technical academic operators.
 
@@ -345,15 +345,15 @@ Before finalizing any admin workflow, data-access mutation, or page query, verif
 ## 9. QUALITY GATES (ALWAYS VERIFY BEFORE COMMITTING)
 
 ```bash
-npm run format:check    # Prettier check
-npm run lint            # ESLint (must be clean 0 errors)
-npm test                # 72/72 tests passing (Node built-in runner)
+npm run format:check    # Prettier check (clean)
+npm run lint            # ESLint (must be clean 0 errors, 0 warnings)
+npm test                # 131/131 tests passing (Node built-in runner)
 npm run db:generate     # Regenerate Prisma client
 npx prisma validate     # Validate schema
 npm run build           # Production build
 ```
 
-Last verified baseline: **72/72 tests passing**, ESLint clean, production build clean.
+Last verified baseline: **131/131 tests passing**, ESLint clean (0 errors, 0 warnings), Prettier clean, production build clean.
 
 ---
 

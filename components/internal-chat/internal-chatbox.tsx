@@ -312,7 +312,10 @@ export function InternalChatBox({
                     </a>
                   ))}
                 </div>
-                <span className="mt-1 px-1 text-[10px] text-[color:var(--color-subtle)]">
+                <span
+                  suppressHydrationWarning
+                  className="mt-1 px-1 text-[10px] text-[color:var(--color-subtle)]"
+                >
                   {dateFormatter.format(new Date(message.createdAt))} ·{" "}
                   {timeFormatter.format(new Date(message.createdAt))}
                 </span>

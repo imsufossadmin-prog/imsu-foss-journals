@@ -46,7 +46,8 @@ export function calculateAverageScore(
   return Number((total / scores.length).toFixed(1));
 }
 
-export function validateReview(input: ReviewFormInput, _final: boolean) {
+export function validateReview(input: ReviewFormInput, _final = false) {
+  void _final;
   const fieldErrors: Record<string, string> = {};
   for (const dimension of scorecardDimensions) {
     const score = input[dimension.key];

@@ -31,32 +31,54 @@ export default function ContactPage() {
               <div className="grid gap-6 sm:grid-cols-2">
                 <div className="rounded-[var(--radius-lg)] border border-[color:var(--color-border)] bg-[color:var(--color-surface-raised)] p-6 shadow-sm">
                   <span className="font-mono text-[10px] font-bold text-[color:var(--color-accent)] uppercase">
-                    Official Emails
+                    Official Email
                   </span>
                   <h3 className="mt-2 font-serif text-lg font-semibold text-[color:var(--color-foreground)]">
-                    Editorial & Submissions
+                    Editorial &amp; Submissions
                   </h3>
                   <p className="mt-2 text-xs leading-relaxed text-[color:var(--color-muted)]">
                     For manuscript queries, payment confirmations, and review
                     status:
                   </p>
-                  <div className="mt-4 space-y-1.5 font-mono text-xs font-semibold text-[color:var(--color-accent)]">
+                  <div className="mt-4 font-mono text-xs font-semibold text-[color:var(--color-accent)]">
                     <a
                       href="mailto:fossjournals@gmail.com"
                       className="block hover:underline"
                     >
                       fossjournals@gmail.com
                     </a>
-                    <a
-                      href="mailto:ajsbs2016@gmail.com"
-                      className="block hover:underline"
-                    >
-                      ajsbs2016@gmail.com
-                    </a>
                   </div>
                 </div>
 
                 <div className="rounded-[var(--radius-lg)] border border-[color:var(--color-border)] bg-[color:var(--color-surface-raised)] p-6 shadow-sm">
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="font-mono text-[10px] font-bold text-[color:var(--color-accent)] uppercase">
+                      Secretariat WhatsApp
+                    </span>
+                    <span className="rounded bg-emerald-500/15 px-2 py-0.5 font-mono text-[10px] font-bold text-emerald-300 uppercase">
+                      WhatsApp Only
+                    </span>
+                  </div>
+                  <h3 className="mt-2 font-serif text-lg font-semibold text-[color:var(--color-foreground)]">
+                    Editorial Desk &amp; Enquiries
+                  </h3>
+                  <div className="mt-2">
+                    <a
+                      href="https://wa.me/2348033689174"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="font-mono text-sm font-bold text-[color:var(--color-accent)] hover:underline"
+                    >
+                      +234 803 368 9174
+                    </a>
+                    <p className="mt-1 text-xs text-[color:var(--color-muted)]">
+                      (Dr. Richards Ebeh) — Head of Managing Editors, IMSU FOSS
+                      Journals
+                    </p>
+                  </div>
+                </div>
+
+                <div className="rounded-[var(--radius-lg)] border border-[color:var(--color-border)] bg-[color:var(--color-surface-raised)] p-6 shadow-sm sm:col-span-2">
                   <span className="font-mono text-[10px] font-bold text-[color:var(--color-accent)] uppercase">
                     Physical Secretariat
                   </span>
@@ -76,7 +98,7 @@ export default function ContactPage() {
               {/* Office Hours & Turnaround Note */}
               <div className="rounded-[var(--radius-lg)] border border-[color:var(--color-border)] bg-[color:var(--color-surface)] p-8">
                 <h3 className="font-serif text-xl font-semibold text-[color:var(--color-foreground)]">
-                  Submission & Review Inquiries
+                  Submission &amp; Review Inquiries
                 </h3>
                 <p className="mt-3 text-xs leading-relaxed text-[color:var(--color-muted)]">
                   The editorial team operates during standard university
@@ -112,19 +134,24 @@ export default function ContactPage() {
                   <li className="flex items-start gap-2">
                     <span className="mt-1.5 size-1.5 rounded-full bg-[color:var(--color-accent)]" />
                     <span>
-                      African Journal of Social & Behavioural Sciences (AJSBS)
+                      Nigerian Journal of Contemporary Psychology (NJCP)
                     </span>
                   </li>
                   <li className="flex items-start gap-2">
                     <span className="mt-1.5 size-1.5 rounded-full bg-[color:var(--color-accent)]" />
                     <span>
-                      Global Journal of Social & Behavioural Research (GJSBR)
+                      African Journal of Social &amp; Behavioural Sciences
+                      (AJSBS)
                     </span>
                   </li>
                   <li className="flex items-start gap-2">
                     <span className="mt-1.5 size-1.5 rounded-full bg-[color:var(--color-accent)]" />
+                    <span>Nwaebere Journal of Scientific Research (NJSR)</span>
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <span className="mt-1.5 size-1.5 rounded-full bg-[color:var(--color-accent)]" />
                     <span>
-                      Nwaebere Journal of Social & Behavioural Research (NJSBR)
+                      Global Journal of Contemporary Social Research (GJCSR)
                     </span>
                   </li>
                 </ul>

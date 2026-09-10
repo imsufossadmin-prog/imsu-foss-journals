@@ -61,20 +61,26 @@ const authorUser = {
   journalRoles: [],
 };
 
-test("initially active journals (Psychology, AJSBS, GJSBR, NJSBR) are operational by default", async () => {
+test("initially active journals (NJCP, AJSBS, GJCSR, NJSR) are operational by default", async () => {
   const store = new MemoryJournalActivationStore();
   assert.equal(await isJournalActivated("psychology", store), true);
   assert.equal(await isJournalActivated("PSYCHOLOGY", store), true);
+  assert.equal(await isJournalActivated("njcp", store), true);
+  assert.equal(await isJournalActivated("NJCP", store), true);
   assert.equal(await isJournalActivated("ajsbs", store), true);
   assert.equal(await isJournalActivated("AJSBS", store), true);
+  assert.equal(await isJournalActivated("gjcsr", store), true);
   assert.equal(await isJournalActivated("gjsbr", store), true);
+  assert.equal(await isJournalActivated("njsr", store), true);
   assert.equal(await isJournalActivated("njsbr", store), true);
 });
 
 test("faculty journals with null departments are never locked", async () => {
   const store = new MemoryJournalActivationStore();
   assert.equal(await isJournalActivated("ajsbs", store), true);
+  assert.equal(await isJournalActivated("gjcsr", store), true);
   assert.equal(await isJournalActivated("gjsbr", store), true);
+  assert.equal(await isJournalActivated("njsr", store), true);
   assert.equal(await isJournalActivated("njsbr", store), true);
 });
 

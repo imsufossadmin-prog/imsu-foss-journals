@@ -35,7 +35,7 @@ export default function SubmissionsPage() {
     {
       step: "01",
       title: "Manuscript Submission & Intake",
-      desc: "Authors initiate a digital request through the portal or via official email (fossjournals@gmail.com / ajsbs2016@gmail.com) with a cover letter affirming original work.",
+      desc: "Authors initiate a digital request through the portal or via official email (fossjournals@gmail.com) with a cover letter affirming original work.",
     },
     {
       step: "02",
@@ -103,42 +103,108 @@ export default function SubmissionsPage() {
       {/* Fee Schedule */}
       <section>
         <Container>
-          <div className="rounded-[var(--radius-lg)] border border-[color:var(--color-accent)]/30 bg-[color:var(--color-surface)] p-8 shadow-sm">
-            <div className="flex flex-col gap-6 md:flex-row md:items-center md:justify-between">
-              <div>
-                <span className="font-mono text-xs font-semibold text-[color:var(--color-accent)] uppercase">
-                  Transparent Schedule
-                </span>
-                <h2 className="mt-1 font-serif text-2xl font-semibold text-[color:var(--color-foreground)]">
-                  Publication & Review Fees
-                </h2>
-                <p className="mt-2 text-xs leading-relaxed text-[color:var(--color-muted)]">
-                  To sustain independent peer-review operations, open-access
-                  hosting, and digital DOI registration:
-                </p>
-              </div>
-              <div className="flex flex-wrap gap-4">
-                <div className="rounded-[var(--radius-md)] border border-[color:var(--color-border)] bg-[color:var(--color-surface-raised)] p-4 text-center">
-                  <p className="font-mono text-[10px] text-[color:var(--color-subtle)] uppercase">
-                    Non-Refundable Review Fee
+          <div className="rounded-[var(--radius-lg)] border border-[color:var(--color-border)] bg-[color:var(--color-surface)] p-6 shadow-sm sm:p-8">
+            <div className="max-w-2xl">
+              <span className="font-mono text-xs font-semibold tracking-wider text-[color:var(--color-accent)] uppercase">
+                Transparent Schedule
+              </span>
+              <h2 className="mt-1 font-serif text-2xl font-semibold text-[color:var(--color-foreground)] sm:text-3xl">
+                Publication &amp; Review Fees
+              </h2>
+              <p className="mt-1.5 text-xs text-[color:var(--color-muted)]">
+                Direct operating costs for double-blind peer review,
+                copyediting, DOI registration, and open-access hosting.
+              </p>
+            </div>
+
+            <div className="mt-6 grid gap-5 md:grid-cols-2">
+              {/* Card 1: For Nigerian Authors */}
+              <div className="flex flex-col justify-between rounded-[var(--radius-md)] border border-[color:var(--color-border)] bg-[color:var(--color-surface-raised)] p-5 transition-colors hover:border-[color:var(--color-accent)]/50 sm:p-6">
+                <div>
+                  <div className="flex items-center justify-between font-mono text-[11px] text-[color:var(--color-accent)] uppercase">
+                    <span className="font-bold">Domestic Submissions</span>
+                    <span className="rounded bg-[color:var(--color-surface-strong)] px-2 py-0.5 font-bold">
+                      NGN (₦)
+                    </span>
+                  </div>
+                  <h3 className="mt-2.5 font-serif text-lg font-semibold text-[color:var(--color-foreground)]">
+                    For Nigerian Authors
+                  </h3>
+                  <p className="mt-0.5 text-xs text-[color:var(--color-muted)]">
+                    Researchers affiliated with Nigerian academic institutions.
                   </p>
-                  <p className="mt-1 font-serif text-2xl font-bold text-[color:var(--color-accent)]">
-                    ₦10,000
-                  </p>
-                  <p className="text-[10px] text-[color:var(--color-muted)]">
-                    Upon manuscript intake
-                  </p>
+
+                  <div className="mt-5 space-y-3.5 divide-y divide-[color:var(--color-border)]/60">
+                    <div className="pt-1">
+                      <p className="font-mono text-[10px] font-semibold tracking-wider text-[color:var(--color-subtle)] uppercase">
+                        Non-Refundable Review Fee
+                      </p>
+                      <div className="mt-1 flex flex-wrap items-baseline gap-2">
+                        <span className="font-serif text-2xl font-bold text-[color:var(--color-accent)]">
+                          ₦10,000
+                        </span>
+                        <span className="text-xs text-[color:var(--color-muted)] italic">
+                          (Upon manuscript submission)
+                        </span>
+                      </div>
+                    </div>
+
+                    <div className="pt-3.5">
+                      <p className="font-mono text-[10px] font-semibold tracking-wider text-[color:var(--color-subtle)] uppercase">
+                        Publication Fee
+                      </p>
+                      <div className="mt-1 flex flex-wrap items-baseline gap-2">
+                        <span className="font-serif text-2xl font-bold text-[color:var(--color-foreground)]">
+                          ₦25,000
+                        </span>
+                        <span className="text-xs text-[color:var(--color-muted)] italic">
+                          (Payable only upon acceptance)
+                        </span>
+                      </div>
+                    </div>
+                  </div>
                 </div>
-                <div className="rounded-[var(--radius-md)] border border-[color:var(--color-border)] bg-[color:var(--color-surface-raised)] p-4 text-center">
-                  <p className="font-mono text-[10px] text-[color:var(--color-subtle)] uppercase">
-                    Publication & Production Fee
+              </div>
+
+              {/* Card 2: For Foreign Authors */}
+              <div className="flex flex-col justify-between rounded-[var(--radius-md)] border border-[color:var(--color-border)] bg-[color:var(--color-surface-raised)] p-5 transition-colors hover:border-[color:var(--color-accent)]/50 sm:p-6">
+                <div>
+                  <div className="flex items-center justify-between font-mono text-[11px] text-[color:var(--color-accent)] uppercase">
+                    <span className="font-bold">International Submissions</span>
+                    <span className="rounded bg-[color:var(--color-surface-strong)] px-2 py-0.5 font-bold">
+                      USD ($)
+                    </span>
+                  </div>
+                  <h3 className="mt-2.5 font-serif text-lg font-semibold text-[color:var(--color-foreground)]">
+                    For Foreign Authors
+                  </h3>
+                  <p className="mt-0.5 text-xs text-[color:var(--color-muted)]">
+                    International scholars submitting from abroad.
                   </p>
-                  <p className="mt-1 font-serif text-2xl font-bold text-[color:var(--color-foreground)]">
-                    ₦25,000
-                  </p>
-                  <p className="text-[10px] text-[color:var(--color-muted)]">
-                    Payable only upon acceptance
-                  </p>
+
+                  <div className="mt-5 space-y-3.5">
+                    <div className="pt-1">
+                      <p className="font-mono text-[10px] font-semibold tracking-wider text-[color:var(--color-subtle)] uppercase">
+                        Article Publication Fee
+                      </p>
+                      <div className="mt-1 flex flex-wrap items-baseline gap-2">
+                        <span className="font-serif text-2xl font-bold text-[color:var(--color-accent)]">
+                          $50
+                        </span>
+                        <span className="text-xs text-[color:var(--color-muted)] italic">
+                          (Payable only upon acceptance)
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="mt-6 rounded-[var(--radius-sm)] border border-[color:var(--color-border)] bg-[color:var(--color-surface)] p-2.5 text-[11px] text-[color:var(--color-muted)]">
+                  <span className="font-semibold text-[color:var(--color-accent)]">
+                    Note:
+                  </span>{" "}
+                  No upfront review assessment fee for international authors;
+                  payable strictly upon formal paper acceptance.
                 </div>
               </div>
             </div>

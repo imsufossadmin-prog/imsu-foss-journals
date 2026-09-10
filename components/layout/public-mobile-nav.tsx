@@ -3,9 +3,17 @@
 import Link from "next/link";
 import { useState } from "react";
 
+type NavigationSubItem = {
+  label: string;
+  shortName?: string;
+  href: string;
+  description?: string;
+};
+
 type NavigationItem = {
   href: string;
   label: string;
+  children?: readonly NavigationSubItem[];
 };
 
 type PublicMobileNavProps = {
@@ -20,6 +28,7 @@ const actionLinkClass =
 
 export function PublicMobileNav({ items }: PublicMobileNavProps) {
   const [isOpen, setIsOpen] = useState(false);
+  const [journalsExpanded, setJournalsExpanded] = useState(true);
 
   return (
     <div className="relative lg:hidden">
@@ -51,19 +60,81 @@ export function PublicMobileNav({ items }: PublicMobileNavProps) {
         <nav
           id="mobile-navigation"
           aria-label="Mobile navigation"
-          className="absolute right-0 mt-3 w-72 rounded-[var(--radius-lg)] border border-[color:var(--color-border)] bg-[color:var(--color-surface-raised)] p-4 shadow-[var(--shadow-menu)] backdrop-blur-xl"
+          className="absolute right-0 mt-3 max-h-[85vh] w-80 overflow-y-auto rounded-[var(--radius-lg)] border border-[color:var(--color-border)] bg-[color:var(--color-surface-raised)] p-4 shadow-[var(--shadow-menu)] backdrop-blur-xl"
         >
           <div className="flex flex-col gap-1">
-            {items.map((item) => (
-              <Link
-                key={item.href}
-                href={item.href}
-                className={mobileLinkClass}
-                onClick={() => setIsOpen(false)}
-              >
-                {item.label}
-              </Link>
-            ))}
+            {items.map((item) => {
+              if (item.children && item.children.length > 0) {
+                return (
+                  <div
+                    key={item.label}
+                    className="mb-1 border-b border-[color:var(--color-border)] pb-2"
+                  >
+                    <button
+                      type="button"
+                      onClick={() => setJournalsExpanded((prev) => !prev)}
+                      className="flex w-full items-center justify-between px-2 py-2 text-sm font-semibold text-[color:var(--color-foreground)] hover:text-[color:var(--color-accent)]"
+                    >
+                      <span>{item.label}</span>
+                      <svg
+                        aria-hidden="true"
+                        className={`size-3.5 transition-transform ${journalsExpanded ? "rotate-180" : ""}`}
+                        viewBox="0 0 16 16"
+                        fill="none"
+                      >
+                        <path
+                          d="M4 6L8 10L12 6"
+                          stroke="currentColor"
+                          strokeWidth="1.5"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                        />
+                      </svg>
+                    </button>
+
+                    {journalsExpanded ? (
+                      <div className="mt-1 space-y-1 border-l border-[color:var(--color-border)] pl-2">
+                        {item.children.map((subItem) => (
+                          <Link
+                            key={subItem.href}
+                            href={subItem.href}
+                            className="flex flex-col rounded-[var(--radius-sm)] px-2 py-1.5 transition hover:bg-[color:var(--color-surface-strong)]"
+                            onClick={() => setIsOpen(false)}
+                          >
+                            <div className="flex items-center justify-between gap-2">
+                              <span className="text-xs font-semibold text-[color:var(--color-foreground)]">
+                                {subItem.label}
+                              </span>
+                              {subItem.shortName ? (
+                                <span className="min-w-[56px] shrink-0 rounded bg-[color:var(--color-surface)] px-2 py-0.5 text-center font-mono text-[9px] font-bold whitespace-nowrap text-[color:var(--color-accent)]">
+                                  {subItem.shortName}
+                                </span>
+                              ) : null}
+                            </div>
+                            {subItem.description ? (
+                              <span className="mt-0.5 text-[10px] text-[color:var(--color-muted)]">
+                                {subItem.description}
+                              </span>
+                            ) : null}
+                          </Link>
+                        ))}
+                      </div>
+                    ) : null}
+                  </div>
+                );
+              }
+
+              return (
+                <Link
+                  key={item.href}
+                  href={item.href}
+                  className={mobileLinkClass}
+                  onClick={() => setIsOpen(false)}
+                >
+                  {item.label}
+                </Link>
+              );
+            })}
             <Link
               href="/login"
               className={actionLinkClass}

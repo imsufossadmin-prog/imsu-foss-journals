@@ -147,13 +147,6 @@ export function PlatformRoleManager({
               (r) => r.role === "EDITOR",
             );
 
-            // Check if user is Journal Admin across all departments
-            const isAllDeptJA =
-              jaRoles.length >= journals.length && journals.length > 0;
-            // Check if user is Editor across all departments
-            const isAllDeptEditor =
-              editorRoles.length >= journals.length && journals.length > 0;
-
             const hasStaffRole =
               isSuperAdmin || jaRoles.length > 0 || editorRoles.length > 0;
 
