@@ -101,17 +101,33 @@ test("Phase 2: Default editorial board configurations for AJSBS, NJSR, GJCSR", (
   );
 
   const njsrBoard = getDefaultEditorialBoard("njsr");
-  assert.ok(njsrBoard.length > 0);
+  assert.equal(njsrBoard.length, 14);
   assert.equal(
     njsrBoard.find((m) => m.category === "CHIEF_EDITOR")?.name,
-    "Prof. Nkwam C. Uwaoma",
+    "Prof Okee Okoro",
+  );
+  assert.equal(
+    njsrBoard.find((m) => m.category === "DEPUTY_EDITOR")?.name,
+    "Leonard C. Onwukwe, PhD",
+  );
+  assert.equal(
+    njsrBoard.find((m) => m.category === "MANAGING_EDITOR")?.name,
+    "Richards E. Ebeh, PhD",
   );
 
   const gjcsrBoard = getDefaultEditorialBoard("gjcsr");
-  assert.ok(gjcsrBoard.length > 0);
+  assert.equal(gjcsrBoard.length, 13);
   assert.equal(
     gjcsrBoard.find((m) => m.category === "CHIEF_EDITOR")?.name,
-    "Prof. B.T.O. Ikegwuoha",
+    "Prof Nkwam C. Uwaoma",
+  );
+  assert.equal(
+    gjcsrBoard.find((m) => m.category === "DEPUTY_EDITOR")?.name,
+    "Chinedu N. Nwokorie, PhD",
+  );
+  assert.equal(
+    gjcsrBoard.find((m) => m.category === "MANAGING_EDITOR")?.name,
+    "Richards E. Ebeh, PhD",
   );
 });
 

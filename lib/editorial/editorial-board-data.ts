@@ -426,156 +426,247 @@ export const AJSBS_EDITORIAL_BOARD: EditorialBoardMember[] = [
 export const NJSR_EDITORIAL_BOARD: EditorialBoardMember[] = [
   {
     id: "njsr-chief",
-    name: "Prof. Nkwam C. Uwaoma",
+    name: "Prof Okee Okoro",
     role: "Chief Editor",
     affiliation:
-      "Faculty of Social Sciences, Imo State University, Owerri, Nigeria",
+      "Department of Library and Information Science, Imo State University, Owerri, Nigeria",
     category: "CHIEF_EDITOR",
     order: 1,
   },
   {
     id: "njsr-deputy",
-    name: "Prof. Fabian Emerenini",
+    name: "Leonard C. Onwukwe, PhD",
     role: "Deputy Editor",
     affiliation:
-      "Faculty of Social Sciences, Imo State University, Owerri, Nigeria",
+      "Department of Psychology, Imo State University, Owerri, Nigeria",
     category: "DEPUTY_EDITOR",
     order: 2,
   },
   {
     id: "njsr-managing",
-    name: "Richards E. Ebeh, Ph.D.",
+    name: "Richards E. Ebeh, PhD",
     role: "Managing Editor",
     affiliation:
-      "Faculty of Social Sciences, Imo State University, Owerri, Nigeria",
+      "Department of Psychology, Imo State University, Owerri, Nigeria",
     category: "MANAGING_EDITOR",
     order: 3,
   },
   {
     id: "njsr-bm-1",
-    name: "Prof. Charles I. Mbaeze",
+    name: "Prof Aham Ikwumezie",
     role: "Editorial Board Member",
-    affiliation: "Faculty of Social Sciences, Imo State University",
+    affiliation:
+      "Department of Economics, Imo State University, Owerri, Imo State, Nigeria",
     category: "BOARD_MEMBER",
     order: 4,
   },
   {
     id: "njsr-bm-2",
-    name: "Prof. Cletus N. Offor",
+    name: "Prof Samuel Ezeanyika",
     role: "Editorial Board Member",
-    affiliation: "Faculty of Social Sciences, Imo State University",
+    affiliation:
+      "Department of Political Science, Imo State University, Owerri, Imo State, Nigeria",
     category: "BOARD_MEMBER",
     order: 5,
   },
   {
     id: "njsr-bm-3",
-    name: "Leonard C. Onwukwe, PhD",
+    name: "Prof Paschal I.O. Igboeche",
     role: "Editorial Board Member",
-    affiliation: "Faculty of Social Sciences, Imo State University",
+    affiliation:
+      "Department of Public Administration, Imo State University, Owerri, Nigeria",
     category: "BOARD_MEMBER",
     order: 6,
   },
   {
     id: "njsr-bm-4",
-    name: "Ann Ukachi Madukwe PhD",
+    name: "Prof Okey Anyaoha",
     role: "Editorial Board Member",
-    affiliation: "Faculty of Social Sciences, Imo State University",
+    affiliation: "Department of Sociology, Imo State University, Owerri",
     category: "BOARD_MEMBER",
     order: 7,
   },
   {
-    id: "njsr-ce-1",
-    name: "Prof. Stanley Okafor",
-    role: "Consulting Editor",
-    affiliation: "Imo State University, Owerri, Nigeria",
-    category: "CONSULTING_EDITOR",
+    id: "njsr-bm-5",
+    name: "Prof Charles I. Mbaeze",
+    role: "Editorial Board Member",
+    affiliation:
+      "Department of Psychology, Imo State University, Owerri, Nigeria",
+    category: "BOARD_MEMBER",
     order: 8,
   },
   {
-    id: "njsr-ce-2",
-    name: "Prof. Benjamin Ehigie",
-    role: "Consulting Editor",
-    affiliation: "University of Ibadan, Ibadan, Nigeria",
-    category: "CONSULTING_EDITOR",
+    id: "njsr-bm-6",
+    name: "Prof. Collins Nwaogwugwu",
+    role: "Editorial Board Member",
+    affiliation:
+      "Department of Economics, Nnamdi Azikiwe University, Awka, Nigeria",
+    category: "BOARD_MEMBER",
     order: 9,
+  },
+  {
+    id: "njsr-bm-7",
+    name: "Prof Daniel Nkwocha",
+    role: "Editorial Board Member",
+    affiliation:
+      "Department of Criminology and Security Studies, Imo State University, Owerri, Nigeria",
+    category: "BOARD_MEMBER",
+    order: 10,
+  },
+  {
+    id: "njsr-bm-8",
+    name: "Adaora Joy Udo-Anyanwu",
+    role: "Editorial Board Member",
+    affiliation:
+      "Department of Library and Information Science, Imo State University, Owerri, Nigeria",
+    category: "BOARD_MEMBER",
+    order: 11,
+  },
+  {
+    id: "njsr-ce-1",
+    name: "Prof R.N. Ugokwe-Ossai",
+    role: "Consulting Editor",
+    affiliation:
+      "Department of Psychology, Nnamdi Azikiwe University, Awka, Nigeria",
+    category: "CONSULTING_EDITOR",
+    order: 12,
+  },
+  {
+    id: "njsr-ce-2",
+    name: "Prof Ike Ernest Onyishi",
+    role: "Consulting Editor",
+    affiliation:
+      "Department of Psychology, University of Nigeria, Nsukka, Nigeria",
+    category: "CONSULTING_EDITOR",
+    order: 13,
+  },
+  {
+    id: "njsr-ce-3",
+    name: "Prof Nnamdi Obikeze",
+    role: "Consulting Editor",
+    affiliation:
+      "Chukwuemeka Odumegwu Ojukwu University, Anambra State, Nigeria",
+    category: "CONSULTING_EDITOR",
+    order: 14,
   },
 ];
 
 export const GJCSR_EDITORIAL_BOARD: EditorialBoardMember[] = [
   {
     id: "gjcsr-chief",
-    name: "Prof. B.T.O. Ikegwuoha",
+    name: "Prof Nkwam C. Uwaoma",
     role: "Chief Editor",
     affiliation:
-      "Faculty of Social Sciences, Imo State University, Owerri, Nigeria",
+      "Department of Psychology, Imo State University, Owerri, Nigeria",
     category: "CHIEF_EDITOR",
     order: 1,
   },
   {
     id: "gjcsr-deputy",
-    name: "Vin O. Umeh, Ph.D.",
+    name: "Chinedu N. Nwokorie, PhD",
     role: "Deputy Editor",
-    affiliation:
-      "Faculty of Social Sciences, Imo State University, Owerri, Nigeria",
+    affiliation: "Department of Sociology, Imo State University, Owerri",
     category: "DEPUTY_EDITOR",
     order: 2,
   },
   {
     id: "gjcsr-managing",
-    name: "Richards E. Ebeh, Ph.D.",
+    name: "Richards E. Ebeh, PhD",
     role: "Managing Editor",
     affiliation:
-      "Faculty of Social Sciences, Imo State University, Owerri, Nigeria",
+      "Department of Psychology, Imo State University, Owerri, Nigeria",
     category: "MANAGING_EDITOR",
     order: 3,
   },
   {
     id: "gjcsr-bm-1",
-    name: "Prof. Sam Ezeanyika",
+    name: "Prof Basil Onyeoziri Edom",
     role: "Editorial Board Member",
-    affiliation: "Faculty of Social Sciences, Imo State University",
+    affiliation:
+      "Department of Library and Information Science, Imo State University, Owerri, Nigeria",
     category: "BOARD_MEMBER",
     order: 4,
   },
   {
     id: "gjcsr-bm-2",
-    name: "Prof. Okechi D. Azuwike",
+    name: "Prof Andrew A. Igwemma",
     role: "Editorial Board Member",
-    affiliation: "Faculty of Social Sciences, Imo State University",
+    affiliation:
+      "Department of Economics, Imo State University, Owerri, Imo State, Nigeria",
     category: "BOARD_MEMBER",
     order: 5,
   },
   {
     id: "gjcsr-bm-3",
-    name: "Prof. Andrew A. Igwemma",
+    name: "Prof Pearl Chidinma Akanwa",
     role: "Editorial Board Member",
-    affiliation: "Faculty of Social Sciences, Imo State University",
+    affiliation:
+      "Department of Library and Information Science, Imo State University, Owerri, Nigeria",
     category: "BOARD_MEMBER",
     order: 6,
   },
   {
     id: "gjcsr-bm-4",
-    name: "Ethelbert Njoku PhD",
+    name: "Ethelbert Njoku, PhD",
     role: "Editorial Board Member",
-    affiliation: "Faculty of Social Sciences, Imo State University",
+    affiliation:
+      "Department of Psychology, Imo State University, Owerri, Nigeria",
     category: "BOARD_MEMBER",
     order: 7,
   },
   {
-    id: "gjcsr-ce-1",
-    name: "Prof. Collins Nwaogwugwu",
-    role: "Consulting Editor",
-    affiliation: "Faculty of Social Sciences, Imo State University",
-    category: "CONSULTING_EDITOR",
+    id: "gjcsr-bm-5",
+    name: "Emmanuel Ogueri Ibekwe, PhD",
+    role: "Editorial Board Member",
+    affiliation:
+      "Department of Political Science, Imo State University, Owerri, Nigeria",
+    category: "BOARD_MEMBER",
     order: 8,
   },
   {
-    id: "gjcsr-ce-2",
-    name: "Prof. Ike Ernest Onyishi",
-    role: "Consulting Editor",
-    affiliation: "University of Nigeria, Nsukka, Nigeria",
-    category: "CONSULTING_EDITOR",
+    id: "gjcsr-bm-6",
+    name: "Ucho Aondoaver, PhD",
+    role: "Editorial Board Member",
+    affiliation:
+      "Department of Psychology, Benue State University, Makurdi, Nigeria",
+    category: "BOARD_MEMBER",
     order: 9,
+  },
+  {
+    id: "gjcsr-bm-7",
+    name: "Prof Agness Osita-Njoku",
+    role: "Editorial Board Member",
+    affiliation:
+      "Department of Sociology, Imo State University, Owerri, Imo State, Nigeria",
+    category: "BOARD_MEMBER",
+    order: 10,
+  },
+  {
+    id: "gjcsr-ce-1",
+    name: "Prof Benjamin Ehigie",
+    role: "Consulting Editor",
+    affiliation:
+      "Department of Psychology, University of Ibadan, Ibadan, Nigeria",
+    category: "CONSULTING_EDITOR",
+    order: 11,
+  },
+  {
+    id: "gjcsr-ce-2",
+    name: "Prof Nchor Bichene Okorn",
+    role: "Consulting Editor",
+    affiliation:
+      "Department of Political Science, Dillard University of New Orleans, Louisiana, USA",
+    category: "CONSULTING_EDITOR",
+    order: 12,
+  },
+  {
+    id: "gjcsr-ce-3",
+    name: "Prof Stanley Okafor",
+    role: "Consulting Editor",
+    affiliation:
+      "Department of Geography, Niger Delta University, Yenagoa, Bayelsa State, Nigeria",
+    category: "CONSULTING_EDITOR",
+    order: 13,
   },
 ];
 
