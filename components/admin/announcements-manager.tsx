@@ -71,7 +71,7 @@ export function AnnouncementsManager({
         setAnnouncements((prev) =>
           prev.map((a) =>
             a.id === editingItem.id
-              ? {
+              ? res.announcement || {
                   ...a,
                   title: formData.get("title")?.toString() || a.title,
                   category: (formData.get("category")?.toString() ||
@@ -276,6 +276,17 @@ export function AnnouncementsManager({
                 {item.content}
               </p>
 
+              {item.imageUrl ? (
+                <div className="mt-3 overflow-hidden rounded-md border border-[color:var(--color-border)]">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src={item.imageUrl}
+                    alt={item.title}
+                    className="max-h-56 w-full object-cover"
+                  />
+                </div>
+              ) : null}
+
               <div className="mt-4 flex flex-wrap items-center justify-between gap-3 border-t border-[color:var(--color-border)] pt-3">
                 <div className="flex items-center gap-2">
                   <button
@@ -377,6 +388,21 @@ export function AnnouncementsManager({
                   required
                   rows={4}
                   placeholder="Provide complete announcement details, submission deadlines, themes, formatting instructions..."
+                  className="app-field mt-1 w-full text-xs"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-[color:var(--color-foreground)]">
+                  Cover Image / Poster{" "}
+                  <span className="font-normal text-[color:var(--color-subtle)]">
+                    (Optional - JPG, PNG, WEBP)
+                  </span>
+                </label>
+                <input
+                  type="file"
+                  name="image"
+                  accept="image/png,image/jpeg,image/webp"
                   className="app-field mt-1 w-full text-xs"
                 />
               </div>
@@ -488,6 +514,34 @@ export function AnnouncementsManager({
                   defaultValue={editingItem.content}
                   required
                   rows={4}
+                  className="app-field mt-1 w-full text-xs"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-[color:var(--color-foreground)]">
+                  Cover Image / Poster{" "}
+                  <span className="font-normal text-[color:var(--color-subtle)]">
+                    (Optional - JPG, PNG, WEBP)
+                  </span>
+                </label>
+                {editingItem.imageUrl ? (
+                  <div className="mt-1 mb-2 flex items-center gap-3">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img
+                      src={editingItem.imageUrl}
+                      alt="Current preview"
+                      className="h-14 w-24 rounded border border-[color:var(--color-border)] object-cover"
+                    />
+                    <span className="text-[11px] text-[color:var(--color-muted)]">
+                      Image attached. Choose a file below to replace it.
+                    </span>
+                  </div>
+                ) : null}
+                <input
+                  type="file"
+                  name="image"
+                  accept="image/png,image/jpeg,image/webp"
                   className="app-field mt-1 w-full text-xs"
                 />
               </div>

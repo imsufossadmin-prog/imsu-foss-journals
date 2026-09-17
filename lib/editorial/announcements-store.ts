@@ -17,6 +17,7 @@ export interface Announcement {
   category: AnnouncementCategory;
   targetJournal: string; // "ALL" | "njcp" | "ajsbs" | "njsr" | "gjcsr"
   content: string;
+  imageUrl?: string;
   publishedAt: string; // ISO string
   expiresAt?: string; // ISO string
   isActive: boolean;
@@ -199,16 +200,20 @@ export async function createAnnouncement({
   category,
   targetJournal,
   content,
+  imageUrl,
   expiresAt,
   isActive = true,
+  authorName: customAuthorName,
   actor,
 }: {
   title: string;
   category: AnnouncementCategory;
   targetJournal: string;
   content: string;
+  imageUrl?: string;
   expiresAt?: string;
   isActive?: boolean;
+  authorName?: string;
   actor: Parameters<typeof isSuperAdmin>[0];
 }): Promise<{ success: boolean; error?: string; announcement?: Announcement }> {
   if (!title.trim() || !content.trim()) {
@@ -236,7 +241,9 @@ export async function createAnnouncement({
   const id = `ann-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
   const slug = `${slugify(title)}-${Date.now().toString(36)}`;
   const authorEmail = (actor as { email?: string })?.email;
-  const authorName = authorEmail ? authorEmail.split("@")[0] : "Administrator";
+  const authorName =
+    customAuthorName?.trim() ||
+    (authorEmail ? authorEmail.split("@")[0] : "Administrator");
 
   const newAnn: Announcement = {
     id,
@@ -245,6 +252,7 @@ export async function createAnnouncement({
     category,
     targetJournal: normalizedJournal,
     content: content.trim(),
+    imageUrl: imageUrl?.trim() || undefined,
     publishedAt: new Date().toISOString(),
     expiresAt: expiresAt?.trim() || undefined,
     isActive: Boolean(isActive),
@@ -272,6 +280,7 @@ export async function updateAnnouncement({
   category,
   targetJournal,
   content,
+  imageUrl,
   expiresAt,
   isActive,
   actor,
@@ -281,10 +290,11 @@ export async function updateAnnouncement({
   category: AnnouncementCategory;
   targetJournal: string;
   content: string;
+  imageUrl?: string;
   expiresAt?: string;
   isActive: boolean;
   actor: Parameters<typeof isSuperAdmin>[0];
-}): Promise<{ success: boolean; error?: string }> {
+}): Promise<{ success: boolean; error?: string; announcement?: Announcement }> {
   const store = readPersistedStore();
   const annIndex = store.announcements.findIndex(
     (a) => a.id === announcementId,
@@ -312,15 +322,19 @@ export async function updateAnnouncement({
     };
   }
 
-  store.announcements[annIndex] = {
+  const updated: Announcement = {
     ...existing,
     title: title.trim(),
     category,
     targetJournal: normalizedJournal,
     content: content.trim(),
+    imageUrl:
+      imageUrl !== undefined ? imageUrl.trim() || undefined : existing.imageUrl,
     expiresAt: expiresAt?.trim() || undefined,
     isActive: Boolean(isActive),
   };
+
+  store.announcements[annIndex] = updated;
 
   writePersistedStore(store);
 
@@ -332,7 +346,7 @@ export async function updateAnnouncement({
     // ignore outside Next.js request context
   }
 
-  return { success: true };
+  return { success: true, announcement: updated };
 }
 
 export async function deleteAnnouncement({

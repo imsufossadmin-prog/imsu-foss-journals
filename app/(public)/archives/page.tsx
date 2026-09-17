@@ -8,13 +8,13 @@ import { getJournalActivationMap } from "@/lib/editorial/journal-activation";
 export const dynamic = "force-dynamic";
 
 const CANONICAL_ORDER = [
-  "njcp",
-  "psychology",
   "ajsbs",
   "njsr",
   "njsbr",
   "gjcsr",
   "gjsbr",
+  "njcp",
+  "psychology",
 ];
 
 function getJournalPriority(slug: string): number {
@@ -216,7 +216,7 @@ export default async function ArchivesPage({
                       : "border border-[color:var(--color-border)] bg-[color:var(--color-surface-raised)] text-[color:var(--color-muted)] hover:text-[color:var(--color-foreground)]"
                   }`}
                 >
-                  {j.shortName || j.name}
+                  {(j.slug === "psychology" ? "NJCP" : j.shortName) || j.name}
                 </Link>
               );
             })}

@@ -33,7 +33,10 @@ export function EditorialBoardManager({
   initialBoards: Record<string, EditorialBoardMember[]>;
 }) {
   const [journals, setJournals] = useState<JournalMetadata[]>(initialJournals);
-  const [activeSlug, setActiveSlug] = useState<string>(
+  const [activeBoardSlug, setActiveBoardSlug] = useState<string>(
+    journals[0]?.slug ?? "njcp",
+  );
+  const [activeMetaSlug, setActiveMetaSlug] = useState<string>(
     journals[0]?.slug ?? "njcp",
   );
   const [showAddModal, setShowAddModal] = useState(false);
@@ -51,28 +54,29 @@ export function EditorialBoardManager({
   const [metaPending, startMetaTransition] = useTransition();
   const [togglePending, startToggleTransition] = useTransition();
 
-  const currentJournal =
-    journals.find((j) => j.slug === activeSlug) || journals[0];
-  const members = initialBoards[activeSlug] || [];
+  const currentBoardJournal =
+    journals.find((j) => j.slug === activeBoardSlug) || journals[0];
+  const currentMetaJournal =
+    journals.find((j) => j.slug === activeMetaSlug) || journals[0];
+  const members = initialBoards[activeBoardSlug] || [];
+  const showMetadataChecked =
+    currentMetaJournal?.showMetadataOnHomepage === true;
 
-  const [showMetadataChecked, setShowMetadataChecked] = useState<boolean>(
-    currentJournal?.showMetadataOnHomepage === true,
-  );
-
-  // Sync controlled toggle state when active journal tab changes
-  const handleTabChange = (slug: string) => {
-    setActiveSlug(slug);
+  const handleBoardTabChange = (slug: string) => {
+    setActiveBoardSlug(slug);
     setFeedback(null);
-    const targetJournal = journals.find((j) => j.slug === slug);
-    setShowMetadataChecked(targetJournal?.showMetadataOnHomepage === true);
+  };
+
+  const handleMetaTabChange = (slug: string) => {
+    setActiveMetaSlug(slug);
+    setFeedback(null);
   };
 
   const handleToggleVisibility = (newChecked: boolean) => {
     // 1. Immediate optimistic UI update
-    setShowMetadataChecked(newChecked);
     setJournals((prev) =>
       prev.map((j) =>
-        j.slug === activeSlug
+        j.slug === activeMetaSlug
           ? { ...j, showMetadataOnHomepage: newChecked }
           : j,
       ),
@@ -81,22 +85,21 @@ export function EditorialBoardManager({
     // 2. Instant background server action
     startToggleTransition(async () => {
       const res = await toggleJournalMetadataVisibilityAction({
-        journalSlug: activeSlug,
+        journalSlug: activeMetaSlug,
         isVisible: newChecked,
       });
       if (res.success) {
         setFeedback({
           type: "success",
           message: newChecked
-            ? `Metadata bar turned ON on public page (${currentJournal.shortName})`
-            : `Metadata bar turned OFF on public page (${currentJournal.shortName})`,
+            ? `Metadata bar turned ON on public page (${currentMetaJournal.shortName})`
+            : `Metadata bar turned OFF on public page (${currentMetaJournal.shortName})`,
         });
       } else {
         // Rollback on error
-        setShowMetadataChecked(!newChecked);
         setJournals((prev) =>
           prev.map((j) =>
-            j.slug === activeSlug
+            j.slug === activeMetaSlug
               ? { ...j, showMetadataOnHomepage: !newChecked }
               : j,
           ),
@@ -113,7 +116,7 @@ export function EditorialBoardManager({
     e.preventDefault();
     const form = e.currentTarget;
     const formData = new FormData(form);
-    formData.set("journalSlug", activeSlug);
+    formData.set("journalSlug", activeMetaSlug);
     formData.set(
       "showMetadataOnHomepage",
       showMetadataChecked ? "true" : "false",
@@ -124,7 +127,7 @@ export function EditorialBoardManager({
       if (res.success) {
         setJournals((prev) =>
           prev.map((j) =>
-            j.slug === activeSlug
+            j.slug === activeMetaSlug
               ? {
                   ...j,
                   issnPrint:
@@ -143,7 +146,7 @@ export function EditorialBoardManager({
         );
         setFeedback({
           type: "success",
-          message: `Metadata details for ${currentJournal.shortName} updated.`,
+          message: `Metadata details for ${currentMetaJournal.shortName} updated.`,
         });
       } else {
         setFeedback({
@@ -157,7 +160,7 @@ export function EditorialBoardManager({
   const handleAddSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     const formData = new FormData(e.currentTarget);
-    formData.set("journalSlug", activeSlug);
+    formData.set("journalSlug", activeBoardSlug);
 
     startAddTransition(async () => {
       const res = await addEditorialBoardMemberAction({}, formData);
@@ -180,7 +183,7 @@ export function EditorialBoardManager({
     e.preventDefault();
     if (!editingMember) return;
     const formData = new FormData(e.currentTarget);
-    formData.set("journalSlug", activeSlug);
+    formData.set("journalSlug", activeBoardSlug);
     formData.set("memberId", editingMember.id);
 
     startAddTransition(async () => {
@@ -207,7 +210,7 @@ export function EditorialBoardManager({
       return;
     }
     const formData = new FormData();
-    formData.set("journalSlug", activeSlug);
+    formData.set("journalSlug", activeBoardSlug);
     formData.set("memberId", memberId);
 
     startDeleteTransition(async () => {
@@ -229,13 +232,13 @@ export function EditorialBoardManager({
   const handleReset = () => {
     if (
       !confirm(
-        `Reset ${currentJournal.shortName} editorial board to standard institutional defaults?`,
+        `Reset ${currentBoardJournal.shortName} editorial board to standard institutional defaults?`,
       )
     ) {
       return;
     }
     const formData = new FormData();
-    formData.set("journalSlug", activeSlug);
+    formData.set("journalSlug", activeBoardSlug);
 
     startResetTransition(async () => {
       const res = await resetEditorialBoardAction({}, formData);
@@ -308,21 +311,21 @@ export function EditorialBoardManager({
         </div>
       ) : null}
 
-      {/* Journal Tabs */}
+      {/* Journal Tabs for Editorial Board */}
       {journals.length > 1 ? (
         <div className="flex gap-2 overflow-x-auto border-b border-[color:var(--color-border)] pb-3">
           {journals.map((j) => (
             <button
               key={j.slug}
               type="button"
-              onClick={() => handleTabChange(j.slug)}
-              className={`rounded-full px-3.5 py-1 text-xs font-semibold whitespace-nowrap transition ${
-                activeSlug === j.slug
+              onClick={() => handleBoardTabChange(j.slug)}
+              className={`rounded-full px-4 py-1.5 text-xs font-semibold whitespace-nowrap transition ${
+                activeBoardSlug === j.slug
                   ? "bg-[color:var(--color-accent)] text-black"
                   : "border border-[color:var(--color-border)] bg-[color:var(--color-surface-raised)] text-[color:var(--color-muted)] hover:text-[color:var(--color-foreground)]"
               }`}
             >
-              {j.shortName} ({j.title})
+              {j.shortName || j.slug.toUpperCase()}
             </button>
           ))}
         </div>
@@ -333,14 +336,14 @@ export function EditorialBoardManager({
         <div className="flex flex-col gap-2 border-b border-[color:var(--color-border)] pb-3 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <h2 className="font-serif text-lg font-semibold text-[color:var(--color-foreground)]">
-              {currentJournal.title} ({currentJournal.shortName})
+              {currentBoardJournal.title} ({currentBoardJournal.shortName})
             </h2>
             <p className="font-mono text-xs text-[color:var(--color-accent)]">
               {members.length} Active Editorial Officers &amp; Scholars
             </p>
           </div>
           <a
-            href={`/journals/${currentJournal.slug}`}
+            href={`/journals/${currentBoardJournal.slug}`}
             target="_blank"
             rel="noopener noreferrer"
             className="text-xs font-semibold text-[color:var(--color-accent)] hover:underline"
@@ -415,16 +418,17 @@ export function EditorialBoardManager({
             </span>
             <span className="font-serif text-base font-semibold text-[color:var(--color-foreground)]">
               Publication Metadata &amp; Visibility Settings (
-              {currentJournal.shortName})
+              {currentMetaJournal.shortName})
             </span>
             <span
               className={`rounded-full px-2 py-0.5 font-mono text-[10px] font-bold ${
-                currentJournal.showMetadataOnHomepage
+                currentMetaJournal.showMetadataOnHomepage
                   ? "bg-emerald-500/15 text-emerald-400"
                   : "bg-zinc-500/15 text-[color:var(--color-subtle)]"
               }`}
             >
-              Public Bar: {currentJournal.showMetadataOnHomepage ? "ON" : "OFF"}
+              Public Bar:{" "}
+              {currentMetaJournal.showMetadataOnHomepage ? "ON" : "OFF"}
             </span>
           </div>
           <div className="flex items-center gap-1.5 font-mono text-xs text-[color:var(--color-muted)]">
@@ -440,39 +444,65 @@ export function EditorialBoardManager({
               style, and toggle the public metadata bar displayed under the
               title on{" "}
               <code className="text-[color:var(--color-accent)]">
-                /journals/{currentJournal.slug}
+                /journals/{currentMetaJournal.slug}
               </code>
               .
             </p>
 
+            {/* Dedicated Metadata Journal Selector Tabs */}
+            {journals.length > 1 ? (
+              <div className="mt-3 mb-2 flex gap-2 overflow-x-auto border-b border-[color:var(--color-border)] pb-3">
+                {journals.map((j) => (
+                  <button
+                    key={j.slug}
+                    type="button"
+                    onClick={() => handleMetaTabChange(j.slug)}
+                    className={`rounded-full px-4 py-1.5 text-xs font-semibold whitespace-nowrap transition ${
+                      activeMetaSlug === j.slug
+                        ? "bg-[color:var(--color-accent)] text-black"
+                        : "border border-[color:var(--color-border)] bg-[color:var(--color-surface-raised)] text-[color:var(--color-muted)] hover:text-[color:var(--color-foreground)]"
+                    }`}
+                  >
+                    {j.shortName || j.slug.toUpperCase()}
+                  </button>
+                ))}
+              </div>
+            ) : null}
+
             <form
-              key={currentJournal.slug}
+              key={currentMetaJournal.slug}
               onSubmit={handleMetadataSubmit}
               className="mt-4 space-y-4"
             >
               <div className="grid gap-3 sm:grid-cols-2">
                 <div>
                   <label className="block text-xs font-semibold text-[color:var(--color-foreground)]">
-                    Print ISSN
+                    Print ISSN{" "}
+                    <span className="font-normal text-[color:var(--color-subtle)]">
+                      (Optional)
+                    </span>
                   </label>
                   <input
                     type="text"
                     name="issnPrint"
-                    defaultValue={currentJournal.issnPrint ?? ""}
-                    placeholder="e.g. 2736-0814 (leave blank if none)"
+                    defaultValue={currentMetaJournal.issnPrint ?? ""}
+                    placeholder="e.g. 2141-209X (leave blank if none)"
                     className="app-field mt-1 w-full text-xs"
                   />
                 </div>
 
                 <div>
                   <label className="block text-xs font-semibold text-[color:var(--color-foreground)]">
-                    Online eISSN
+                    Online eISSN{" "}
+                    <span className="font-normal text-[color:var(--color-subtle)]">
+                      (Optional)
+                    </span>
                   </label>
                   <input
                     type="text"
                     name="issnOnline"
-                    defaultValue={currentJournal.issnOnline ?? ""}
-                    placeholder="e.g. 2736-0822 (leave blank if none)"
+                    defaultValue={currentMetaJournal.issnOnline ?? ""}
+                    placeholder="e.g. 2756-5122 (leave blank if none)"
                     className="app-field mt-1 w-full text-xs"
                   />
                 </div>
@@ -484,7 +514,7 @@ export function EditorialBoardManager({
                   <input
                     type="text"
                     name="frequency"
-                    defaultValue={currentJournal.frequency ?? "Bi-Annual"}
+                    defaultValue={currentMetaJournal.frequency ?? "Bi-Annual"}
                     placeholder="e.g. Bi-Annual (June & December)"
                     className="app-field mt-1 w-full text-xs"
                   />
@@ -498,7 +528,7 @@ export function EditorialBoardManager({
                     type="text"
                     name="referencingStyle"
                     defaultValue={
-                      currentJournal.referencingStyle ?? "APA 7th Edition"
+                      currentMetaJournal.referencingStyle ?? "APA 7th Edition"
                     }
                     placeholder="e.g. APA 7th Edition"
                     className="app-field mt-1 w-full text-xs"
@@ -515,7 +545,7 @@ export function EditorialBoardManager({
                     When enabled, the ISSN, Frequency, and Standard bar will be
                     rendered on{" "}
                     <code className="text-[color:var(--color-accent)]">
-                      /journals/{currentJournal.slug}
+                      /journals/{currentMetaJournal.slug}
                     </code>
                     .
                   </p>
@@ -554,7 +584,7 @@ export function EditorialBoardManager({
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4 backdrop-blur-sm">
           <div className="w-full max-w-lg rounded-[var(--radius-lg)] border border-[color:var(--color-border)] bg-[color:var(--color-surface)] p-6 shadow-2xl">
             <h3 className="font-serif text-xl font-semibold text-[color:var(--color-foreground)]">
-              Add Member to {currentJournal.shortName}
+              Add Member to {currentBoardJournal.shortName}
             </h3>
             <p className="text-xs text-[color:var(--color-muted)]">
               Provide the scholar&apos;s full academic name, role, and
@@ -646,7 +676,7 @@ export function EditorialBoardManager({
               Edit Editorial Member
             </h3>
             <p className="text-xs text-[color:var(--color-muted)]">
-              Updating entry for {currentJournal.shortName}.
+              Updating entry for {currentBoardJournal.shortName}.
             </p>
 
             <form onSubmit={handleEditSubmit} className="mt-5 space-y-4">

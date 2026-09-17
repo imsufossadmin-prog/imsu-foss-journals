@@ -55,7 +55,7 @@ export default function SubmissionsPage() {
     {
       step: "05",
       title: "Final Decision & Production Fee",
-      desc: "Upon final acceptance, the ₦25,000 publication fee is confirmed, and the paper enters copyediting, typesetting, and DOI assignment.",
+      desc: "Upon final acceptance, the ₦20,000 publication fee is confirmed, and the paper enters copyediting, typesetting, and DOI assignment.",
     },
     {
       step: "06",
@@ -155,7 +155,7 @@ export default function SubmissionsPage() {
                       </p>
                       <div className="mt-1 flex flex-wrap items-baseline gap-2">
                         <span className="font-serif text-2xl font-bold text-[color:var(--color-foreground)]">
-                          ₦25,000
+                          ₦20,000
                         </span>
                         <span className="text-xs text-[color:var(--color-muted)] italic">
                           (Payable only upon acceptance)

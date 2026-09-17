@@ -5,6 +5,13 @@
       "frequency": "Bi-Annual (2 Issues / Year)",
       "referencingStyle": "APA 7th Edition",
       "showMetadataOnHomepage": true
+    },
+    "ajsbs": {
+      "showMetadataOnHomepage": false,
+      "issnPrint": "2141-209X",
+      "issnOnline": "2756-5122",
+      "frequency": "Quarterly (4 Issues / Year)",
+      "referencingStyle": "APA 7th Edition"
     }
   },
   "boards": {}

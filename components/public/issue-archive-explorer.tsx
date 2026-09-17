@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { TOCDownloadMenu } from "@/components/editorial/toc-download-menu";
 
@@ -54,6 +54,18 @@ export function IssueArchiveExplorer({
   );
   const [activePdfArticle, setActivePdfArticle] =
     useState<ArchiveArticle | null>(null);
+
+  const latestIssueIdByJournal = useMemo(() => {
+    const map = new Map<string, string>();
+    for (const group of issueGroups) {
+      const jSlug = group.issue.volume.journal.slug;
+      if (!map.has(jSlug)) {
+        // Because issueGroups are sorted by year desc, number desc, the first seen is the latest
+        map.set(jSlug, group.issue.id);
+      }
+    }
+    return map;
+  }, [issueGroups]);
 
   // Keyboard accessibility: Escape to close active modal
   useEffect(() => {
@@ -140,13 +152,17 @@ export function IssueArchiveExplorer({
 
                   {/* Top Status Pill */}
                   <div className="absolute top-3 right-3">
-                    {issue.isClosed ? (
+                    {latestIssueIdByJournal.get(journal.slug) === issue.id ? (
+                      <span className="rounded-full border border-emerald-500/40 bg-emerald-950/80 px-2.5 py-0.5 font-mono text-[10px] font-semibold text-emerald-300 backdrop-blur-md">
+                        CURRENT ISSUE
+                      </span>
+                    ) : issue.isClosed ? (
                       <span className="rounded-full border border-slate-600/40 bg-slate-800/80 px-2.5 py-0.5 font-mono text-[10px] font-semibold text-slate-300 backdrop-blur-md">
                         ARCHIVED
                       </span>
                     ) : (
-                      <span className="rounded-full border border-emerald-500/40 bg-emerald-950/80 px-2.5 py-0.5 font-mono text-[10px] font-semibold text-emerald-300 backdrop-blur-md">
-                        CURRENT ISSUE
+                      <span className="rounded-full border border-[color:var(--color-border)] bg-[color:var(--color-surface-strong)] px-2.5 py-0.5 font-mono text-[10px] font-semibold text-[color:var(--color-muted)] backdrop-blur-md">
+                        VOL. ARCHIVE
                       </span>
                     )}
                   </div>

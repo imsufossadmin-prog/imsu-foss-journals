@@ -73,18 +73,23 @@ test("Announcements: Creation, authorization, and updates", async () => {
   assert.equal(authorCreateRes.success, false);
   assert.ok(authorCreateRes.error?.includes("Unauthorized"));
 
-  // 2. Psychology admin can create NJCP announcement
+  // 2. Psychology admin can create NJCP announcement with imageUrl
   const createRes = await createAnnouncement({
     title: "NJCP 2026 Special Call for Cognitive Studies",
     category: "SPECIAL_ISSUE",
     targetJournal: "njcp",
     content:
       "We welcome submissions exploring cognitive behavioral interventions in Nigerian tertiary institutions.",
+    imageUrl: "https://example.com/poster.jpg",
     authorName: "Prof Nkwam C. Uwaoma",
     actor: psychologyAdminActor,
   });
   assert.equal(createRes.success, true);
   assert.ok(createRes.announcement);
+  assert.equal(
+    createRes.announcement!.imageUrl,
+    "https://example.com/poster.jpg",
+  );
   const createdId = createRes.announcement!.id;
 
   // 3. Psychology admin CANNOT edit AJSBS announcement
@@ -110,6 +115,23 @@ test("Announcements: Creation, authorization, and updates", async () => {
   });
   assert.equal(psychEditDenied.success, false);
   assert.ok(psychEditDenied.error?.includes("Unauthorized"));
+
+  // 3b. Psychology admin updates NJCP announcement image
+  const updateRes = await updateAnnouncement({
+    announcementId: createdId,
+    title: "NJCP 2026 Special Call for Cognitive Studies (Updated)",
+    category: "SPECIAL_ISSUE",
+    targetJournal: "njcp",
+    content: "Updated details...",
+    imageUrl: "https://example.com/new-poster.jpg",
+    isActive: true,
+    actor: psychologyAdminActor,
+  });
+  assert.equal(updateRes.success, true);
+  assert.equal(
+    updateRes.announcement?.imageUrl,
+    "https://example.com/new-poster.jpg",
+  );
 
   // 4. Toggle active status
   const toggleRes = await toggleAnnouncementActive({

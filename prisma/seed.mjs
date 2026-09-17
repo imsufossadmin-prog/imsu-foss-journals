@@ -21,7 +21,7 @@ async function main() {
     {
       slug: "psychology",
       name: "Psychology",
-      shortName: "PSY",
+      shortName: "NJCP",
       description: "Department of Psychology, Faculty of Social Sciences",
     },
     {

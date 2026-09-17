@@ -81,6 +81,7 @@ export default async function JournalLandingPage({
       include: {
         issues: {
           where: { isPublished: true },
+          orderBy: { number: "desc" },
           include: {
             _count: { select: { articles: { where: { isPublished: true } } } },
           },
@@ -287,7 +288,7 @@ export default async function JournalLandingPage({
                       Publication Fee (Upon Acceptance):
                     </dt>
                     <dd className="font-bold text-[color:var(--color-foreground)]">
-                      ₦25,000
+                      ₦20,000
                     </dd>
                   </div>
                   <div className="flex justify-between border-b border-[color:var(--color-border)] pb-2">
@@ -585,22 +586,22 @@ export default async function JournalLandingPage({
               </Link>
             </div>
 
-            <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            <div className="mt-6 grid items-start gap-4 sm:grid-cols-2 lg:grid-cols-3">
               {journalVolumes.map((vol) => (
                 <div
                   key={vol.id}
-                  className="rounded-[var(--radius-md)] border border-[color:var(--color-border)] bg-[color:var(--color-surface-raised)] p-5"
+                  className="flex flex-col rounded-[var(--radius-md)] border border-[color:var(--color-border)] bg-[color:var(--color-surface-raised)] p-5 shadow-sm"
                 >
-                  <div className="flex items-center justify-between font-mono text-xs text-[color:var(--color-accent)]">
+                  <div className="flex items-center justify-between border-b border-[color:var(--color-border)]/60 pb-3 font-mono text-xs text-[color:var(--color-accent)]">
                     <span className="font-bold">Volume {vol.number}</span>
                     <span>{vol.year}</span>
                   </div>
-                  <div className="mt-3 space-y-2">
+                  <div className="mt-3 max-h-80 space-y-1.5 overflow-y-auto pr-1">
                     {vol.issues.map((iss) => (
                       <Link
                         key={iss.id}
                         href={`/archives?journal=${meta.slug}`}
-                        className="flex items-center justify-between rounded-[var(--radius-sm)] bg-[color:var(--color-surface)] p-2.5 text-xs transition hover:bg-[color:var(--color-surface-strong)]"
+                        className="flex items-center justify-between rounded-[var(--radius-sm)] bg-[color:var(--color-surface)] p-2.5 text-xs transition hover:bg-[color:var(--color-surface-strong)] hover:text-[color:var(--color-accent)]"
                       >
                         <span className="font-medium text-[color:var(--color-foreground)]">
                           Issue {iss.number}

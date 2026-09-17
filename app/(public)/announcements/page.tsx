@@ -112,6 +112,17 @@ export default async function AnnouncementsPage({
                     {item.title}
                   </h2>
 
+                  {item.imageUrl ? (
+                    <div className="mt-4 overflow-hidden rounded-md border border-[color:var(--color-border)]">
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img
+                        src={item.imageUrl}
+                        alt={item.title}
+                        className="max-h-80 w-full object-cover"
+                      />
+                    </div>
+                  ) : null}
+
                   <div className="mt-3 text-sm leading-relaxed whitespace-pre-line text-[color:var(--color-muted)]">
                     {item.content}
                   </div>
