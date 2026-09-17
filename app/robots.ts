@@ -14,6 +14,8 @@ export default function robots(): MetadataRoute.Robots {
           "/current-issue",
           "/archives",
           "/articles/",
+          "/api/articles/", // Allows Google Scholar & public academic crawlers to index PDFs
+          "/api/issues/", // Allows crawling of public TOC files
           "/submit",
           "/contact",
         ],

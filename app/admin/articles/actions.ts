@@ -10,6 +10,7 @@ import {
   deleteArticle,
   publishArticle as setArticlePublishedStatus,
   publishDirectLegacyArticle,
+  updateDirectLegacyArticle,
   unpublishArticle,
 } from "@/lib/editorial/legacy-mutations";
 import {
@@ -322,4 +323,283 @@ export async function publishIssueTOCAdminAction(issueId: string) {
   revalidatePath("/");
   revalidatePath("/current-issue");
   revalidatePath("/archives");
+}
+
+export async function updateArticleAction(
+  _prevState: AdminArticleFormState,
+  formData: FormData,
+): Promise<AdminArticleFormState> {
+  const user = await requireApplicationArea("admin");
+  const articleId = (formData.get("articleId") as string)?.trim();
+  const title = (formData.get("title") as string)?.trim();
+  const volumeStr = formData.get("volume") as string;
+  const issueStr = formData.get("issue") as string;
+  const yearStr = formData.get("year") as string;
+  const issueOrderStr = (formData.get("issueOrder") as string)?.trim();
+  const publishedAtStr = (formData.get("publishedAt") as string)?.trim();
+  const pageStart = (formData.get("pageStart") as string)?.trim() || null;
+  const pageEnd = (formData.get("pageEnd") as string)?.trim() || null;
+  const abstract = (formData.get("abstract") as string)?.trim() || null;
+  const keywordsStr = (formData.get("keywords") as string)?.trim();
+  const doi = (formData.get("doi") as string)?.trim() || null;
+
+  const manuscriptPdf = formData.get("manuscriptPdf") as File | null;
+  const coverImageFile = formData.get("coverImage") as File | null;
+
+  if (!articleId) {
+    return { error: "Article ID is missing." };
+  }
+
+  if (!title || !volumeStr || !issueStr) {
+    return {
+      error: "Please fill in manuscript title, volume, and issue numbers.",
+    };
+  }
+
+  const existingArticle = await prisma.article.findUnique({
+    where: { id: articleId },
+    include: {
+      issue: {
+        include: {
+          volume: {
+            include: {
+              journal: true,
+            },
+          },
+        },
+      },
+    },
+  });
+
+  if (!existingArticle) {
+    return { error: "Target article not found." };
+  }
+
+  const journal = existingArticle.issue.volume.journal;
+
+  if (
+    !isSuperAdmin(user) &&
+    !hasJournalRole(user, journal.id, "JOURNAL_ADMIN")
+  ) {
+    return {
+      error: "You are not authorized to edit content in this journal.",
+    };
+  }
+
+  if (doi) {
+    const duplicateDoi = await prisma.article.findFirst({
+      where: {
+        doi,
+        id: { not: articleId },
+      },
+      select: { id: true, title: true },
+    });
+    if (duplicateDoi) {
+      return {
+        error: `DOI "${doi}" is already assigned to another published article.`,
+      };
+    }
+  }
+
+  const volume = Number.parseInt(volumeStr, 10);
+  const issue = Number.parseInt(issueStr, 10);
+  const year = yearStr
+    ? Number.parseInt(yearStr, 10)
+    : existingArticle.issue.volume.year;
+
+  if (Number.isNaN(volume) || Number.isNaN(issue)) {
+    return { error: "Volume and Issue numbers must be valid integers." };
+  }
+
+  let publishedAt: Date | undefined = undefined;
+  if (publishedAtStr) {
+    const parsedDate = new Date(publishedAtStr);
+    if (!Number.isNaN(parsedDate.getTime())) {
+      publishedAt = parsedDate;
+    }
+  }
+
+  let issueOrder: number | undefined = undefined;
+  if (issueOrderStr) {
+    const parsedOrder = Number.parseInt(issueOrderStr, 10);
+    if (!Number.isNaN(parsedOrder) && parsedOrder > 0) {
+      issueOrder = parsedOrder;
+    }
+  }
+
+  const keywords = keywordsStr
+    ? keywordsStr
+        .split(",")
+        .map((k) => k.trim())
+        .filter(Boolean)
+    : [];
+
+  let authors: Array<{
+    fullName: string;
+    affiliation?: string | null;
+    email?: string | null;
+  }> = [];
+
+  const authorsJson = formData.get("authorsJson") as string | null;
+  if (authorsJson) {
+    try {
+      const parsed = JSON.parse(authorsJson);
+      if (Array.isArray(parsed)) {
+        authors = parsed
+          .map(
+            (a: {
+              fullName?: string;
+              affiliation?: string;
+              email?: string;
+            }) => ({
+              fullName: (a.fullName || "").trim(),
+              affiliation: (a.affiliation || "").trim() || null,
+              email: (a.email || "").trim() || null,
+            }),
+          )
+          .filter((a) => a.fullName.length > 0);
+      }
+    } catch {
+      // fallback
+    }
+  }
+
+  if (authors.length === 0) {
+    const authorNamesStr = (formData.get("authorNames") as string)?.trim();
+    if (authorNamesStr) {
+      authors = authorNamesStr
+        .split(",")
+        .map((name) => ({ fullName: name.trim() }))
+        .filter((a) => a.fullName.length > 0);
+    }
+  }
+
+  if (authors.length === 0) {
+    return { error: "At least one author name is required." };
+  }
+
+  const supabase = createAdminClient();
+  let pdfPath = "";
+  let coverImagePath = "";
+  let coverImageUrl: string | undefined = undefined;
+
+  try {
+    // Optional manuscript PDF upload
+    if (manuscriptPdf && manuscriptPdf.size > 0) {
+      const pdfArrayBuffer = await manuscriptPdf.arrayBuffer();
+      const pdfBuffer = Buffer.from(pdfArrayBuffer);
+      const pdfFileName = manuscriptPdf.name.replace(/[^a-zA-Z0-9.-]/g, "_");
+      pdfPath = `published-legacy/${journal.slug}/${Date.now()}_${pdfFileName}`;
+
+      const { error: pdfUploadError } = await supabase.storage
+        .from("published-articles")
+        .upload(pdfPath, pdfBuffer, {
+          contentType: manuscriptPdf.type || "application/pdf",
+          upsert: true,
+        });
+
+      if (pdfUploadError) {
+        return {
+          error: `Failed to upload manuscript PDF: ${pdfUploadError.message}`,
+        };
+      }
+    }
+
+    // Optional Cover Image upload
+    if (coverImageFile && coverImageFile.size > 0) {
+      const imgArrayBuffer = await coverImageFile.arrayBuffer();
+      const imgBuffer = Buffer.from(imgArrayBuffer);
+      const imgFileName = coverImageFile.name.replace(/[^a-zA-Z0-9.-]/g, "_");
+      const imgPath = `published-covers/${journal.slug}/${Date.now()}_${imgFileName}`;
+
+      const { error: imgError } = await supabase.storage
+        .from("published-articles")
+        .upload(imgPath, imgBuffer, {
+          contentType: coverImageFile.type || "image/jpeg",
+          upsert: true,
+        });
+
+      if (!imgError) {
+        coverImagePath = imgPath;
+        const { data: publicUrlData } = supabase.storage
+          .from("published-articles")
+          .getPublicUrl(imgPath);
+        coverImageUrl = publicUrlData.publicUrl;
+      }
+    }
+  } catch (err: unknown) {
+    return {
+      error: `Storage upload error: ${err instanceof Error ? err.message : String(err)}`,
+    };
+  }
+
+  let updatedArticleSlug = existingArticle.slug;
+  const journalIds = manageableJournalIds(user);
+
+  try {
+    const updated = await updateDirectLegacyArticle({
+      articleId,
+      journalIds,
+      adminId: user.id,
+      title,
+      abstract,
+      keywords,
+      volume,
+      issue,
+      year,
+      pageStart,
+      pageEnd,
+      doi,
+      coverImageUrl,
+      publishedAt,
+      issueOrder,
+      manuscriptFile:
+        pdfPath && manuscriptPdf
+          ? {
+              bucket: "published-articles",
+              objectPath: pdfPath,
+              originalFileName: manuscriptPdf.name,
+              sizeBytes: manuscriptPdf.size,
+              mimeType: manuscriptPdf.type || "application/pdf",
+            }
+          : null,
+      authors,
+    });
+    updatedArticleSlug = updated.slug;
+  } catch (err: unknown) {
+    const uploadedPaths = [pdfPath, coverImagePath].filter(Boolean);
+    if (uploadedPaths.length > 0) {
+      const { error } = await supabase.storage
+        .from("published-articles")
+        .remove(uploadedPaths);
+      if (error) console.error("Update storage cleanup failed:", error.message);
+    }
+    let message = "Failed to update article. Please try again.";
+    if (err instanceof Error) {
+      if (
+        err.message.includes("Unique constraint failed") ||
+        err.message.includes("invocation")
+      ) {
+        message =
+          "A unique record conflict was encountered. Please check the volume, issue, or DOI.";
+      } else if (
+        !err.message.includes("\n") &&
+        !err.message.includes("PrismaClient") &&
+        !err.message.includes("/")
+      ) {
+        message = err.message;
+      }
+    }
+    return { error: message };
+  }
+
+  revalidatePath("/admin/articles");
+  revalidatePath(`/admin/articles/${articleId}/edit`);
+  revalidatePath(`/articles/${updatedArticleSlug}`);
+  revalidatePath(`/journals/${journal.slug}`);
+  revalidatePath("/");
+  revalidatePath("/current-issue");
+  revalidatePath("/archives");
+
+  redirect("/admin/articles?success=updated");
 }

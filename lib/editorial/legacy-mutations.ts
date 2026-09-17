@@ -234,3 +234,237 @@ export async function deleteArticle(
     prisma.storedFile.deleteMany({ where: { id: { in: storedFileIds } } }),
   ]);
 }
+
+export type UpdateDirectLegacyArticleInput = {
+  articleId: string;
+  journalIds: string[] | null;
+  adminId: string;
+  title: string;
+  abstract?: string | null;
+  keywords?: string[];
+  volume: number;
+  issue: number;
+  year?: number;
+  pageStart?: string | null;
+  pageEnd?: string | null;
+  doi?: string | null;
+  coverImageUrl?: string | null;
+  publishedAt?: Date | null;
+  issueOrder?: number | null;
+  manuscriptFile?: {
+    bucket: string;
+    objectPath: string;
+    originalFileName: string;
+    sizeBytes: number;
+    mimeType: string;
+  } | null;
+  authors: Array<{
+    fullName: string;
+    email?: string | null;
+    affiliation?: string | null;
+  }>;
+};
+
+export async function updateDirectLegacyArticle(
+  input: UpdateDirectLegacyArticleInput,
+) {
+  const existingArticle = await prisma.article.findFirst({
+    where: articleScope(input.articleId, input.journalIds),
+    include: {
+      issue: {
+        include: {
+          volume: {
+            include: {
+              journal: true,
+            },
+          },
+        },
+      },
+      files: {
+        where: { type: { in: ["PUBLISHED_PDF", "PRODUCTION_FILE"] } },
+        include: { storedFile: true },
+      },
+    },
+  });
+
+  if (!existingArticle) {
+    throw new Error("Article unavailable.");
+  }
+
+  const journal = existingArticle.issue.volume.journal;
+  const pubYear = input.year ?? new Date().getFullYear();
+
+  // Atomic Volume upsert
+  const volume = await prisma.volume.upsert({
+    where: {
+      journalId_year_number: {
+        journalId: journal.id,
+        year: pubYear,
+        number: input.volume,
+      },
+    },
+    update: {},
+    create: {
+      journalId: journal.id,
+      number: input.volume,
+      year: pubYear,
+    },
+  });
+
+  // Atomic Issue upsert
+  const issue = await prisma.issue.upsert({
+    where: {
+      volumeId_number: {
+        volumeId: volume.id,
+        number: input.issue,
+      },
+    },
+    update: {},
+    create: {
+      volumeId: volume.id,
+      number: input.issue,
+      isPublished: true,
+      publishedAt: input.publishedAt ?? new Date(),
+    },
+  });
+
+  // Validate issueOrder uniqueness
+  const occupiedArticles = await prisma.article.findMany({
+    where: {
+      issueId: issue.id,
+      id: { not: existingArticle.id },
+    },
+    select: { issueOrder: true },
+  });
+
+  let finalOrder: number;
+  if (input.issueOrder != null && input.issueOrder > 0) {
+    const isTaken = occupiedArticles.some(
+      (a) => a.issueOrder === input.issueOrder,
+    );
+    if (isTaken) {
+      throw new Error(
+        `Article order ${input.issueOrder} is already used in this volume/issue. Please choose another order.`,
+      );
+    }
+    finalOrder = input.issueOrder;
+  } else if (
+    existingArticle.issueId === issue.id &&
+    existingArticle.issueOrder
+  ) {
+    finalOrder = existingArticle.issueOrder;
+  } else {
+    const maxOrder = occupiedArticles.reduce(
+      (max, a) => (a.issueOrder && a.issueOrder > max ? a.issueOrder : max),
+      0,
+    );
+    finalOrder = maxOrder + 1;
+  }
+
+  // Handle optional manuscript PDF replacement
+  let newStoredFileId: string | null = null;
+  let oldStoredFileToDelete: {
+    bucket: string;
+    objectPath: string;
+    id: string;
+  } | null = null;
+
+  if (input.manuscriptFile) {
+    const storedFile = await prisma.storedFile.create({
+      data: {
+        bucket: input.manuscriptFile.bucket,
+        objectPath: input.manuscriptFile.objectPath,
+        originalFileName: input.manuscriptFile.originalFileName,
+        mimeType: input.manuscriptFile.mimeType,
+        sizeBytes: BigInt(input.manuscriptFile.sizeBytes),
+        uploaderId: input.adminId,
+      },
+    });
+    newStoredFileId = storedFile.id;
+
+    if (existingArticle.files.length > 0) {
+      const old = existingArticle.files[0].storedFile;
+      oldStoredFileToDelete = {
+        bucket: old.bucket,
+        objectPath: old.objectPath,
+        id: old.id,
+      };
+    }
+  }
+
+  // Update Article
+  const article = await prisma.article.update({
+    where: { id: existingArticle.id },
+    data: {
+      issueId: issue.id,
+      title: input.title,
+      abstract: input.abstract,
+      keywords: input.keywords ?? [],
+      doi: input.doi || null,
+      pageStart: input.pageStart,
+      pageEnd: input.pageEnd,
+      issueOrder: finalOrder,
+      ...(input.coverImageUrl !== undefined
+        ? { coverImageUrl: input.coverImageUrl }
+        : {}),
+      ...(input.publishedAt ? { publishedAt: input.publishedAt } : {}),
+      ...(newStoredFileId
+        ? {
+            files: {
+              deleteMany: {},
+              create: {
+                storedFileId: newStoredFileId,
+                type: "PUBLISHED_PDF",
+              },
+            },
+          }
+        : {}),
+    },
+    include: {
+      authors: true,
+      issue: {
+        include: {
+          volume: {
+            include: {
+              journal: true,
+            },
+          },
+        },
+      },
+    },
+  });
+
+  // Synchronize Authors
+  await prisma.articleAuthor.deleteMany({
+    where: { articleId: existingArticle.id },
+  });
+
+  if (input.authors.length > 0) {
+    await prisma.articleAuthor.createMany({
+      data: input.authors.map((author, index) => ({
+        articleId: existingArticle.id,
+        position: index + 1,
+        fullName: author.fullName,
+        email: author.email || null,
+        affiliation: author.affiliation || null,
+      })),
+    });
+  }
+
+  // Cleanup old storage file if replaced
+  if (oldStoredFileToDelete) {
+    try {
+      const supabase = createAdminClient();
+      await supabase.storage
+        .from(oldStoredFileToDelete.bucket)
+        .remove([oldStoredFileToDelete.objectPath]);
+      await prisma.storedFile.delete({
+        where: { id: oldStoredFileToDelete.id },
+      });
+    } catch (cleanupErr) {
+      console.error("Failed to cleanup replaced PDF file:", cleanupErr);
+    }
+  }
+
+  return article;
+}

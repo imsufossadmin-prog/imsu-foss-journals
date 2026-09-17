@@ -3,7 +3,12 @@ import Link from "next/link";
 import { requireApplicationArea } from "@/lib/auth/authorization";
 import { isSuperAdmin } from "@/lib/auth/permissions";
 import { prisma } from "@/lib/db/prisma";
-import { AdminArticleRowActions, AdminIssueRowActions } from "./actions-client";
+import { AdminArticleRowActions } from "./actions-client";
+import {
+  CompactTOCExplorer,
+  type CompactIssueData,
+} from "./compact-toc-explorer";
+import { AdminArticlesSearchBar } from "./search-bar";
 
 export default async function AdminArticlesDirectoryPage({
   searchParams,
@@ -38,6 +43,13 @@ export default async function AdminArticlesDirectoryPage({
               OR: [
                 { title: { contains: q, mode: "insensitive" } },
                 { abstract: { contains: q, mode: "insensitive" } },
+                { doi: { contains: q, mode: "insensitive" } },
+                { keywords: { has: q } },
+                {
+                  authors: {
+                    some: { fullName: { contains: q, mode: "insensitive" } },
+                  },
+                },
               ],
             }
           : {}),
@@ -77,6 +89,7 @@ export default async function AdminArticlesDirectoryPage({
           include: {
             journal: {
               select: {
+                id: true,
                 name: true,
                 slug: true,
                 department: { select: { name: true } },
@@ -92,6 +105,24 @@ export default async function AdminArticlesDirectoryPage({
       },
     }),
   ]);
+
+  const compactIssues: CompactIssueData[] = issues.map((iss) => ({
+    id: iss.id,
+    number: iss.number,
+    title: iss.title,
+    isClosed: iss.isClosed,
+    publishedArticleCount: iss._count.articles,
+    volume: {
+      number: iss.volume.number,
+      year: iss.volume.year,
+      journal: {
+        id: iss.volume.journal.id,
+        name: iss.volume.journal.name,
+        slug: iss.volume.journal.slug,
+        departmentName: iss.volume.journal.department?.name ?? null,
+      },
+    },
+  }));
 
   return (
     <div className="mx-auto max-w-6xl min-w-0 space-y-8 px-4 py-8 sm:px-6 lg:px-8">
@@ -131,6 +162,7 @@ export default async function AdminArticlesDirectoryPage({
         </div>
       </div>
 
+      {/* Success Notification Banners */}
       {success === "published" ? (
         <div className="rounded-[var(--radius-md)] border border-emerald-500/30 bg-emerald-500/10 p-4 text-xs font-semibold text-emerald-400">
           Article published successfully and is now available in Manage
@@ -138,75 +170,17 @@ export default async function AdminArticlesDirectoryPage({
         </div>
       ) : null}
 
-      {/* Issues & Table of Contents Section */}
-      <div className="rounded-[var(--radius-lg)] border border-[color:var(--color-border)] bg-[color:var(--color-surface-raised)] p-6">
-        <div className="flex items-center justify-between border-b border-[color:var(--color-border)] pb-4">
-          <div>
-            <h2 className="text-sm font-bold text-[color:var(--color-foreground)]">
-              Journal Issues &amp; Table of Contents ({issues.length})
-            </h2>
-            <p className="text-xs text-[color:var(--color-muted)]">
-              Open/close issues, publish updated TOCs, and download TOC in PDF
-              or HTML format.
-            </p>
-          </div>
+      {success === "updated" ? (
+        <div className="rounded-[var(--radius-md)] border border-emerald-500/30 bg-emerald-500/10 p-4 text-xs font-semibold text-emerald-400">
+          Article metadata and files updated successfully.
         </div>
+      ) : null}
 
-        {issues.length === 0 ? (
-          <div className="p-8 text-center">
-            <p className="text-xs text-[color:var(--color-muted)]">
-              No journal issues created yet. Published articles will
-              automatically populate issues here.
-            </p>
-          </div>
-        ) : (
-          <div className="mt-4 divide-y divide-[color:var(--color-border)]/70">
-            {issues.map((issue) => {
-              const journal = issue.volume.journal;
-              const journalLabel = journal.department?.name ?? journal.name;
+      {/* Compact Issues & Table of Contents Section */}
+      <CompactTOCExplorer issues={compactIssues} />
 
-              return (
-                <div
-                  key={issue.id}
-                  className="flex flex-col gap-4 py-4 sm:flex-row sm:items-center sm:justify-between"
-                >
-                  <div className="space-y-1">
-                    <div className="flex items-center gap-2 text-xs font-semibold text-[color:var(--color-accent)] uppercase">
-                      <span>{journalLabel}</span>
-                      <span>·</span>
-                      <span>
-                        Vol. {issue.volume.number} · Issue {issue.number} (
-                        {issue.volume.year})
-                      </span>
-                      <span>
-                        {issue.isClosed ? (
-                          <span className="rounded bg-slate-500/20 px-2 py-0.5 text-[10px] text-slate-400">
-                            CLOSED
-                          </span>
-                        ) : (
-                          <span className="rounded bg-emerald-500/20 px-2 py-0.5 text-[10px] text-emerald-400">
-                            OPEN
-                          </span>
-                        )}
-                      </span>
-                    </div>
-                    <p className="text-xs text-[color:var(--color-subtle)]">
-                      {issue._count.articles}{" "}
-                      {issue._count.articles === 1 ? "article" : "articles"}{" "}
-                      published in this issue
-                    </p>
-                  </div>
-
-                  <AdminIssueRowActions
-                    issueId={issue.id}
-                    isClosed={issue.isClosed}
-                  />
-                </div>
-              );
-            })}
-          </div>
-        )}
-      </div>
+      {/* Search Bar */}
+      <AdminArticlesSearchBar totalCount={articles.length} currentQuery={q} />
 
       {/* Directory Table */}
       <div className="rounded-[var(--radius-lg)] border border-[color:var(--color-border)] bg-[color:var(--color-surface-raised)] p-6">
@@ -275,16 +249,10 @@ export default async function AdminArticlesDirectoryPage({
                   ) : null}
                 </div>
 
-                <div className="flex shrink-0 items-center gap-3">
-                  <Link
-                    href={`/articles/${article.slug}`}
-                    target="_blank"
-                    className="button-secondary text-xs"
-                  >
-                    View Public Page
-                  </Link>
+                <div className="shrink-0 pt-2 sm:pt-0">
                   <AdminArticleRowActions
                     articleId={article.id}
+                    articleSlug={article.slug}
                     isPublished={article.isPublished}
                   />
                 </div>
