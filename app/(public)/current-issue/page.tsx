@@ -82,7 +82,7 @@ export default async function CurrentIssuePage() {
                 IMSU FOSS Journals.
               </p>
             </div>
-            <div className="flex items-center gap-3">
+            <div className="flex flex-wrap items-center gap-3">
               <Link
                 href="/archives"
                 className="button-secondary px-4 py-2 text-xs font-semibold"

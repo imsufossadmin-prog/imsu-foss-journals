@@ -60,7 +60,7 @@ export function PublicMobileNav({ items }: PublicMobileNavProps) {
         <nav
           id="mobile-navigation"
           aria-label="Mobile navigation"
-          className="absolute right-0 mt-3 max-h-[85vh] w-80 overflow-y-auto rounded-[var(--radius-lg)] border border-[color:var(--color-border)] bg-[color:var(--color-surface-raised)] p-4 shadow-[var(--shadow-menu)] backdrop-blur-xl"
+          className="absolute right-0 mt-3 max-h-[85vh] w-[calc(100vw-2.5rem)] max-w-xs overflow-y-auto rounded-[var(--radius-lg)] border border-[color:var(--color-border)] bg-[color:var(--color-surface-raised)] p-4 shadow-[var(--shadow-menu)] backdrop-blur-xl sm:w-80"
         >
           <div className="flex flex-col gap-1">
             {items.map((item) => {

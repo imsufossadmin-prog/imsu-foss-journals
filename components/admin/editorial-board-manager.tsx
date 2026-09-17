@@ -582,7 +582,7 @@ export function EditorialBoardManager({
       {/* Add Modal */}
       {showAddModal ? (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4 backdrop-blur-sm">
-          <div className="w-full max-w-lg rounded-[var(--radius-lg)] border border-[color:var(--color-border)] bg-[color:var(--color-surface)] p-6 shadow-2xl">
+          <div className="max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-[var(--radius-lg)] border border-[color:var(--color-border)] bg-[color:var(--color-surface)] p-5 shadow-2xl sm:p-6">
             <h3 className="font-serif text-xl font-semibold text-[color:var(--color-foreground)]">
               Add Member to {currentBoardJournal.shortName}
             </h3>
@@ -671,7 +671,7 @@ export function EditorialBoardManager({
       {/* Edit Modal */}
       {editingMember ? (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4 backdrop-blur-sm">
-          <div className="w-full max-w-lg rounded-[var(--radius-lg)] border border-[color:var(--color-border)] bg-[color:var(--color-surface)] p-6 shadow-2xl">
+          <div className="max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-[var(--radius-lg)] border border-[color:var(--color-border)] bg-[color:var(--color-surface)] p-5 shadow-2xl sm:p-6">
             <h3 className="font-serif text-xl font-semibold text-[color:var(--color-foreground)]">
               Edit Editorial Member
             </h3>

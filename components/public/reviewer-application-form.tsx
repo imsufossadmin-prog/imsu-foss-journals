@@ -275,17 +275,17 @@ export function ReviewerApplicationForm({
         />
       </div>
 
-      <div className="flex items-center justify-between border-t border-[color:var(--color-border)] pt-5">
+      <div className="flex flex-col-reverse gap-3 border-t border-[color:var(--color-border)] pt-5 sm:flex-row sm:items-center sm:justify-between">
         <Link
           href="/"
-          className="text-xs font-medium text-[color:var(--color-muted)] transition hover:text-[color:var(--color-foreground)]"
+          className="text-center text-xs font-medium text-[color:var(--color-muted)] hover:text-[color:var(--color-foreground)] sm:text-left"
         >
-          ← Cancel
+          ← Cancel and return home
         </Link>
         <button
           type="submit"
           disabled={isPending}
-          className="button-primary px-6 py-3 text-xs font-semibold shadow-md"
+          className="button-primary w-full px-6 py-3 text-xs font-semibold shadow-md transition disabled:opacity-50 sm:w-auto"
         >
           {isPending
             ? "Submitting Application…"

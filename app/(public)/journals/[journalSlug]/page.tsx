@@ -275,31 +275,31 @@ export default async function JournalLandingPage({
                   Publishing Schedule & Fees
                 </h3>
                 <dl className="mt-4 space-y-3 text-xs">
-                  <div className="flex justify-between border-b border-[color:var(--color-border)] pb-2">
+                  <div className="flex flex-wrap items-baseline justify-between gap-1 border-b border-[color:var(--color-border)] pb-2">
                     <dt className="text-[color:var(--color-subtle)]">
                       Review Fee (Nigerian Authors):
                     </dt>
-                    <dd className="font-bold text-[color:var(--color-accent)]">
+                    <dd className="shrink-0 font-bold text-[color:var(--color-accent)]">
                       ₦10,000
                     </dd>
                   </div>
-                  <div className="flex justify-between border-b border-[color:var(--color-border)] pb-2">
+                  <div className="flex flex-wrap items-baseline justify-between gap-1 border-b border-[color:var(--color-border)] pb-2">
                     <dt className="text-[color:var(--color-subtle)]">
                       Publication Fee (Upon Acceptance):
                     </dt>
-                    <dd className="font-bold text-[color:var(--color-foreground)]">
+                    <dd className="shrink-0 font-bold text-[color:var(--color-foreground)]">
                       ₦20,000
                     </dd>
                   </div>
-                  <div className="flex justify-between border-b border-[color:var(--color-border)] pb-2">
+                  <div className="flex flex-wrap items-baseline justify-between gap-1 border-b border-[color:var(--color-border)] pb-2">
                     <dt className="text-[color:var(--color-subtle)]">
                       Foreign Author Fee (All-inclusive):
                     </dt>
-                    <dd className="font-bold text-[color:var(--color-accent)]">
+                    <dd className="shrink-0 font-bold text-[color:var(--color-accent)]">
                       $50
                     </dd>
                   </div>
-                  <div className="flex justify-between pb-1">
+                  <div className="flex flex-wrap items-baseline justify-between gap-1 pb-1">
                     <dt className="text-[color:var(--color-subtle)]">
                       Manuscript Format:
                     </dt>
@@ -569,7 +569,7 @@ export default async function JournalLandingPage({
       {journalVolumes.length > 0 ? (
         <section className="border-t border-[color:var(--color-border)] pt-12">
           <Container>
-            <div className="flex items-center justify-between border-b border-[color:var(--color-border)] pb-4">
+            <div className="flex flex-col gap-3 border-b border-[color:var(--color-border)] pb-4 sm:flex-row sm:items-center sm:justify-between">
               <div>
                 <p className="font-mono text-xs font-semibold text-[color:var(--color-accent)] uppercase">
                   Periodical Shelves
@@ -580,7 +580,7 @@ export default async function JournalLandingPage({
               </div>
               <Link
                 href={`/archives?journal=${meta.slug}`}
-                className="button-secondary px-3.5 py-1.5 text-xs font-semibold"
+                className="button-secondary w-full px-3.5 py-1.5 text-center text-xs font-semibold sm:w-auto"
               >
                 Open Periodical Shelf
               </Link>

@@ -147,13 +147,15 @@ export default async function PublicArticlePage({
           ) : null}
 
           {article.doi ? (
-            <div className="mt-4 inline-flex items-center gap-2 rounded-[var(--radius-md)] bg-[color:var(--color-surface-strong)] px-3.5 py-2 text-xs font-semibold text-[color:var(--color-accent)]">
-              <span>DOI:</span>
+            <div className="mt-4 inline-flex max-w-full flex-wrap items-center gap-2 rounded-[var(--radius-md)] border border-[color:var(--color-border)] bg-[color:var(--color-surface)] px-3 py-1.5 text-xs text-[color:var(--color-muted)]">
+              <span className="font-semibold text-[color:var(--color-foreground)]">
+                DOI:
+              </span>
               <a
                 href={`https://doi.org/${article.doi}`}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="hover:underline"
+                className="break-all text-[color:var(--color-accent)] hover:underline"
               >
                 https://doi.org/{article.doi}
               </a>
@@ -201,16 +203,14 @@ export default async function PublicArticlePage({
             </div>
           ) : null}
 
-          <div className="mt-8 flex items-center justify-between border-t border-[color:var(--color-border)] pt-4 text-xs text-[color:var(--color-subtle)]">
+          <div className="mt-8 flex flex-col gap-2 border-t border-[color:var(--color-border)] pt-4 text-xs text-[color:var(--color-subtle)] sm:flex-row sm:items-center sm:justify-between">
             <span suppressHydrationWarning>
               Published:{" "}
               {article.publishedAt
                 ? formatLongDate(article.publishedAt)
                 : "Recently"}
             </span>
-            <span className="font-semibold text-[color:var(--color-accent)]">
-              IMSU FOSS Open Access Journal
-            </span>
+            <span>IMSU FOSS Open Access Academic Journal</span>
           </div>
         </div>
       </div>

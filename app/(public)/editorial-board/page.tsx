@@ -100,7 +100,7 @@ export default function EditorialBoardPage() {
       {/* Associate Editors Grid */}
       <section>
         <Container>
-          <div className="rounded-[var(--radius-lg)] border border-[color:var(--color-border)] bg-[color:var(--color-surface)] p-8">
+          <div className="rounded-[var(--radius-lg)] border border-[color:var(--color-border)] bg-[color:var(--color-surface)] p-5 sm:p-8">
             <h2 className="font-serif text-2xl font-semibold text-[color:var(--color-foreground)]">
               Associate Editors
             </h2>
@@ -128,7 +128,7 @@ export default function EditorialBoardPage() {
       {/* Advisory Board */}
       <section>
         <Container>
-          <div className="rounded-[var(--radius-lg)] border border-[color:var(--color-border)] bg-[color:var(--color-surface-raised)] p-8">
+          <div className="rounded-[var(--radius-lg)] border border-[color:var(--color-border)] bg-[color:var(--color-surface-raised)] p-5 sm:p-8">
             <h2 className="font-serif text-2xl font-semibold text-[color:var(--color-foreground)]">
               International Advisory Board
             </h2>
