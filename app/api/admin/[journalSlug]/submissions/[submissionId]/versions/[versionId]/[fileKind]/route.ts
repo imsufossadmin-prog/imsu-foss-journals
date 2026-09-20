@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 
 import { requireJournalWorkspace } from "@/lib/auth/workspace-context";
 import { prisma } from "@/lib/db/prisma";
-import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 
 export async function GET(
   _request: Request,
@@ -42,7 +42,7 @@ export async function GET(
       : version?.manuscriptStoredFile;
   if (!file)
     return NextResponse.json({ error: "File unavailable." }, { status: 404 });
-  const supabase = await createClient();
+  const supabase = createAdminClient();
   const { data, error } = await supabase.storage
     .from(file.bucket)
     .createSignedUrl(file.objectPath, 60);

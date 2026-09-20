@@ -72,27 +72,30 @@ export default async function EditorialSubmissionPage({
 
   return (
     <div className="mx-auto max-w-6xl">
-      <div className="flex items-center gap-4">
-        <Link
-          href="/admin"
-          className="rounded-md border border-[color:var(--color-border)] bg-[color:var(--color-surface-raised)] px-3 py-1.5 text-xs font-semibold text-[color:var(--color-foreground)] hover:border-[color:var(--color-accent)] hover:text-[color:var(--color-accent)]"
-        >
-          ← Back to Overview
-        </Link>
-        <Link
-          href={`/admin/${journal.slug}/submissions`}
-          className="text-xs font-semibold text-[color:var(--color-muted)] hover:text-[color:var(--color-foreground)]"
-        >
-          Manuscripts list
-        </Link>
+      <div className="flex flex-wrap items-center justify-between gap-4">
+        <div className="flex items-center gap-3">
+          <Link
+            href="/admin"
+            className="rounded-md border border-[color:var(--color-border)] bg-[color:var(--color-surface-raised)] px-3 py-1.5 text-xs font-semibold text-[color:var(--color-foreground)] hover:border-[color:var(--color-accent)] hover:text-[color:var(--color-accent)]"
+          >
+            ← Overview
+          </Link>
+          <Link
+            href={`/admin/${journal.slug}`}
+            className="text-xs font-semibold text-[color:var(--color-muted)] hover:text-[color:var(--color-foreground)]"
+          >
+            Manuscripts list
+          </Link>
+        </div>
       </div>
-      <header className="mt-6 pb-6">
+
+      <header className="mt-6 border-b border-[color:var(--color-border)] pb-6">
         <SubmissionStatus status={submission.status} />
         <h1 className="mt-3 max-w-4xl font-serif text-4xl leading-tight font-medium tracking-[-0.035em] sm:text-5xl">
           {submission.title ?? "Untitled manuscript"}
         </h1>
         <p className="mt-2 font-mono text-xs text-[color:var(--color-subtle)]">
-          {submission.trackingNumber ?? "Tracking pending"}
+          {submission.trackingNumber ?? "Tracking ID pending"}
         </p>
       </header>
 
@@ -126,30 +129,39 @@ export default async function EditorialSubmissionPage({
               label: version.kind.toLowerCase(),
               createdAt: date.format(version.submittedAt),
               originalFileName: version.manuscriptStoredFile.originalFileName,
+              downloadUrl: `/api/admin/${journal.slug}/submissions/${submission.id}/versions/${version.id}/manuscript`,
             }))}
           />
 
           {submission.request ? (
-            <div className="rounded-[var(--radius-lg)] bg-[color:var(--color-surface-raised)] p-5">
-              <h2 className="mb-4 text-sm font-semibold text-[color:var(--color-foreground)]">
-                Conversation with author
-              </h2>
-              <RequestChatBox
-                requestId={submission.request.id}
-                viewerId={user.id}
-                messages={messages}
-                action={sendAdminMessageAction.bind(
-                  null,
-                  journal.slug,
-                  submission.request.id,
-                )}
-                correctionAction={correctionAction.bind(
-                  null,
-                  journal.slug,
-                  submission.id,
-                )}
-              />
-            </div>
+            <details
+              className="group rounded-[var(--radius-lg)] border border-[color:var(--color-border)] bg-[color:var(--color-surface-raised)] p-5"
+              open
+            >
+              <summary className="flex cursor-pointer items-center justify-between text-sm font-semibold text-[color:var(--color-foreground)] select-none">
+                <span>Conversation with author</span>
+                <span className="text-xs text-[color:var(--color-subtle)] transition-transform group-open:rotate-180">
+                  ▼
+                </span>
+              </summary>
+              <div className="mt-4 border-t border-[color:var(--color-border)] pt-4">
+                <RequestChatBox
+                  requestId={submission.request.id}
+                  viewerId={user.id}
+                  messages={messages}
+                  action={sendAdminMessageAction.bind(
+                    null,
+                    journal.slug,
+                    submission.request.id,
+                  )}
+                  correctionAction={correctionAction.bind(
+                    null,
+                    journal.slug,
+                    submission.id,
+                  )}
+                />
+              </div>
+            </details>
           ) : null}
 
           {currentRound ? (
@@ -505,9 +517,7 @@ export default async function EditorialSubmissionPage({
                 "AWAITING_REVIEWERS",
                 "UNDER_REVIEW",
                 "REVIEWS_RECEIVED",
-              ].includes(submission.status) &&
-              currentRound &&
-              !currentRound.decisions.length ? (
+              ].includes(submission.status) ? (
                 <div className="space-y-4">
                   <div>
                     <p className="text-xs leading-5 font-semibold text-[color:var(--color-foreground)]">
@@ -524,29 +534,43 @@ export default async function EditorialSubmissionPage({
                       />
                     </div>
                   </div>
-                  <div className="border-t border-[color:var(--color-border)] pt-3">
-                    <details className="group rounded-[var(--radius-md)] border border-[color:var(--color-border)] bg-[color:var(--color-surface)] p-3">
-                      <summary className="flex cursor-pointer items-center justify-between text-xs font-semibold text-[color:var(--color-subtle)] select-none">
-                        <span>Record Editorial Decision (Optional)</span>
-                        <span className="text-[10px] text-[color:var(--color-subtle)] transition-transform group-open:rotate-180">
-                          ▼
-                        </span>
-                      </summary>
-                      <div className="mt-3 border-t border-[color:var(--color-border)] pt-3">
-                        <DecisionForm
-                          journalSlug={journal.slug}
-                          submissionId={submission.id}
-                          roundId={currentRound.id}
-                        />
-                      </div>
-                    </details>
-                  </div>
+                  {currentRound && !currentRound.decisions.length ? (
+                    <div className="border-t border-[color:var(--color-border)] pt-3">
+                      <details className="group rounded-[var(--radius-md)] border border-[color:var(--color-border)] bg-[color:var(--color-surface)] p-3">
+                        <summary className="flex cursor-pointer items-center justify-between text-xs font-semibold text-[color:var(--color-subtle)] select-none">
+                          <span>Record Editorial Decision (Optional)</span>
+                          <span className="text-[10px] text-[color:var(--color-subtle)] transition-transform group-open:rotate-180">
+                            ▼
+                          </span>
+                        </summary>
+                        <div className="mt-3 border-t border-[color:var(--color-border)] pt-3">
+                          <DecisionForm
+                            journalSlug={journal.slug}
+                            submissionId={submission.id}
+                            roundId={currentRound.id}
+                          />
+                        </div>
+                      </details>
+                    </div>
+                  ) : null}
+                </div>
+              ) : null}
+              {submission.status === "DRAFT" ? (
+                <div className="rounded-[var(--radius-md)] border border-amber-500/30 bg-amber-500/10 p-3.5">
+                  <p className="text-xs font-semibold text-amber-400">
+                    Draft in progress
+                  </p>
+                  <p className="mt-1 text-xs text-[color:var(--color-muted)]">
+                    Waiting for author to complete submission and upload
+                    manuscript.
+                  </p>
                 </div>
               ) : null}
               {["ACCEPTED", "REJECTED"].includes(submission.status) ? (
                 <p className="text-xs leading-5 text-[color:var(--color-muted)]">
-                  This editorial workflow is complete. Publishing is outside
-                  Phase 4.
+                  {submission.status === "ACCEPTED"
+                    ? "Editorial workflow complete. Manuscript is accepted for publication."
+                    : "Editorial workflow complete. Manuscript has been rejected."}
                 </p>
               ) : null}
             </div>
@@ -554,84 +578,113 @@ export default async function EditorialSubmissionPage({
           <div>
             <h2 className="text-sm font-semibold">Audit trail</h2>
             <ol className="mt-4 border-l border-[color:var(--color-border-strong)] pl-5">
-              {[
-                {
-                  id: "draft_created",
-                  type: "Draft created",
-                  message: null,
-                  createdAt: submission.createdAt,
-                  actorName: null,
-                },
-                ...(submission.submittedAt
-                  ? [
-                      {
-                        id: "submitted",
-                        type: "Submitted",
-                        message: null,
-                        createdAt: submission.submittedAt,
-                        actorName: submission.owner.displayName,
-                      },
-                    ]
-                  : []),
-                ...submission.events.map((event) => {
-                  let eventType = event.type.replaceAll("_", " ").toLowerCase();
-                  let eventMessage = event.message;
+              {(() => {
+                const hasSubmissionReceived = submission.events.some(
+                  (e) => e.type === "SUBMISSION_RECEIVED",
+                );
+                const eventsList = [
+                  {
+                    id: "draft_created",
+                    type: "Draft Created",
+                    message: null,
+                    createdAt: submission.createdAt,
+                    actorName: null,
+                  },
+                  ...(!hasSubmissionReceived && submission.submittedAt
+                    ? [
+                        {
+                          id: "submitted",
+                          type: "Submitted by Author",
+                          message: null,
+                          createdAt: submission.submittedAt,
+                          actorName: submission.owner.displayName,
+                        },
+                      ]
+                    : []),
+                  ...submission.events.map((event) => {
+                    let eventType = event.type
+                      .replaceAll("_", " ")
+                      .toLowerCase();
+                    let eventMessage = event.message;
 
-                  if (event.type === "CORRECTION_REQUESTED") {
-                    eventType = "Correction Requested";
-                    if (event.message?.includes("attachment")) {
-                      const match = event.message.match(/\d+\s+attachments?/i);
-                      eventMessage = match
-                        ? match[0].toLowerCase()
-                        : event.message;
-                    } else {
-                      eventMessage = null;
+                    if (event.type === "SUBMISSION_RECEIVED") {
+                      eventType = "Submitted by Author";
+                    } else if (event.type === "TRACKING_ID_ASSIGNED") {
+                      eventType = "Tracking ID Assigned";
+                    } else if (event.type === "CORRECTION_REQUESTED") {
+                      eventType = "Correction Requested";
+                      if (event.message?.includes("attachment")) {
+                        const match =
+                          event.message.match(/\d+\s+attachments?/i);
+                        eventMessage = match
+                          ? match[0].toLowerCase()
+                          : event.message;
+                      } else {
+                        eventMessage = null;
+                      }
+                    } else if (event.type === "REVISION_SUBMITTED") {
+                      eventType = "Correction Submitted";
+                      if (event.message?.includes("attachment")) {
+                        const match =
+                          event.message.match(/\d+\s+attachments?/i);
+                        eventMessage = match
+                          ? match[0].toLowerCase()
+                          : event.message;
+                      } else {
+                        eventMessage = null;
+                      }
+                    } else if (event.type === "REVIEWER_ASSIGNED") {
+                      eventType = "Reviewer Assigned";
+                    } else if (event.type === "ADHERENCE_REPORT_SUBMITTED") {
+                      eventType = "Adherence Report Submitted";
+                      eventMessage = event.message
+                        ? `— ${event.message}`
+                        : null;
+                    } else if (event.type === "REVIEW_SUBMITTED") {
+                      eventType = "Final Review Submitted";
+                      eventMessage = event.message;
+                    } else if (event.type === "EDITORIAL_DECISION") {
+                      eventType = "Editorial Decision Issued";
+                    } else if (event.type === "INITIAL_ASSESSMENT_STARTED") {
+                      eventType = "Initial Assessment Started";
+                    } else if (event.type === "INITIAL_ASSESSMENT_PASSED") {
+                      eventType = "Initial Assessment Passed";
                     }
-                  } else if (event.type === "REVISION_SUBMITTED") {
-                    eventType = "Correction Submitted";
-                    if (event.message?.includes("attachment")) {
-                      const match = event.message.match(/\d+\s+attachments?/i);
-                      eventMessage = match
-                        ? match[0].toLowerCase()
-                        : event.message;
-                    } else {
-                      eventMessage = null;
-                    }
-                  } else if (event.type === "ADHERENCE_REPORT_SUBMITTED") {
-                    eventType = "Adherence Report Submitted";
-                    eventMessage = event.message ? `— ${event.message}` : null;
-                  } else if (event.type === "REVIEW_SUBMITTED") {
-                    eventType = "Final Review Submitted";
-                    eventMessage = event.message;
-                  }
 
-                  return {
-                    id: event.id,
-                    type: eventType,
-                    message: eventMessage,
-                    createdAt: event.createdAt,
-                    actorName: event.actor?.displayName,
-                  };
-                }),
-              ]
-                .sort((a, b) => a.createdAt.getTime() - b.createdAt.getTime())
-                .map((event) => (
-                  <li key={event.id} className="relative pb-5 last:pb-0">
-                    <span className="absolute top-1.5 -left-[1.42rem] size-2 rounded-full bg-[color:var(--color-accent)]" />
-                    <p className="text-xs font-semibold capitalize">
-                      {event.type}
-                    </p>
-                    <p className="mt-1 text-[11px] text-[color:var(--color-subtle)]">
-                      {date.format(event.createdAt)}
-                      {event.actorName ? ` · ${event.actorName}` : ""}
-                    </p>
-                    {event.message ? (
-                      <p className="mt-1 text-xs leading-5 text-[color:var(--color-muted)]">
-                        {event.message}
+                    return {
+                      id: event.id,
+                      type: eventType,
+                      message: eventMessage,
+                      createdAt: event.createdAt,
+                      actorName:
+                        event.actor?.displayName ??
+                        (event.type === "SUBMISSION_RECEIVED"
+                          ? submission.owner.displayName
+                          : null),
+                    };
+                  }),
+                ];
+
+                return eventsList
+                  .sort((a, b) => a.createdAt.getTime() - b.createdAt.getTime())
+                  .map((event) => (
+                    <li key={event.id} className="relative pb-5 last:pb-0">
+                      <span className="absolute top-1.5 -left-[1.42rem] size-2 rounded-full bg-[color:var(--color-accent)]" />
+                      <p className="text-xs font-semibold capitalize">
+                        {event.type}
                       </p>
-                    ) : null}
-                  </li>
-                ))}
+                      <p className="mt-1 text-[11px] text-[color:var(--color-subtle)]">
+                        {date.format(event.createdAt)}
+                        {event.actorName ? ` · ${event.actorName}` : ""}
+                      </p>
+                      {event.message ? (
+                        <p className="mt-1 text-xs leading-5 text-[color:var(--color-muted)]">
+                          {event.message}
+                        </p>
+                      ) : null}
+                    </li>
+                  ));
+              })()}
             </ol>
           </div>
         </aside>

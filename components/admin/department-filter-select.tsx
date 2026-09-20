@@ -24,9 +24,9 @@ export function DepartmentFilterSelect({
     const value = e.target.value;
     startTransition(() => {
       if (value === "all") {
-        router.push("/admin/requests");
+        router.push("/admin/submissions");
       } else {
-        router.push(`/admin/requests?department=${value}`);
+        router.push(`/admin/submissions?journal=${value}`);
       }
     });
   };

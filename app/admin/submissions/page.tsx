@@ -11,6 +11,8 @@ import { getAvailableWorkspaces } from "@/lib/auth/workspaces";
 import { listPlatformSubmissions } from "@/lib/editorial/data";
 import { getActiveDepartmentJournals } from "@/lib/requests/data";
 
+import { getJournalActivationMap } from "@/lib/editorial/journal-activation";
+
 const date = new Intl.DateTimeFormat("en-NG", {
   day: "numeric",
   month: "short",
@@ -19,24 +21,30 @@ const date = new Intl.DateTimeFormat("en-NG", {
 
 const statusOptions: Array<{ value: string; label: string }> = [
   { value: "all", label: "All Statuses" },
-  { value: "ACCEPTED", label: "Approved / Ready to Publish" },
-  { value: "REVIEWS_RECEIVED", label: "Reviews Received" },
+  { value: "SUBMITTED", label: "Submitted / Awaiting Tracking ID" },
+  { value: "SCREENING", label: "Screening" },
   { value: "UNDER_REVIEW", label: "Under Review" },
-  { value: "AWAITING_REVIEWERS", label: "Awaiting Reviewers" },
-  { value: "SUBMITTED", label: "Awaiting Tracking ID" },
+  { value: "REVIEWS_RECEIVED", label: "Reviews Received" },
+  { value: "REVISION_REQUESTED", label: "Revisions Requested" },
+  { value: "ACCEPTED", label: "Accepted / Ready to Publish" },
+  { value: "REJECTED", label: "Rejected" },
 ];
 
 export default async function PlatformSubmissionsPage({
   searchParams,
 }: {
-  searchParams: Promise<{ department?: string; status?: string }>;
+  searchParams: Promise<{
+    department?: string;
+    journal?: string;
+    status?: string;
+  }>;
 }) {
   const user = await requireApplicationArea("admin");
   if (!isSuperAdmin(user)) {
     redirect("/unauthorized?reason=workspace");
   }
 
-  const { department, status } = await searchParams;
+  const { department, journal, status } = await searchParams;
   const workspaces = getAvailableWorkspaces(user);
   const workspace = workspaces.find((item) => item.area === "platform");
   if (!workspace) redirect("/unauthorized?reason=workspace");
@@ -49,15 +57,19 @@ export default async function PlatformSubmissionsPage({
       ? (normalizedStatus as SubmissionStatus)
       : undefined;
 
-  const [journals, submissions] = await Promise.all([
+  const journalFilter = journal || department;
+
+  const [journals, activationMap, submissions] = await Promise.all([
     getActiveDepartmentJournals(),
+    getJournalActivationMap(),
     listPlatformSubmissions({
-      departmentSlug: department,
+      departmentSlug: journalFilter,
       status: filterStatus,
     }),
   ]);
 
-  const selectedDepartment = department ?? "all";
+  const activeJournals = journals.filter((j) => Boolean(activationMap[j.slug]));
+  const selectedDepartment = journalFilter ?? "all";
   const selectedStatus = status ?? "all";
 
   return (
@@ -67,7 +79,6 @@ export default async function PlatformSubmissionsPage({
       workspaces={workspaces}
       navigation={[
         { href: "/admin", label: "Overview" },
-        { href: "/admin/requests", label: "Requests" },
         { href: "/admin/submissions", label: "Manuscripts" },
         { href: "/admin/articles", label: "Articles & Content" },
         { href: "/admin/editorial-board", label: "Editorial Board" },
@@ -87,15 +98,15 @@ export default async function PlatformSubmissionsPage({
           </h1>
           <p className="mt-3 max-w-xl text-sm leading-6 text-[color:var(--color-muted)]">
             Review, manage tracking IDs, assign reviewers, and publish approved
-            manuscripts across all IMSU FOSS department journals.
+            manuscripts across all IMSU FOSS faculty journals.
           </p>
         </div>
 
         {/* Filters */}
         <SubmissionsFilterBar
-          journals={journals.map((j) => ({
+          journals={activeJournals.map((j) => ({
             id: j.id,
-            name: j.department?.name ?? j.name,
+            name: j.shortName ? `${j.name} (${j.shortName})` : j.name,
             slug: j.slug,
           }))}
           statusOptions={statusOptions}

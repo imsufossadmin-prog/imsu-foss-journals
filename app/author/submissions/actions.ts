@@ -25,6 +25,10 @@ import {
   saveDraftDetails,
   SubmissionMutationError,
 } from "@/lib/submissions/mutations";
+import {
+  DirectSubmissionError,
+  createDirectArticleSubmission,
+} from "@/lib/submissions/direct-submission";
 import type {
   ActionState,
   SubmissionAuthorInput,
@@ -39,7 +43,8 @@ import { createClient } from "@/lib/supabase/server";
 function actionError(error: unknown): ActionState {
   if (
     error instanceof SubmissionMutationError ||
-    error instanceof EditorialMutationError
+    error instanceof EditorialMutationError ||
+    error instanceof DirectSubmissionError
   ) {
     return { error: error.message, fieldErrors: error.fieldErrors };
   }
@@ -241,7 +246,7 @@ export async function deleteDraftAction(
     revalidatePath(`/author/requests/${linkedRequest.id}`);
   }
   revalidatePath("/author/submissions");
-  revalidatePath("/admin/requests");
+  revalidatePath("/admin/submissions");
 
   if (linkedRequest) {
     redirect(`/author/requests/${linkedRequest.id}`);
@@ -375,4 +380,55 @@ export async function submitAuthorCorrectionAction(
     }
     return actionError(error);
   }
+}
+
+export async function submitDirectArticleAction(
+  _previousState: ActionState,
+  formData: FormData,
+): Promise<ActionState> {
+  const user = await requireGlobalRole("AUTHOR");
+  const journalSlug = String(formData.get("journalSlug") ?? "").trim();
+  const title = String(formData.get("title") ?? "").trim();
+  const abstract = String(formData.get("abstract") ?? "").trim();
+  const keywordsStr = String(formData.get("keywords") ?? "").trim();
+  const manuscriptFile = formData.get("manuscriptFile") as File | null;
+
+  let authors: SubmissionAuthorInput[] = [];
+  try {
+    const rawAuthors = formData.get("authors");
+    if (typeof rawAuthors === "string") {
+      authors = JSON.parse(rawAuthors);
+    }
+  } catch {
+    return { error: "The author details could not be parsed." };
+  }
+
+  if (!manuscriptFile || manuscriptFile.size === 0) {
+    return {
+      error: "Please choose a manuscript file (.docx or .pdf) to upload.",
+    };
+  }
+
+  let submissionId = "";
+  try {
+    const result = await createDirectArticleSubmission({
+      authorId: user.id,
+      journalSlug,
+      title,
+      abstract,
+      keywords: normalizeKeywords(keywordsStr),
+      authors,
+      file: manuscriptFile,
+    });
+    submissionId = result.submissionId;
+  } catch (error) {
+    return actionError(error);
+  }
+
+  revalidatePath("/author");
+  revalidatePath("/author/submissions");
+  revalidatePath(`/admin/${journalSlug}`);
+  revalidatePath(`/admin/${journalSlug}/submissions`);
+
+  redirect(`/author/submissions/${submissionId}`);
 }

@@ -1,17 +1,8 @@
 import Link from "next/link";
 
-import { startRequestAction } from "@/app/author/requests/actions";
-import {
-  RequestStatus,
-  StartSubmissionForm,
-} from "@/components/requests/request-components";
+import { SubmissionStatus } from "@/components/submissions/submission-status";
 import { requireApplicationArea } from "@/lib/auth/authorization";
-import {
-  getActiveDepartmentJournals,
-  listAuthorRequests,
-} from "@/lib/requests/data";
-
-import { getJournalActivationMap } from "@/lib/editorial/journal-activation";
+import { listAuthorSubmissions } from "@/lib/submissions/data";
 import { getReviewerApplicationForUser } from "@/lib/editorial/reviewer-applications-store";
 
 const date = new Intl.DateTimeFormat("en-NG", {
@@ -22,27 +13,18 @@ const date = new Intl.DateTimeFormat("en-NG", {
 
 export default async function AuthorPage() {
   const user = await requireApplicationArea("author");
-  const [requests, journals, activationMap, reviewerApp] = await Promise.all([
-    listAuthorRequests(user.id),
-    getActiveDepartmentJournals(),
-    getJournalActivationMap(),
+  const [submissions, reviewerApp] = await Promise.all([
+    listAuthorSubmissions(user.id),
     getReviewerApplicationForUser({ id: user.id, email: user.email ?? "" }),
   ]);
 
-  const activeJournals = journals
-    .filter((j) => Boolean(activationMap[j.slug]))
-    .map((j) => ({
-      ...j,
-      isActivated: true,
-    }));
-
   return (
     <div className="mx-auto max-w-5xl space-y-8">
-      <header className="flex flex-col gap-6 pb-4 sm:flex-row sm:items-end sm:justify-between">
+      <header className="flex flex-col gap-6 border-b border-[color:var(--color-border)] pb-6 sm:flex-row sm:items-end sm:justify-between">
         <div>
           <div className="flex flex-wrap items-center gap-3">
             <p className="text-xs font-semibold tracking-[0.12em] text-[color:var(--color-accent)] uppercase">
-              Author workspace
+              Author Workspace
             </p>
             {reviewerApp?.status === "PENDING" ? (
               <Link
@@ -72,58 +54,90 @@ export default async function AuthorPage() {
               </Link>
             )}
           </div>
-          <h1 className="mt-3 font-serif text-4xl font-medium tracking-[-0.035em] sm:text-5xl">
-            Submit an article
+          <h1 className="mt-3 font-serif text-3xl font-medium tracking-[-0.035em] sm:text-4xl">
+            Manuscripts & Submissions
           </h1>
-          <p className="mt-3 max-w-2xl text-sm leading-6 text-[color:var(--color-muted)]">
-            Select your journal and start your submission request. Your
-            conversation, manuscript, and tracking ID stay together.
+          <p className="mt-2 max-w-2xl text-sm leading-6 text-[color:var(--color-muted)]">
+            Track your submitted papers, communicate directly with the journal
+            secretariat, and upload requested revisions.
           </p>
         </div>
-        <StartSubmissionForm
-          action={startRequestAction}
-          journals={activeJournals}
-        />
+        <div className="shrink-0">
+          <Link
+            href="/author/submissions/new"
+            className="button-primary inline-flex items-center gap-2 text-xs"
+          >
+            <span>+</span> Submit an Article
+          </Link>
+        </div>
       </header>
 
-      <section>
-        <h2 className="text-sm font-semibold">Your submission requests</h2>
-        {requests.length ? (
-          <div className="mt-4 space-y-3">
-            {requests.map((request) => (
+      <section className="space-y-4">
+        <h2 className="text-xs font-bold tracking-wider text-[color:var(--color-foreground)] uppercase">
+          Your Submitted Manuscripts
+        </h2>
+
+        {submissions.length > 0 ? (
+          <div className="space-y-3">
+            {submissions.map((submission) => (
               <Link
-                key={request.id}
-                href={`/author/requests/${request.id}`}
+                key={submission.id}
+                href={`/author/submissions/${submission.id}`}
                 prefetch={true}
-                className="group flex flex-col justify-between rounded-[var(--radius-lg)] bg-[color:var(--color-surface-raised)] p-5 transition hover:bg-[color:var(--color-surface-strong)] sm:flex-row sm:items-center"
+                className="group flex flex-col justify-between gap-4 rounded-[var(--radius-lg)] border border-[color:var(--color-border)] bg-[color:var(--color-surface-raised)] p-5 transition hover:border-[color:var(--color-accent)] hover:bg-[color:var(--color-surface-strong)] sm:flex-row sm:items-center"
               >
-                <div>
-                  <p className="text-sm font-semibold group-hover:text-[color:var(--color-accent)]">
-                    {request.submission?.title ??
-                      `${request.department?.name ?? request.journal.name} submission request`}
+                <div className="min-w-0 space-y-1.5">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <span className="rounded-md bg-[color:var(--color-accent-soft)] px-2 py-0.5 text-[10px] font-bold text-[color:var(--color-accent)] uppercase">
+                      {submission.journal.shortName ?? submission.journal.name}
+                    </span>
+                    {submission.trackingNumber ? (
+                      <span className="font-mono text-xs font-semibold text-[color:var(--color-accent)]">
+                        {submission.trackingNumber}
+                      </span>
+                    ) : (
+                      <span className="font-mono text-[11px] text-[color:var(--color-subtle)]">
+                        Tracking ID pending
+                      </span>
+                    )}
+                  </div>
+                  <p className="text-sm font-semibold tracking-[-0.01em] text-[color:var(--color-foreground)] group-hover:text-[color:var(--color-accent)]">
+                    {submission.title ?? "Untitled manuscript"}
                   </p>
-                  <p className="mt-1 text-xs text-[color:var(--color-subtle)]">
-                    {request._count.messages} conversation updates
+                  <p className="text-xs text-[color:var(--color-subtle)]">
+                    {submission.authors.length}{" "}
+                    {submission.authors.length === 1 ? "Author" : "Authors"} ·
+                    Updated {date.format(submission.updatedAt)}
                   </p>
                 </div>
-                <div className="mt-3 flex items-center justify-between gap-4 sm:mt-0 sm:justify-end">
-                  <RequestStatus status={request.status} />
-                  <p className="text-xs text-[color:var(--color-subtle)]">
-                    Updated {date.format(request.updatedAt)}
-                  </p>
+                <div className="flex shrink-0 items-center justify-between gap-4 sm:justify-end">
+                  <SubmissionStatus status={submission.status} />
+                  <span className="text-xs font-semibold text-[color:var(--color-accent)] group-hover:underline">
+                    View Manuscript & Chat →
+                  </span>
                 </div>
               </Link>
             ))}
           </div>
         ) : (
-          <div className="rounded-[var(--radius-lg)] bg-[color:var(--color-surface-raised)] p-8 text-center">
-            <p className="text-sm font-semibold">
-              No active submission requests
+          <div className="rounded-[var(--radius-lg)] border border-[color:var(--color-border)] bg-[color:var(--color-surface-raised)] p-12 text-center">
+            <span className="text-3xl">📝</span>
+            <p className="mt-3 text-base font-semibold text-[color:var(--color-foreground)]">
+              No submissions yet
             </p>
-            <p className="mt-1 text-xs text-[color:var(--color-muted)]">
-              Select a department above and click &quot;Start request&quot; to
-              talk with the journal team.
+            <p className="mx-auto mt-1 max-w-md text-xs leading-5 text-[color:var(--color-muted)]">
+              You have not submitted any manuscripts yet. Click below to submit
+              your research paper to any IMSU Faculty of Social Sciences
+              journal.
             </p>
+            <div className="mt-5">
+              <Link
+                href="/author/submissions/new"
+                className="button-primary inline-flex items-center gap-2 text-xs"
+              >
+                <span>+</span> Submit Your First Article
+              </Link>
+            </div>
           </div>
         )}
       </section>

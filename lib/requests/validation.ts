@@ -21,22 +21,23 @@ export function validateMessageBody(value: string) {
 
 export const requestStatusContent = {
   NEW: {
-    label: "Request active",
+    label: "Direct manuscript",
     authorGuidance:
-      "Your submission request is active. You can submit your manuscript immediately.",
+      "Your direct submission is active. You can track manuscript progress here.",
   },
   AWAITING_PAYMENT: {
-    label: "Inquiry in progress",
+    label: "In progress",
     authorGuidance:
-      "Your request is active. You can submit your manuscript at any time.",
+      "Your submission is in progress. You can track your manuscript at any time.",
   },
   RECEIPT_SUBMITTED: {
     label: "Update sent",
     authorGuidance: "Your conversation has been updated.",
   },
   SUBMISSION_ENABLED: {
-    label: "Ready for submission",
-    authorGuidance: "You can submit your article manuscript.",
+    label: "Submitted",
+    authorGuidance:
+      "Your manuscript has been submitted for editorial screening.",
   },
   MANUSCRIPT_SUBMITTED: {
     label: "Awaiting tracking ID",

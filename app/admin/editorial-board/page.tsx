@@ -62,7 +62,6 @@ export default async function AdminEditorialBoardPage() {
       workspaces={workspaces}
       navigation={[
         { href: "/admin", label: "Overview" },
-        { href: "/admin/requests", label: "Requests" },
         { href: "/admin/submissions", label: "Manuscripts" },
         { href: "/admin/articles", label: "Articles & Content" },
         { href: "/admin/editorial-board", label: "Editorial Board" },

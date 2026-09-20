@@ -54,68 +54,134 @@ export default async function SubmissionDetailPage({
       }))
     : [];
 
-  if (submission.status === "ACCEPTED") {
-    const publishedUrl = `/articles/art-${submission.id.toLowerCase()}`;
-    const hasCongrats = messages.some((m) =>
-      m.body?.includes("officially published"),
-    );
-    if (!hasCongrats) {
-      messages.push({
-        id: "published-congrats-system",
-        kind: "SYSTEM",
-        body: `Congratulations! Your manuscript "${submission.title ?? "Untitled"}" has been officially published live in IMSU FOSS Journals. View article live: ${publishedUrl}`,
-        createdAt: new Date().toISOString(),
-        sender: null,
-        attachments: [],
-      });
-    }
-  }
-
   const draft = submission.status === "DRAFT";
+
+  const hasSubmissionReceived = (editorial?.events ?? []).some(
+    (e) => e.type === "SUBMISSION_RECEIVED",
+  );
+
+  const timelineEvents = [
+    {
+      id: "draft_created",
+      type: "Draft Created",
+      message: null,
+      createdAt: submission.createdAt,
+    },
+    ...(!hasSubmissionReceived && submission.submittedAt
+      ? [
+          {
+            id: "submitted",
+            type: "Submitted by Author",
+            message: null,
+            createdAt: submission.submittedAt,
+          },
+        ]
+      : []),
+    ...(editorial?.events ?? []).map((event) => {
+      let eventType = event.type.replaceAll("_", " ").toLowerCase();
+      let eventMessage = event.message;
+
+      if (event.type === "SUBMISSION_RECEIVED") {
+        eventType = "Submitted by Author";
+      } else if (event.type === "TRACKING_ID_ASSIGNED") {
+        eventType = "Tracking ID Assigned";
+      } else if (event.type === "CORRECTION_REQUESTED") {
+        eventType = "Correction Requested";
+        if (event.message?.includes("attachment")) {
+          const match = event.message.match(/\d+\s+attachments?/i);
+          eventMessage = match ? match[0].toLowerCase() : event.message;
+        } else {
+          eventMessage = null;
+        }
+      } else if (event.type === "REVISION_SUBMITTED") {
+        eventType = "Correction Submitted";
+        if (event.message?.includes("attachment")) {
+          const match = event.message.match(/\d+\s+attachments?/i);
+          eventMessage = match ? match[0].toLowerCase() : event.message;
+        } else {
+          eventMessage = null;
+        }
+      } else if (event.type === "REVIEWER_ASSIGNED") {
+        eventType = "Reviewer Assigned";
+      } else if (event.type === "ADHERENCE_REPORT_SUBMITTED") {
+        eventType = "Adherence Report Submitted";
+        eventMessage = event.message ? `— ${event.message}` : null;
+      } else if (event.type === "REVIEW_SUBMITTED") {
+        eventType = "Final Review Submitted";
+        eventMessage = event.message;
+      } else if (event.type === "EDITORIAL_DECISION") {
+        eventType = "Editorial Decision Issued";
+      } else if (event.type === "INITIAL_ASSESSMENT_STARTED") {
+        eventType = "Initial Assessment Started";
+      } else if (event.type === "INITIAL_ASSESSMENT_PASSED") {
+        eventType = "Initial Assessment Passed";
+      }
+
+      return {
+        id: event.id,
+        type: eventType,
+        message: eventMessage,
+        createdAt: event.createdAt,
+      };
+    }),
+  ].sort((a, b) => a.createdAt.getTime() - b.createdAt.getTime());
 
   return (
     <div className="mx-auto max-w-5xl">
-      <Link
-        href="/author/submissions"
-        className="text-xs font-semibold text-[color:var(--color-muted)] hover:text-[color:var(--color-foreground)]"
-      >
-        ← My Submissions
-      </Link>
+      <div className="flex items-center justify-between">
+        <Link
+          href="/author"
+          className="text-xs font-semibold text-[color:var(--color-muted)] hover:text-[color:var(--color-foreground)]"
+        >
+          ← Back to Author Workspace
+        </Link>
+      </div>
 
       <div className="mt-6 flex flex-wrap items-start justify-between gap-4 border-b border-[color:var(--color-border)] pb-6">
         <div>
-          <SubmissionStatus status={submission.status} />
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="rounded-md bg-[color:var(--color-accent-soft)] px-2.5 py-0.5 text-[10px] font-bold text-[color:var(--color-accent)] uppercase">
+              {submission.journal.shortName ?? submission.journal.name}
+            </span>
+            <SubmissionStatus status={submission.status} />
+          </div>
           <h1 className="mt-3 font-serif text-3xl font-medium tracking-[-0.035em] sm:text-4xl">
             {submission.title ?? "Untitled manuscript"}
           </h1>
           {submission.trackingNumber ? (
-            <p className="mt-2 font-mono text-xs text-[color:var(--color-subtle)]">
-              {submission.trackingNumber}
+            <p className="mt-2 font-mono text-xs font-semibold text-[color:var(--color-accent)]">
+              Tracking ID: {submission.trackingNumber}
             </p>
+          ) : (
+            <p className="mt-2 font-mono text-xs text-[color:var(--color-subtle)]">
+              Tracking ID pending editorial assignment
+            </p>
+          )}
+        </div>
+        <div className="flex flex-wrap items-center gap-3">
+          {draft ? (
+            <Link
+              href={
+                submission.request
+                  ? `/author/requests/${submission.request.id}/submit?submission=${submission.id}`
+                  : `/author/submissions/${submission.id}/edit/details`
+              }
+              className="button-primary shrink-0"
+            >
+              Continue editing
+            </Link>
+          ) : ["CORRECTION_REQUESTED", "REVISION_REQUESTED"].includes(
+              submission.status,
+            ) ? (
+            <AuthorCorrectionTriggerButton
+              submissionId={submission.id}
+              className="shrink-0"
+            />
           ) : null}
         </div>
-        {draft ? (
-          <Link
-            href={
-              submission.request
-                ? `/author/requests/${submission.request.id}/submit?submission=${submission.id}`
-                : `/author/submissions/${submission.id}/edit/details`
-            }
-            className="button-primary shrink-0"
-          >
-            Continue editing
-          </Link>
-        ) : ["CORRECTION_REQUESTED", "REVISION_REQUESTED"].includes(
-            submission.status,
-          ) ? (
-          <AuthorCorrectionTriggerButton
-            submissionId={submission.id}
-            className="shrink-0"
-          />
-        ) : null}
       </div>
 
-      <div className="mt-6 grid max-w-full min-w-0 gap-6 lg:grid-cols-[minmax(0,1fr)_17rem]">
+      <div className="mt-6 grid max-w-full min-w-0 gap-6 lg:grid-cols-[minmax(0,1fr)_18rem]">
         <div className="max-w-full min-w-0 space-y-6">
           <SubmissionDetailsAccordion
             abstract={submission.abstract}
@@ -140,12 +206,25 @@ export default async function SubmissionDetailPage({
               label: version.kind.toLowerCase(),
               createdAt: dateFormatter.format(version.submittedAt),
               originalFileName: version.manuscriptStoredFile.originalFileName,
+              downloadUrl: `/api/author/submissions/${submission.id}/versions/${version.id}/manuscript`,
             }))}
           />
 
           {request ? (
-            <DetailSection title="Conversation with the journal">
-              <div className="w-full max-w-full min-w-0 overflow-hidden rounded-[var(--radius-lg)] border border-[color:var(--color-border)] bg-[color:var(--color-surface-raised)] p-3 sm:p-5">
+            <details
+              className="group rounded-[var(--radius-lg)] border border-[color:var(--color-border)] bg-[color:var(--color-surface-raised)] p-5"
+              open
+            >
+              <summary className="flex cursor-pointer items-center justify-between text-sm font-semibold text-[color:var(--color-foreground)] select-none">
+                <div className="flex items-center gap-2">
+                  <span className="size-2 rounded-full bg-emerald-400" />
+                  <span>Conversation with editorial secretariat</span>
+                </div>
+                <span className="text-xs text-[color:var(--color-subtle)] transition-transform group-open:rotate-180">
+                  ▼
+                </span>
+              </summary>
+              <div className="mt-4 border-t border-[color:var(--color-border)] pt-4">
                 <RequestChatBox
                   requestId={request.id}
                   viewerId={user.id}
@@ -157,11 +236,29 @@ export default async function SubmissionDetailPage({
                   )}
                 />
               </div>
-            </DetailSection>
+            </details>
           ) : null}
         </div>
+
         <aside className="min-w-0 space-y-4">
           {submission.status === "ACCEPTED" ? (
+            <div className="rounded-[var(--radius-lg)] border border-emerald-500/40 bg-emerald-500/5 p-5">
+              <span className="rounded bg-emerald-500/20 px-2 py-0.5 text-[10px] font-semibold text-emerald-400">
+                ACCEPTED FOR PUBLICATION
+              </span>
+              <h2 className="mt-2 text-sm font-semibold text-[color:var(--color-foreground)]">
+                Manuscript Accepted
+              </h2>
+              <p className="mt-1 text-xs leading-5 text-[color:var(--color-muted)]">
+                Your manuscript has been accepted by the editorial team and is
+                currently in production for Volume &amp; Issue scheduling. You
+                will receive final publication details and DOI links once
+                published.
+              </p>
+            </div>
+          ) : null}
+
+          {submission.status === "PUBLISHED" ? (
             <div className="rounded-[var(--radius-lg)] border border-emerald-500/40 bg-emerald-500/5 p-5">
               <span className="rounded bg-emerald-500/20 px-2 py-0.5 text-[10px] font-semibold text-emerald-400">
                 PUBLISHED
@@ -217,82 +314,23 @@ export default async function SubmissionDetailPage({
               </div>
             </div>
           ) : null}
-          <details className="group rounded-[var(--radius-lg)] border border-[color:var(--color-border)] bg-[color:var(--color-surface-raised)] p-4 sm:p-5">
-            <summary className="flex cursor-pointer items-center justify-between text-xs font-semibold text-[color:var(--color-foreground)] select-none">
-              <span>Timeline & Audit History</span>
-              <span className="text-[10px] text-[color:var(--color-subtle)] transition-transform group-open:rotate-180">
-                ▼
-              </span>
-            </summary>
-            <div className="mt-4 border-t border-[color:var(--color-border)] pt-4">
-              <ol className="border-l border-[color:var(--color-border-strong)] pl-5">
-                {[
-                  {
-                    id: "draft_created",
-                    type: "Draft created",
-                    message: null,
-                    createdAt: submission.createdAt,
-                  },
-                  ...(submission.submittedAt
-                    ? [
-                        {
-                          id: "submitted",
-                          type: "Submitted",
-                          message: null,
-                          createdAt: submission.submittedAt,
-                        },
-                      ]
-                    : []),
-                  ...(editorial?.events ?? []).map((event) => {
-                    let eventType = event.type
-                      .replaceAll("_", " ")
-                      .toLowerCase();
-                    let eventMessage = event.message;
 
-                    if (event.type === "CORRECTION_REQUESTED") {
-                      eventType = "Correction Requested";
-                      if (event.message?.includes("attachment")) {
-                        const match =
-                          event.message.match(/\d+\s+attachments?/i);
-                        eventMessage = match
-                          ? match[0].toLowerCase()
-                          : event.message;
-                      } else {
-                        eventMessage = null;
-                      }
-                    } else if (event.type === "REVISION_SUBMITTED") {
-                      eventType = "Correction Submitted";
-                      if (event.message?.includes("attachment")) {
-                        const match =
-                          event.message.match(/\d+\s+attachments?/i);
-                        eventMessage = match
-                          ? match[0].toLowerCase()
-                          : event.message;
-                      } else {
-                        eventMessage = null;
-                      }
-                    }
+          <div className="rounded-[var(--radius-lg)] border border-[color:var(--color-border)] bg-[color:var(--color-surface-raised)] p-5">
+            <h2 className="text-sm font-semibold text-[color:var(--color-foreground)]">
+              Timeline & Audit History
+            </h2>
+            <ol className="mt-4 border-l border-[color:var(--color-border-strong)] pl-5">
+              {timelineEvents.map((event) => (
+                <TimelineItem
+                  key={event.id}
+                  label={event.type}
+                  date={event.createdAt}
+                  message={event.message}
+                />
+              ))}
+            </ol>
+          </div>
 
-                    return {
-                      id: event.id,
-                      type: eventType,
-                      message: eventMessage,
-                      createdAt: event.createdAt,
-                    };
-                  }),
-                ]
-                  .sort((a, b) => a.createdAt.getTime() - b.createdAt.getTime())
-                  .map((event) => (
-                    <TimelineItem
-                      key={event.id}
-                      label={event.type}
-                      date={event.createdAt}
-                      message={event.message}
-                    />
-                  ))}
-              </ol>
-            </div>
-          </details>
           {draft ? (
             <Link
               href={`/author/submissions/${submission.id}/delete`}
@@ -304,21 +342,6 @@ export default async function SubmissionDetailPage({
         </aside>
       </div>
     </div>
-  );
-}
-
-function DetailSection({
-  title,
-  children,
-}: {
-  title: string;
-  children: React.ReactNode;
-}) {
-  return (
-    <section className="max-w-full min-w-0 overflow-hidden">
-      <h2 className="mb-4 text-sm font-semibold">{title}</h2>
-      {children}
-    </section>
   );
 }
 

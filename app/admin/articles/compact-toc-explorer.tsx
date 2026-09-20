@@ -76,49 +76,34 @@ export function CompactTOCExplorer({ issues }: { issues: CompactIssueData[] }) {
   }
 
   return (
-    <div className="rounded-[var(--radius-lg)] border border-[color:var(--color-border)] bg-[color:var(--color-surface-raised)] p-5 sm:p-6">
-      <div className="flex flex-col gap-4 border-b border-[color:var(--color-border)] pb-4 sm:flex-row sm:items-center sm:justify-between">
-        <div>
+    <div className="rounded-[var(--radius-lg)] border border-[color:var(--color-border)] bg-[color:var(--color-surface-raised)] p-4 sm:p-5">
+      <div className="flex flex-col gap-3">
+        {/* Title + Journal Filter Pills */}
+        <div className="flex flex-wrap items-center justify-between gap-2 border-b border-[color:var(--color-border)] pb-3">
           <div className="flex items-center gap-2">
-            <h2 className="text-sm font-bold text-[color:var(--color-foreground)]">
+            <h2 className="text-xs font-bold tracking-wider text-[color:var(--color-foreground)] uppercase">
               Journal Issues &amp; Table of Contents
             </h2>
             <span className="rounded-full bg-[color:var(--color-surface)] px-2 py-0.5 text-[10px] font-semibold text-[color:var(--color-muted)]">
               {issues.length} {issues.length === 1 ? "issue" : "issues"}
             </span>
           </div>
-          <p className="text-xs text-[color:var(--color-muted)]">
-            Select an issue to manage publication status, update the Table of
-            Contents, or download TOC documents.
-          </p>
-        </div>
-      </div>
 
-      <div className="mt-4 space-y-4">
-        {/* Journal Filter Pills if multiple journals exist */}
-        {journals.length > 1 ? (
-          <div className="flex flex-wrap items-center gap-1.5">
-            <span className="mr-1 text-[11px] font-semibold text-[color:var(--color-muted)]">
-              Journal:
-            </span>
-            <button
-              type="button"
-              onClick={() => {
-                setSelectedJournalSlug("all");
-              }}
-              className={`rounded-full px-2.5 py-1 text-xs font-semibold transition ${
-                selectedJournalSlug === "all"
-                  ? "bg-[color:var(--color-accent)] text-[color:var(--color-accent-foreground)]"
-                  : "bg-[color:var(--color-surface)] text-[color:var(--color-muted)] hover:text-[color:var(--color-foreground)]"
-              }`}
-            >
-              All ({issues.length})
-            </button>
-            {journals.map((j) => {
-              const count = issues.filter(
-                (i) => i.volume.journal.slug === j.slug,
-              ).length;
-              return (
+          {/* Journal Filter Pills */}
+          {journals.length > 1 ? (
+            <div className="flex flex-wrap items-center gap-1.5">
+              <button
+                type="button"
+                onClick={() => setSelectedJournalSlug("all")}
+                className={`rounded-full px-2.5 py-0.5 text-[11px] font-semibold transition ${
+                  selectedJournalSlug === "all"
+                    ? "bg-[color:var(--color-accent)] text-[color:var(--color-accent-foreground)]"
+                    : "bg-[color:var(--color-surface)] text-[color:var(--color-muted)] hover:text-[color:var(--color-foreground)]"
+                }`}
+              >
+                All ({issues.length})
+              </button>
+              {journals.map((j) => (
                 <button
                   key={j.slug}
                   type="button"
@@ -129,99 +114,53 @@ export function CompactTOCExplorer({ issues }: { issues: CompactIssueData[] }) {
                     );
                     if (firstInJournal) setSelectedIssueId(firstInJournal.id);
                   }}
-                  className={`rounded-full px-2.5 py-1 text-xs font-semibold transition ${
+                  className={`rounded-full px-2.5 py-0.5 text-[11px] font-semibold transition ${
                     selectedJournalSlug === j.slug
                       ? "bg-[color:var(--color-accent)] text-[color:var(--color-accent-foreground)]"
                       : "bg-[color:var(--color-surface)] text-[color:var(--color-muted)] hover:text-[color:var(--color-foreground)]"
                   }`}
                 >
-                  {j.label} ({count})
+                  {j.label}
                 </button>
-              );
-            })}
-          </div>
-        ) : null}
-
-        {/* Volume & Issue Dropdown Selector */}
-        <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
-          <label className="text-xs font-semibold whitespace-nowrap text-[color:var(--color-foreground)]">
-            Select Issue:
-          </label>
-          <select
-            value={currentIssue?.id || ""}
-            onChange={(e) => setSelectedIssueId(e.target.value)}
-            className="app-field flex-1 text-xs font-medium"
-          >
-            {filteredIssues.map((iss) => {
-              const journal = iss.volume.journal;
-              const journalLabel = journal.departmentName || journal.name;
-              const issueTitle =
-                iss.title ||
-                `Vol. ${iss.volume.number} No. ${iss.number} (${iss.volume.year})`;
-              return (
-                <option key={iss.id} value={iss.id}>
-                  {journalLabel} — {issueTitle} ({iss.publishedArticleCount}{" "}
-                  {iss.publishedArticleCount === 1 ? "article" : "articles"}){" "}
-                  {iss.isClosed ? "[CLOSED]" : "[OPEN]"}
-                </option>
-              );
-            })}
-          </select>
+              ))}
+            </div>
+          ) : null}
         </div>
 
-        {/* Selected Issue Detail Card */}
-        {currentIssue ? (
-          <div className="rounded-[var(--radius-md)] border border-[color:var(--color-border)] bg-[color:var(--color-surface)] p-4">
-            <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-              <div className="min-w-0 space-y-1.5">
-                <div className="flex flex-wrap items-center gap-2 text-xs font-semibold text-[color:var(--color-accent)] uppercase">
-                  <span>
-                    {currentIssue.volume.journal.departmentName ||
-                      currentIssue.volume.journal.name}
-                  </span>
-                  <span>·</span>
-                  <span>
-                    Vol. {currentIssue.volume.number} · Issue{" "}
-                    {currentIssue.number} ({currentIssue.volume.year})
-                  </span>
-                  <span>
-                    {currentIssue.isClosed ? (
-                      <span className="rounded bg-slate-500/20 px-2 py-0.5 text-[10px] font-bold text-slate-400">
-                        CLOSED
-                      </span>
-                    ) : (
-                      <span className="rounded bg-emerald-500/20 px-2 py-0.5 text-[10px] font-bold text-emerald-400">
-                        OPEN
-                      </span>
-                    )}
-                  </span>
-                </div>
-
-                <p className="truncate text-sm font-semibold text-[color:var(--color-foreground)]">
-                  {currentIssue.title ||
-                    `Vol. ${currentIssue.volume.number} No. ${currentIssue.number} (${currentIssue.volume.year})`}
-                </p>
-
-                <p className="text-xs text-[color:var(--color-subtle)]">
-                  <span className="font-semibold text-[color:var(--color-foreground)]">
-                    {currentIssue.publishedArticleCount}
-                  </span>{" "}
-                  {currentIssue.publishedArticleCount === 1
-                    ? "article"
-                    : "articles"}{" "}
-                  published in this issue
-                </p>
-              </div>
-
-              <div className="shrink-0 pt-2 sm:pt-0">
-                <AdminIssueRowActions
-                  issueId={currentIssue.id}
-                  isClosed={currentIssue.isClosed}
-                />
-              </div>
-            </div>
+        {/* Single Inline Row: Issue Selector + Action Buttons */}
+        <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+          <div className="flex min-w-0 flex-1 items-center gap-2">
+            <select
+              value={currentIssue?.id || ""}
+              onChange={(e) => setSelectedIssueId(e.target.value)}
+              className="app-field max-w-xl truncate text-xs font-medium"
+            >
+              {filteredIssues.map((iss) => {
+                const journal = iss.volume.journal;
+                const journalLabel = journal.departmentName || journal.name;
+                const issueTitle =
+                  iss.title ||
+                  `Vol. ${iss.volume.number} No. ${iss.number} (${iss.volume.year})`;
+                return (
+                  <option key={iss.id} value={iss.id}>
+                    {journalLabel} — {issueTitle} ({iss.publishedArticleCount}{" "}
+                    {iss.publishedArticleCount === 1 ? "article" : "articles"}){" "}
+                    {iss.isClosed ? "[CLOSED]" : "[OPEN]"}
+                  </option>
+                );
+              })}
+            </select>
           </div>
-        ) : null}
+
+          {currentIssue ? (
+            <div className="flex shrink-0 items-center gap-2">
+              <AdminIssueRowActions
+                issueId={currentIssue.id}
+                isClosed={currentIssue.isClosed}
+              />
+            </div>
+          ) : null}
+        </div>
       </div>
     </div>
   );

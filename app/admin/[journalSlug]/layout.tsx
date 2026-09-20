@@ -65,9 +65,8 @@ export default async function JournalAdminLayout({
       workspaces={workspaces}
       journalWorkspaces={journalWorkspaces}
       navigation={[
-        { href: `/admin/${journal.slug}`, label: "Submission requests" },
         {
-          href: `/admin/${journal.slug}/submissions`,
+          href: `/admin/${journal.slug}`,
           label: "Manuscripts",
           matchSubtree: true,
         },

@@ -1,5 +1,14 @@
-AGENTS.md
-.agents/
+.next/
+node_modules/
+dist/
+build/
 .playwright-cli/
-.data/
+*.pdf
+*.png
+*.jpg
+*.jpeg
+*.svg
+*.ico
+scratch/
 supabase/.temp/
+tests/fixtures/

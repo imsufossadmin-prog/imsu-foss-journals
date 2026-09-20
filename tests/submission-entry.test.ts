@@ -25,14 +25,18 @@ const editor = {
 
 test("public submission entry uses one canonical Author request path", () => {
   assert.equal(publicSubmissionEntryPath, "/submit");
-  assert.equal(canonicalSubmissionEntryPath, "/author/requests/new");
+  assert.equal(canonicalSubmissionEntryPath, "/author/submissions/new");
   assert.equal(
     getSubmissionEntryDestination(null),
-    "/login?next=%2Fauthor%2Frequests%2Fnew",
+    "/login?next=%2Fauthor%2Fsubmissions%2Fnew",
   );
   assert.equal(
     getSubmissionEntryDestination(author),
     canonicalSubmissionEntryPath,
+  );
+  assert.equal(
+    getSubmissionEntryDestination(author, "ajsbs"),
+    "/author/submissions/new?journal=ajsbs",
   );
 });
 
@@ -40,6 +44,10 @@ test("login return paths reject open redirects and unrelated destinations", () =
   assert.equal(
     getSafeLoginReturnPath(canonicalSubmissionEntryPath),
     canonicalSubmissionEntryPath,
+  );
+  assert.equal(
+    getSafeLoginReturnPath("/author/submissions/new?journal=ajsbs"),
+    "/author/submissions/new?journal=ajsbs",
   );
   assert.equal(getSafeLoginReturnPath("https://example.com"), null);
   assert.equal(getSafeLoginReturnPath("//example.com"), null);
@@ -96,7 +104,7 @@ test("OAuth callback keeps only the safe submission return path", () => {
   try {
     assert.equal(
       getOAuthCallbackUrl(canonicalSubmissionEntryPath),
-      "http://localhost:3000/auth/callback?next=%2Fauthor%2Frequests%2Fnew",
+      "http://localhost:3000/auth/callback?next=%2Fauthor%2Fsubmissions%2Fnew",
     );
     assert.equal(
       getOAuthCallbackUrl("https://example.com"),
@@ -108,17 +116,9 @@ test("OAuth callback keeps only the safe submission return path", () => {
   }
 });
 
-test("legacy new-submission route redirects and normal navigation avoids the wizard", () => {
+test("direct submission route renders the 1-page submission form", () => {
   assert.match(
     source("app/author/submissions/new/page.tsx"),
-    /redirect\("\/submit"\)/,
-  );
-  assert.doesNotMatch(
-    source("app/author/layout.tsx"),
-    /\/author\/submissions\/new/,
-  );
-  assert.doesNotMatch(
-    source("app/author/page.tsx"),
-    /\/author\/submissions\/new/,
+    /DirectArticleSubmissionForm/,
   );
 });

@@ -115,11 +115,11 @@ export function validateInitialManuscriptFile(
   const extension = file.name.split(".").pop()?.toLowerCase() ?? "";
 
   if (extension === "pdf" || file.type === "application/pdf") {
-    return "Initial manuscript must be a Microsoft Word document (.doc or .docx). PDF is not accepted for initial submission.";
+    return "Initial manuscript must be a Microsoft Word document (.docx). PDF is not accepted for initial submission.";
   }
 
   if (extension !== "doc" && extension !== "docx") {
-    return "Initial manuscript must be a Microsoft Word document (.doc or .docx).";
+    return "Initial manuscript must be a Microsoft Word document (.docx).";
   }
 
   return null;

@@ -1,4 +1,5 @@
 <!-- BEGIN:nextjs-agent-rules -->
+
 # This is NOT the Next.js you know
 
 This version has breaking changes — APIs, conventions, and file structure may all differ from your training data. Read the relevant guide in `node_modules/next/dist/docs/` before writing any code. Heed deprecation notices.
@@ -9,6 +10,7 @@ This version has breaking changes — APIs, conventions, and file structure may 
 # IMSU FOSS JOURNALS — AGENT SYSTEM RULES
 
 > **Authoritative sources (read before making substantial changes):**
+>
 > 1. `docs/handoff.md` — full project state, rules, and history
 > 2. `docs/PRODUCT_NORTH_STAR.md` — product direction and simplicity mandate
 > 3. `prisma/schema.prisma` — domain model
@@ -31,17 +33,17 @@ This version has breaking changes — APIs, conventions, and file structure may 
 
 ## 2. TECH STACK (EXACT VERSIONS)
 
-| Layer | Technology | Version |
-|---|---|---|
-| Framework | Next.js | **16.2.12** |
-| UI | React | 19.2.4 |
-| Language | TypeScript | ^5 |
-| ORM | Prisma | ^7.9.1 (with `@prisma/adapter-pg`) |
-| Auth/Storage | Supabase | `@supabase/ssr` 0.12.0, `@supabase/supabase-js` 2.109.0 |
-| CSS | Tailwind CSS | ^4 |
-| Test runner | Node.js built-in `--test` with tsx | — |
-| Linter | ESLint 9 | eslint-config-next 16.2.12 |
-| Formatter | Prettier 3 with prettier-plugin-tailwindcss | — |
+| Layer        | Technology                                  | Version                                                 |
+| ------------ | ------------------------------------------- | ------------------------------------------------------- |
+| Framework    | Next.js                                     | **16.2.12**                                             |
+| UI           | React                                       | 19.2.4                                                  |
+| Language     | TypeScript                                  | ^5                                                      |
+| ORM          | Prisma                                      | ^7.9.1 (with `@prisma/adapter-pg`)                      |
+| Auth/Storage | Supabase                                    | `@supabase/ssr` 0.12.0, `@supabase/supabase-js` 2.109.0 |
+| CSS          | Tailwind CSS                                | ^4                                                      |
+| Test runner  | Node.js built-in `--test` with tsx          | —                                                       |
+| Linter       | ESLint 9                                    | eslint-config-next 16.2.12                              |
+| Formatter    | Prettier 3 with prettier-plugin-tailwindcss | —                                                       |
 
 > **IMPORTANT:** Next.js 16 has breaking changes relative to earlier versions. Always check `node_modules/next/dist/docs/` before writing framework-level code.
 
@@ -104,14 +106,14 @@ This version has breaking changes — APIs, conventions, and file structure may 
 
 ## 4. ENVIRONMENT VARIABLES
 
-| Variable | Visibility | Purpose |
-|---|---|---|
-| `NEXT_PUBLIC_SUPABASE_URL` | Public | Supabase project URL |
-| `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` | Public | Supabase anon key |
-| `NEXT_PUBLIC_APP_URL` | Public | Application origin URL |
-| `DATABASE_URL` | Server-only | Supabase Session Pooler URL for Prisma |
-| `SUPABASE_SECRET_KEY` | Server-only | Supabase service-role key |
-| `DEV_USER_EMAIL/PASSWORD/DISPLAY_NAME/ROLE/JOURNAL_SLUG` | Provisioning only | Never commit values |
+| Variable                                                 | Visibility        | Purpose                                |
+| -------------------------------------------------------- | ----------------- | -------------------------------------- |
+| `NEXT_PUBLIC_SUPABASE_URL`                               | Public            | Supabase project URL                   |
+| `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`                   | Public            | Supabase anon key                      |
+| `NEXT_PUBLIC_APP_URL`                                    | Public            | Application origin URL                 |
+| `DATABASE_URL`                                           | Server-only       | Supabase Session Pooler URL for Prisma |
+| `SUPABASE_SECRET_KEY`                                    | Server-only       | Supabase service-role key              |
+| `DEV_USER_EMAIL/PASSWORD/DISPLAY_NAME/ROLE/JOURNAL_SLUG` | Provisioning only | Never commit values                    |
 
 ---
 
@@ -151,6 +153,7 @@ This version has breaking changes — APIs, conventions, and file structure may 
 4. **AUTHOR** — default for all users; never removed even if staff role is removed.
 
 ### Critical Authorization Rules
+
 - Every first Google login creates an AUTHOR — **never any other role automatically**.
 - Privileged roles are assigned **only by authorized administrators, server-side**.
 - Google authenticates identity; it does **NOT** determine authorization.
@@ -178,9 +181,11 @@ This version has breaking changes — APIs, conventions, and file structure may 
 ## 8. PERFORMANCE & DATA-ACCESS INVARIANTS
 
 ### Performance Context & System Reality
+
 IMSUFOSS connects to a remote PostgreSQL/Supabase database via Prisma. Network and connection-pooling round trips cost approximately **~195–200ms per remote call**, even when PostgreSQL query execution itself completes in milliseconds.
 
 Performance auditing proved that historical application latency was **NOT** primarily caused by:
+
 - React rendering or client state
 - Database table size
 - PostgreSQL query computation time
@@ -190,9 +195,11 @@ Performance auditing proved that historical application latency was **NOT** prim
 The dominant performance bottleneck was **unnecessary sequential remote database round trips and duplicate client/server work**. Future feature development and refactoring must never reintroduce these patterns.
 
 ### Core Engineering Mandate
+
 > **"IMSUFOSS became fast primarily by eliminating unnecessary waiting, sequential remote round trips, and duplicate work — NOT by removing important business logic."**
 
 All future engineering must preserve:
+
 ```text
 Correctness
 +
@@ -212,52 +219,67 @@ Measurement before optimization
 ### Invariant Rules & Implementation Guardrails
 
 #### 1. Prevent Query Waterfalls
+
 Avoid unneeded sequential `await` waterfalls:
+
 ```ts
 // ❌ Avoid sequential remote queries when operations are independent:
 await queryA();
 await queryB();
 await queryC();
 ```
+
 Where operations are independent or can safely be unified, utilize:
+
 - Prisma relation joins (`include` / `select`)
 - Nested atomic writes
 - Combined queries
 - Conditional atomic updates
 - `Promise.all()` for genuinely independent reads/writes
 
-*Never parallelize operations that have sequential data dependencies purely for speed.*
+_Never parallelize operations that have sequential data dependencies purely for speed._
 
 #### 2. Preserve Prisma Relation-Join Optimization
+
 The existing relation-join query strategy was introduced after production measurement demonstrated substantial latency reductions in remote relational graph queries.
+
 - Do **not** remove or disable relation-join optimizations casually.
 - Any change to this strategy must be strictly justified by: (1) a correctness/compatibility requirement, (2) diagnostic trace measurement, and (3) verified before/after benchmarks.
 - Future Prisma version upgrades must regression-test relation query latency.
 
 #### 3. Avoid Unnecessary Interactive Transaction Round Trips
+
 Do not default to long, multi-step interactive transactions:
+
 ```ts
 // ❌ Avoid multi-round-trip interactive transactions when atomic operations suffice:
 prisma.$transaction(async (tx) => {
   // many sequential remote round trips across pooled connections
 });
 ```
+
 Where business rules permit, prefer atomic/nested Prisma operations or combined statements that allow PostgreSQL to execute related work in a single server-side round trip.  
-**Critical Constraint:** Never weaken transaction atomicity, introduce race conditions, break status transitions, or compromise data integrity simply to reduce round trips. *Correctness always overrides query count.*
+**Critical Constraint:** Never weaken transaction atomicity, introduce race conditions, break status transitions, or compromise data integrity simply to reduce round trips. _Correctness always overrides query count._
 
 #### 4. Do Not Duplicate Revalidation and Refresh
+
 Historical workflows sometimes performed server-side mutation revalidations and immediately invoked client-side `router.refresh()`, triggering duplicate RSC rendering passes.
+
 - Before adding `router.refresh()` after a Server Action or mutation, inspect whether the Server Action already performed targeted path/tag revalidation.
 - Never fetch or re-render the same state twice without a demonstrated requirement.
 
 #### 5. Keep Cache Invalidation Targeted
+
 Before calling `revalidatePath()`, `revalidateTag()`, or `router.refresh()`:
+
 - Identify precisely which data became stale.
 - Avoid broad, indiscriminate invalidation of unrelated application state.
 - **Never remove required invalidation for performance:** Publishing workflows must always reliably invalidate and refresh all affected public surfaces (e.g., homepage, current issue, archives, journal catalog, and article detail pages).
 
 #### 6. Polling Policy
+
 Frequent automated polling is strictly reserved for genuine communication features (such as the active Author ↔ Admin request chatbox and the Editor ↔ Admin internal chat).
+
 - **Chat Communication Polling Standards:**
   - Visible/active tab: ~4-second polling cadence.
   - Hidden browser tab: Polling immediately paused.
@@ -267,14 +289,18 @@ Frequent automated polling is strictly reserved for genuine communication featur
 - **General Workflows:** Do **NOT** introduce polling to dashboards, request directories, submission queues, articles, user directories, journal settings, statistics, public catalogs, or filter controls without an explicit requirement. Standard data updates through navigation, Server Actions, targeted revalidation, or explicit user action.
 
 #### 7. Immediate UI Acknowledgement & Truthful Feedback
+
 Backend operations may legitimately require processing time (e.g., document parsing, storage uploads, PDF generation). User interactions must receive immediate visible confirmation:
+
 - Pending states and disabled buttons on trigger.
 - Loading indicators, inline skeletons, and React transitions.
 - Truthful, measured upload progress (e.g., native XHR upload events).
 - **Never use artificial delays or fake progress bars** to simulate or mask latency.
 
 #### 8. Preserve Existing Performance Infrastructure
+
 Agents must not casually remove or regress established performance patterns:
+
 - Admin loading skeletons and Suspense boundaries.
 - Filter pending states and transitions (`useTransition`).
 - Truthful XHR upload progress reporting.
@@ -284,10 +310,12 @@ Agents must not casually remove or regress established performance patterns:
 - Targeted cache invalidation and duplicate-refresh guards.
 - Adaptive visibility-aware chat polling.
 
-*If any of these must be modified, investigate and document the architectural reason first.*
+_If any of these must be modified, investigate and document the architectural reason first._
 
 #### 9. Security and Correctness Override Performance
+
 Never sacrifice safety, authorization, or business integrity for speed. Do not weaken:
+
 - Authentication & Supabase session verification
 - Role-based access control (SUPER_ADMIN, JOURNAL_ADMIN, EDITOR, AUTHOR)
 - Department and journal boundary scoping
@@ -298,13 +326,16 @@ Never sacrifice safety, authorization, or business integrity for speed. Do not w
 - Duplicate-action protections
 - Storage orphan cleanup and rollback handlers
 
-*A slower, secure, and correct operation is always preferable to a faster, insecure, or corrupted one.*
+_A slower, secure, and correct operation is always preferable to a faster, insecure, or corrupted one._
 
 #### 10. Measure Before Optimizing (Scientific Workflow)
+
 All performance investigations and modifications must adhere to this discipline:
+
 ```text
 OBSERVE → REPRODUCE → MEASURE → TRACE → IDENTIFY → CHANGE → VERIFY
 ```
+
 - Never perform speculative performance refactoring.
 - Do not assume a workflow is slow without verifiable telemetry or reproduction.
 - Never claim an optimization succeeded without providing before/after measurements.
@@ -313,7 +344,9 @@ OBSERVE → REPRODUCE → MEASURE → TRACE → IDENTIFY → CHANGE → VERIFY
 ---
 
 ### Regression Checklist for Future Features
+
 Before finalizing any admin workflow, data-access mutation, or page query, verify:
+
 1. Did this change introduce a new remote database round trip?
 2. Is that database round trip sequential when it could be combined or parallelized?
 3. Can independent read operations safely execute concurrently via `Promise.all()`?
@@ -329,16 +362,17 @@ Before finalizing any admin workflow, data-access mutation, or page query, verif
 ---
 
 ### Historical Performance Baseline (Diagnostic Reference)
-> **Note:** These figures represent historical diagnostic benchmarks used during performance tuning, *not permanent hard SLAs*. Infrastructure, connection pools, and network latency fluctuate over time. Use these baselines to detect major regressions.
 
-| Metric / Surface | Unoptimized Baseline | Optimized Reference |
-|---|---|---|
-| Remote DB / Network Round Trip | ~195 ms | ~195 ms (physical limit) |
-| Authenticated User Relation Graph | ~960 ms | **~231 ms** |
-| Super Admin Dashboard Data | 462 ms | **234 ms** |
-| Request List Data | 449 ms | **222 ms** |
-| Submission List Data | 688 ms | **248 ms** |
-| Prefetched Production Admin Navigation | — | **~65–104 ms** (perceived) |
+> **Note:** These figures represent historical diagnostic benchmarks used during performance tuning, _not permanent hard SLAs_. Infrastructure, connection pools, and network latency fluctuate over time. Use these baselines to detect major regressions.
+
+| Metric / Surface                       | Unoptimized Baseline | Optimized Reference        |
+| -------------------------------------- | -------------------- | -------------------------- |
+| Remote DB / Network Round Trip         | ~195 ms              | ~195 ms (physical limit)   |
+| Authenticated User Relation Graph      | ~960 ms              | **~231 ms**                |
+| Super Admin Dashboard Data             | 462 ms               | **234 ms**                 |
+| Request List Data                      | 449 ms               | **222 ms**                 |
+| Submission List Data                   | 688 ms               | **248 ms**                 |
+| Prefetched Production Admin Navigation | —                    | **~65–104 ms** (perceived) |
 
 ---
 
@@ -362,7 +396,8 @@ Last verified baseline: **131/131 tests passing**, ESLint clean (0 errors, 0 war
 **SIMPLIFY → CONNECT → POLISH → COMPLETE**
 
 When uncertain about a product decision, ask:
-> *"Would this make IMSU FOSS easier for an older, non-technical academic administrator to operate every day?"*
+
+> _"Would this make IMSU FOSS easier for an older, non-technical academic administrator to operate every day?"_
 
 ---
 
@@ -373,5 +408,3 @@ When uncertain about a product decision, ask:
 - **Complete Transparency & Honest Communication:** Always disclose exact methods used. Never use evasive language or obscure technical implementation choices.
 - **Acronym Recognition ("IP"):** Treat "IP" as shorthand for **Implementation Plan**. When the user asks for "IP first" or "implementation plan first", prepare and present the implementation plan artifact before writing any code changes.
 - **Precise UI Placement:** Place edit actions, icons, and contextual controls directly inline next to their associated content where requested (e.g., small edit icon beside headers/badges) rather than adding unnecessary bulky cards or sidebar panels.
-
-

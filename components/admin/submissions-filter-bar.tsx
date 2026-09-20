@@ -18,12 +18,22 @@ export function SubmissionsFilterBar({
   const searchParams = useSearchParams();
   const [isPending, startTransition] = useTransition();
 
-  function updateFilter(key: "department" | "status", value: string) {
+  function updateFilter(
+    key: "department" | "journal" | "status",
+    value: string,
+  ) {
     const params = new URLSearchParams(searchParams.toString());
     if (value === "all") {
-      params.delete(key);
+      params.delete("department");
+      params.delete("journal");
+      if (key === "status") params.delete("status");
     } else {
-      params.set(key, value);
+      if (key === "department" || key === "journal") {
+        params.delete("department");
+        params.set("journal", value);
+      } else {
+        params.set(key, value);
+      }
     }
     startTransition(() => {
       router.push(`/admin/submissions?${params.toString()}`);
@@ -37,19 +47,19 @@ export function SubmissionsFilterBar({
     >
       <div className="flex items-center gap-2">
         <label
-          htmlFor="department-filter"
+          htmlFor="journal-filter"
           className="text-xs font-semibold whitespace-nowrap text-[color:var(--color-muted)]"
         >
-          Department:
+          Journal:
         </label>
         <select
-          id="department-filter"
+          id="journal-filter"
           disabled={isPending}
           value={selectedDepartment}
-          onChange={(e) => updateFilter("department", e.target.value)}
+          onChange={(e) => updateFilter("journal", e.target.value)}
           className="app-field py-1.5 pr-8 text-xs font-semibold"
         >
-          <option value="all">All Departments</option>
+          <option value="all">All Journals</option>
           {journals.map((journal) => (
             <option key={journal.id} value={journal.slug}>
               {journal.name}

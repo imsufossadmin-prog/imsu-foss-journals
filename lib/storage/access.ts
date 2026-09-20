@@ -11,6 +11,7 @@ import {
   createSubmissionObjectPath,
   storageBuckets,
 } from "@/lib/storage/paths";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
 
 export async function createSubmissionFileDownloadUrl(
@@ -39,7 +40,7 @@ export async function createSubmissionFileDownloadUrl(
     submissionFile.type,
   );
 
-  const supabase = await createClient();
+  const supabase = createAdminClient();
   const { data, error } = await supabase.storage
     .from(submissionFile.storedFile.bucket)
     .createSignedUrl(submissionFile.storedFile.objectPath, 60);

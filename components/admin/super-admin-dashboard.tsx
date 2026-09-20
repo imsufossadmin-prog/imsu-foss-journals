@@ -1,12 +1,13 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import Link from "next/link";
 
 type OperationalCounts = {
-  newRequests: number;
-  pendingReceipts: number;
+  newRequests?: number;
+  pendingReceipts?: number;
   awaitingTracking: number;
+  activeSubmissions?: number;
   readyForPublishing?: number;
   publishedArticles?: number;
 };
@@ -112,9 +113,21 @@ export function SuperAdminDashboard({
   activateAction,
 }: SuperAdminDashboardProps) {
   const [showAllJournals, setShowAllJournals] = useState(false);
-  const totalItems = operational.newRequests + operational.awaitingTracking;
+  const totalItems =
+    (operational.activeSubmissions ?? 0) + operational.awaitingTracking;
 
-  const visibleJournals = showAllJournals ? journals : journals.slice(0, 4);
+  const sortedJournals = useMemo(() => {
+    return [...journals].sort((a, b) => {
+      const aActive = a.isActivated !== false ? 1 : 0;
+      const bActive = b.isActivated !== false ? 1 : 0;
+      if (aActive !== bActive) return bActive - aActive;
+      return 0;
+    });
+  }, [journals]);
+
+  const visibleJournals = showAllJournals
+    ? sortedJournals
+    : sortedJournals.slice(0, 4);
 
   return (
     <div className="mx-auto max-w-5xl space-y-12">
@@ -127,8 +140,7 @@ export function SuperAdminDashboard({
             </p>
             <span className="text-[color:var(--color-border-strong)]">·</span>
             <span className="rounded-full bg-[color:var(--color-accent-soft)] px-2 py-0.5 text-[11px] font-semibold text-[color:var(--color-accent)]">
-              {journals.length}{" "}
-              {pluralise(journals.length, "Journal", "Journals")} Active
+              4 Faculty Journals Active
             </span>
           </div>
           <h1 className="mt-3 max-w-2xl font-serif text-3xl leading-[1.12] font-medium tracking-[-0.035em] text-[color:var(--color-foreground)] sm:text-4xl lg:text-[2.75rem]">
@@ -156,6 +168,16 @@ export function SuperAdminDashboard({
         <SectionHeader>Operational queue</SectionHeader>
         <div className="mt-5 grid gap-4 sm:grid-cols-3">
           <OperationalTile
+            count={operational.activeSubmissions ?? 0}
+            label={pluralise(
+              operational.activeSubmissions ?? 0,
+              "Submitted Manuscript",
+              "Submitted Manuscripts",
+            )}
+            actionLabel="View manuscripts"
+            href="/admin/submissions"
+          />
+          <OperationalTile
             count={operational.awaitingTracking}
             label={pluralise(
               operational.awaitingTracking,
@@ -164,16 +186,6 @@ export function SuperAdminDashboard({
             )}
             actionLabel="Assign tracking IDs"
             href="/admin/submissions?status=SUBMITTED"
-          />
-          <OperationalTile
-            count={operational.newRequests}
-            label={pluralise(
-              operational.newRequests,
-              "New submission request",
-              "New submission requests",
-            )}
-            actionLabel="View requests"
-            href="/admin/requests"
           />
           <OperationalTile
             count={operational.publishedArticles ?? 0}
@@ -192,9 +204,7 @@ export function SuperAdminDashboard({
       {journals.length > 0 ? (
         <section>
           <div className="flex items-center justify-between">
-            <SectionHeader>
-              {pluralise(journals.length, "Active journal", "Active journals")}
-            </SectionHeader>
+            <SectionHeader>Faculty Journals</SectionHeader>
             {journals.length > 4 ? (
               <button
                 type="button"

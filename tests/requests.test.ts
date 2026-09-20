@@ -96,16 +96,10 @@ test("submission permission belongs to the active request author", () => {
 });
 
 test("request statuses use plain operational language", () => {
-  assert.equal(requestStatusContent.NEW.label, "Request active");
-  assert.equal(
-    requestStatusContent.AWAITING_PAYMENT.label,
-    "Inquiry in progress",
-  );
+  assert.equal(requestStatusContent.NEW.label, "Direct manuscript");
+  assert.equal(requestStatusContent.AWAITING_PAYMENT.label, "In progress");
   assert.equal(requestStatusContent.RECEIPT_SUBMITTED.label, "Update sent");
-  assert.equal(
-    requestStatusContent.SUBMISSION_ENABLED.label,
-    "Ready for submission",
-  );
+  assert.equal(requestStatusContent.SUBMISSION_ENABLED.label, "Submitted");
   assert.equal(
     requestStatusContent.MANUSCRIPT_SUBMITTED.label,
     "Awaiting tracking ID",

@@ -127,6 +127,7 @@ export async function getPlatformOperationalCounts() {
     newRequests,
     pendingReceipts,
     awaitingTracking,
+    activeSubmissions,
     readyForPublishing,
     publishedArticles,
   ] = await Promise.all([
@@ -134,8 +135,26 @@ export async function getPlatformOperationalCounts() {
     prisma.submissionRequest.count({
       where: { status: "RECEIPT_SUBMITTED" },
     }),
-    prisma.submissionRequest.count({
-      where: { status: "MANUSCRIPT_SUBMITTED" },
+    prisma.submission.count({
+      where: { status: "SUBMITTED" },
+    }),
+    prisma.submission.count({
+      where: {
+        status: {
+          in: [
+            "SUBMITTED",
+            "SCREENING",
+            "CORRECTION_REQUESTED",
+            "AWAITING_REVIEWERS",
+            "UNDER_REVIEW",
+            "REVIEWS_RECEIVED",
+            "REVISION_REQUESTED",
+            "REVISED",
+            "ACCEPTED",
+            "REJECTED",
+          ],
+        },
+      },
     }),
     prisma.submission.count({
       where: { status: { in: ["ACCEPTED", "REVIEWS_RECEIVED"] } },
@@ -146,6 +165,7 @@ export async function getPlatformOperationalCounts() {
     newRequests,
     pendingReceipts,
     awaitingTracking,
+    activeSubmissions,
     readyForPublishing,
     publishedArticles,
   };

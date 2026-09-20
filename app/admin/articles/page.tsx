@@ -1,7 +1,10 @@
 import Link from "next/link";
+import { redirect } from "next/navigation";
 
+import { AuthenticatedShell } from "@/components/app/authenticated-shell";
 import { requireApplicationArea } from "@/lib/auth/authorization";
 import { isSuperAdmin } from "@/lib/auth/permissions";
+import { getAvailableWorkspaces } from "@/lib/auth/workspaces";
 import { prisma } from "@/lib/db/prisma";
 import { AdminArticleRowActions } from "./actions-client";
 import {
@@ -16,6 +19,14 @@ export default async function AdminArticlesDirectoryPage({
   searchParams: Promise<{ q?: string; success?: string }>;
 }) {
   const user = await requireApplicationArea("admin");
+  const workspaces = getAvailableWorkspaces(user);
+  const workspace =
+    workspaces.find((w) => w.area === "platform") ?? workspaces[0];
+
+  if (!workspace) {
+    redirect("/unauthorized?reason=workspace");
+  }
+
   const { q, success } = await searchParams;
   const isSuper = isSuperAdmin(user);
   const allowedJournalIds = isSuper
@@ -23,14 +34,6 @@ export default async function AdminArticlesDirectoryPage({
     : user.journalRoles
         .filter((jr) => jr.role === "JOURNAL_ADMIN" && jr.journal.isActive)
         .map((jr) => jr.journalId);
-
-  const backHref = isSuper
-    ? "/admin"
-    : user.journalRoles.find(
-          (jr) => jr.role === "JOURNAL_ADMIN" && jr.journal.isActive,
-        )
-      ? `/admin/${user.journalRoles.find((jr) => jr.role === "JOURNAL_ADMIN" && jr.journal.isActive)!.journal.slug}`
-      : "/admin";
 
   const [articles, issues] = await Promise.all([
     prisma.article.findMany({
@@ -125,142 +128,146 @@ export default async function AdminArticlesDirectoryPage({
   }));
 
   return (
-    <div className="mx-auto max-w-6xl min-w-0 space-y-8 px-4 py-8 sm:px-6 lg:px-8">
-      {/* Back to Overview */}
-      <div>
-        <Link
-          href={backHref}
-          prefetch={true}
-          className="rounded-md border border-[color:var(--color-border)] bg-[color:var(--color-surface-raised)] px-3 py-1.5 text-xs font-semibold text-[color:var(--color-foreground)] hover:border-[color:var(--color-accent)] hover:text-[color:var(--color-accent)]"
-        >
-          ← Back to Overview
-        </Link>
-      </div>
-
-      {/* Page Header */}
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <p className="text-[10px] font-bold tracking-[0.14em] text-[color:var(--color-accent)] uppercase">
-            Platform Content Management
-          </p>
-          <h1 className="mt-1 font-serif text-3xl font-bold tracking-[-0.035em] text-[color:var(--color-foreground)] sm:text-4xl">
-            Published Articles &amp; Issues
-          </h1>
-          <p className="mt-1 text-xs text-[color:var(--color-muted)]">
-            Manage issues, publish Table of Contents, and manage published
-            articles in the catalog.
-          </p>
-        </div>
-        <div>
-          <Link
-            href="/admin/articles/new"
-            prefetch={true}
-            className="button-primary inline-flex items-center gap-2 text-xs"
-          >
-            <span>+</span> Direct Publish Manuscript
-          </Link>
-        </div>
-      </div>
-
-      {/* Success Notification Banners */}
-      {success === "published" ? (
-        <div className="rounded-[var(--radius-md)] border border-emerald-500/30 bg-emerald-500/10 p-4 text-xs font-semibold text-emerald-400">
-          Article published successfully and is now available in Manage
-          Articles.
-        </div>
-      ) : null}
-
-      {success === "updated" ? (
-        <div className="rounded-[var(--radius-md)] border border-emerald-500/30 bg-emerald-500/10 p-4 text-xs font-semibold text-emerald-400">
-          Article metadata and files updated successfully.
-        </div>
-      ) : null}
-
-      {/* Compact Issues & Table of Contents Section */}
-      <CompactTOCExplorer issues={compactIssues} />
-
-      {/* Search Bar */}
-      <AdminArticlesSearchBar totalCount={articles.length} currentQuery={q} />
-
-      {/* Directory Table */}
-      <div className="rounded-[var(--radius-lg)] border border-[color:var(--color-border)] bg-[color:var(--color-surface-raised)] p-6">
-        <div className="flex items-center justify-between border-b border-[color:var(--color-border)] pb-4">
-          <p className="text-sm font-bold text-[color:var(--color-foreground)]">
-            All Articles ({articles.length})
-          </p>
-        </div>
-
-        {articles.length === 0 ? (
-          <div className="p-12 text-center">
-            <p className="text-sm font-medium text-[color:var(--color-muted)]">
-              No published articles found.
+    <AuthenticatedShell
+      user={user}
+      workspace={workspace}
+      workspaces={workspaces}
+      navigation={[
+        { href: "/admin", label: "Overview" },
+        { href: "/admin/submissions", label: "Manuscripts" },
+        { href: "/admin/articles", label: "Articles & Content" },
+        { href: "/admin/editorial-board", label: "Editorial Board" },
+        { href: "/admin/reviewers", label: "Reviewers" },
+        { href: "/admin/announcements", label: "Announcements" },
+        { href: "/admin/access", label: "Users" },
+      ]}
+    >
+      <div className="mx-auto max-w-6xl min-w-0 space-y-8">
+        {/* Page Header */}
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <p className="text-[10px] font-bold tracking-[0.14em] text-[color:var(--color-accent)] uppercase">
+              Platform Content Management
             </p>
+            <h1 className="mt-1 font-serif text-2xl font-medium tracking-[-0.03em] text-[color:var(--color-foreground)] sm:text-3xl">
+              Published Articles &amp; Issues
+            </h1>
+            <p className="mt-1 text-xs text-[color:var(--color-muted)]">
+              Manage issues, publish Table of Contents, and manage published
+              articles in the catalog.
+            </p>
+          </div>
+          <div>
             <Link
               href="/admin/articles/new"
-              className="mt-4 inline-block text-xs font-semibold text-[color:var(--color-accent)] hover:underline"
+              prefetch={true}
+              className="button-primary inline-flex items-center gap-2 text-xs"
             >
-              Upload a legacy manuscript now →
+              <span>+</span> Direct Publish Manuscript
             </Link>
           </div>
-        ) : (
-          <div className="mt-4 divide-y divide-[color:var(--color-border)]/70">
-            {articles.map((article) => (
-              <div
-                key={article.id}
-                className="flex flex-col gap-4 py-5 sm:flex-row sm:items-center sm:justify-between"
-              >
-                <div className="min-w-0 flex-1 space-y-1">
-                  <div className="flex items-center gap-2 text-[11px] font-semibold text-[color:var(--color-accent)] uppercase">
-                    <span>
-                      {article.issue.volume.journal.department?.name ??
-                        article.issue.volume.journal.name}
-                    </span>
-                    <span>·</span>
-                    <span>
-                      Vol. {article.issue.volume.number}, Issue{" "}
-                      {article.issue.number}
-                    </span>
-                    <span className="ml-auto sm:ml-0">
-                      {article.isPublished ? (
-                        <span className="rounded bg-emerald-500/20 px-2 py-0.5 text-[10px] text-emerald-400">
-                          LIVE
-                        </span>
-                      ) : (
-                        <span className="rounded bg-amber-500/20 px-2 py-0.5 text-[10px] text-amber-400">
-                          UNPUBLISHED
-                        </span>
-                      )}
-                    </span>
-                  </div>
-                  <h3 className="text-base font-semibold text-[color:var(--color-foreground)]">
-                    <Link
-                      href={`/articles/${article.slug}`}
-                      target="_blank"
-                      className="hover:text-[color:var(--color-accent)] hover:underline"
-                    >
-                      {article.title}
-                    </Link>
-                  </h3>
-                  {article.authors.length ? (
-                    <p className="text-xs text-[color:var(--color-subtle)]">
-                      Authors:{" "}
-                      {article.authors.map((a) => a.fullName).join(", ")}
-                    </p>
-                  ) : null}
-                </div>
+        </div>
 
-                <div className="shrink-0 pt-2 sm:pt-0">
-                  <AdminArticleRowActions
-                    articleId={article.id}
-                    articleSlug={article.slug}
-                    isPublished={article.isPublished}
-                  />
-                </div>
-              </div>
-            ))}
+        {/* Success Notification Banners */}
+        {success === "published" ? (
+          <div className="rounded-[var(--radius-md)] border border-emerald-500/30 bg-emerald-500/10 p-4 text-xs font-semibold text-emerald-400">
+            Article published successfully and is now available in Manage
+            Articles.
           </div>
-        )}
+        ) : null}
+
+        {success === "updated" ? (
+          <div className="rounded-[var(--radius-md)] border border-emerald-500/30 bg-emerald-500/10 p-4 text-xs font-semibold text-emerald-400">
+            Article metadata and files updated successfully.
+          </div>
+        ) : null}
+
+        {/* Compact Issues & Table of Contents Section */}
+        <CompactTOCExplorer issues={compactIssues} />
+
+        {/* Search Bar */}
+        <AdminArticlesSearchBar totalCount={articles.length} currentQuery={q} />
+
+        {/* Directory Table */}
+        <div className="rounded-[var(--radius-lg)] border border-[color:var(--color-border)] bg-[color:var(--color-surface-raised)] p-6">
+          <div className="flex items-center justify-between border-b border-[color:var(--color-border)] pb-4">
+            <p className="text-sm font-bold text-[color:var(--color-foreground)]">
+              All Articles ({articles.length})
+            </p>
+          </div>
+
+          {articles.length === 0 ? (
+            <div className="p-12 text-center">
+              <p className="text-sm font-medium text-[color:var(--color-muted)]">
+                No published articles found.
+              </p>
+              <Link
+                href="/admin/articles/new"
+                className="mt-4 inline-block text-xs font-semibold text-[color:var(--color-accent)] hover:underline"
+              >
+                Upload a legacy manuscript now →
+              </Link>
+            </div>
+          ) : (
+            <div className="mt-4 divide-y divide-[color:var(--color-border)]/70">
+              {articles.map((article) => (
+                <div
+                  key={article.id}
+                  className="flex flex-col gap-4 py-5 sm:flex-row sm:items-center sm:justify-between"
+                >
+                  <div className="min-w-0 flex-1 space-y-1">
+                    <div className="flex items-center gap-2 text-[11px] font-semibold text-[color:var(--color-accent)] uppercase">
+                      <span>
+                        {article.issue.volume.journal.department?.name ??
+                          article.issue.volume.journal.name}
+                      </span>
+                      <span>·</span>
+                      <span>
+                        Vol. {article.issue.volume.number}, Issue{" "}
+                        {article.issue.number}
+                      </span>
+                      <span className="ml-auto sm:ml-0">
+                        {article.isPublished ? (
+                          <span className="rounded bg-emerald-500/20 px-2 py-0.5 text-[10px] text-emerald-400">
+                            LIVE
+                          </span>
+                        ) : (
+                          <span className="rounded bg-amber-500/20 px-2 py-0.5 text-[10px] text-amber-400">
+                            UNPUBLISHED
+                          </span>
+                        )}
+                      </span>
+                    </div>
+                    <h3 className="text-base font-semibold text-[color:var(--color-foreground)]">
+                      <Link
+                        href={`/articles/${article.slug}`}
+                        target="_blank"
+                        className="hover:text-[color:var(--color-accent)] hover:underline"
+                      >
+                        {article.title}
+                      </Link>
+                    </h3>
+                    {article.authors.length ? (
+                      <p className="text-xs text-[color:var(--color-subtle)]">
+                        Authors:{" "}
+                        {article.authors.map((a) => a.fullName).join(", ")}
+                      </p>
+                    ) : null}
+                  </div>
+
+                  <div className="shrink-0 pt-2 sm:pt-0">
+                    <AdminArticleRowActions
+                      articleId={article.id}
+                      articleSlug={article.slug}
+                      isPublished={article.isPublished}
+                    />
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
       </div>
-    </div>
+    </AuthenticatedShell>
   );
 }
