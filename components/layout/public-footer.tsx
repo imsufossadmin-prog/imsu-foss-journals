@@ -34,9 +34,17 @@ export function PublicFooter() {
           </nav>
         </div>
 
-        <p className="mt-10 text-sm text-[color:var(--color-muted)]">
-          &copy; {currentYear} {siteConfig.name}
-        </p>
+        <div className="mt-10 flex flex-col gap-2 border-t border-[color:var(--color-border)]/60 pt-6 text-sm text-[color:var(--color-muted)] sm:flex-row sm:items-center sm:justify-between">
+          <p>
+            &copy; {currentYear} {siteConfig.name}
+          </p>
+          <p className="text-xs text-[color:var(--color-subtle)]">
+            Powered by{" "}
+            <span className="font-medium text-[color:var(--color-foreground)]">
+              4KS RESOURCES
+            </span>
+          </p>
+        </div>
       </Container>
     </footer>
   );
