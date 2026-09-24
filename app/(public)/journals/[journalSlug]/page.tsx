@@ -6,12 +6,10 @@ import { Container } from "@/components/ui/container";
 import { prisma } from "@/lib/db/prisma";
 import {
   getJournalDbSlugs,
+  getJournalMetadata,
   resolveCanonicalJournalSlug,
 } from "@/lib/editorial/editorial-board-data";
-import {
-  getJournalEditorialBoard,
-  getJournalMetadataWithOverrides,
-} from "@/lib/editorial/editorial-board-store";
+import { getJournalEditorialBoard } from "@/lib/editorial/editorial-board-store";
 
 export const dynamic = "force-dynamic";
 
@@ -22,7 +20,7 @@ export async function generateMetadata({
 }): Promise<Metadata> {
   const { journalSlug } = await params;
   const canonical = resolveCanonicalJournalSlug(journalSlug);
-  const meta = await getJournalMetadataWithOverrides(canonical);
+  const meta = getJournalMetadata(canonical);
   if (!meta) return { title: "Journal Not Found" };
 
   return {
@@ -38,7 +36,7 @@ export default async function JournalLandingPage({
 }) {
   const { journalSlug } = await params;
   const canonical = resolveCanonicalJournalSlug(journalSlug);
-  const meta = await getJournalMetadataWithOverrides(canonical);
+  const meta = getJournalMetadata(canonical);
 
   if (!meta) {
     notFound();
@@ -159,26 +157,22 @@ export default async function JournalLandingPage({
               </p>
             </div>
 
-            {/* ISSN & Attributes Bar */}
-            {meta.showMetadataOnHomepage &&
-            (meta.issnPrint ||
-              meta.issnOnline ||
-              meta.frequency ||
-              meta.referencingStyle) ? (
+            {/* ISSN & Attributes Bar - Shown exclusively when journal has registered ISSN identifiers (AJSBS) */}
+            {meta.issnPrint || meta.issnL ? (
               <div className="flex flex-wrap items-center gap-x-6 gap-y-2 border-y border-[color:var(--color-border)] py-2.5 font-mono text-xs text-[color:var(--color-muted)]">
                 {meta.issnPrint ? (
                   <span>
-                    Print ISSN:{" "}
+                    ISSN:{" "}
                     <strong className="font-semibold text-[color:var(--color-foreground)]">
                       {meta.issnPrint}
                     </strong>
                   </span>
                 ) : null}
-                {meta.issnOnline ? (
+                {meta.issnL ? (
                   <span>
-                    Online eISSN:{" "}
+                    ISSN-L:{" "}
                     <strong className="font-semibold text-[color:var(--color-foreground)]">
-                      {meta.issnOnline}
+                      {meta.issnL}
                     </strong>
                   </span>
                 ) : null}

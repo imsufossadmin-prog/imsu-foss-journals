@@ -7,11 +7,11 @@ import { getAvailableWorkspaces } from "@/lib/auth/workspaces";
 import { isSuperAdmin } from "@/lib/auth/permissions";
 import {
   CANONICAL_JOURNAL_METADATA,
+  getJournalMetadata,
   type EditorialBoardMember,
 } from "@/lib/editorial/editorial-board-data";
 import {
   getJournalEditorialBoard,
-  getJournalMetadataWithOverrides,
   isAuthorizedForJournal,
 } from "@/lib/editorial/editorial-board-store";
 
@@ -37,21 +37,16 @@ export default async function AdminEditorialBoardPage() {
     redirect("/unauthorized?reason=scope");
   }
 
-  // Load journal metadata with overrides and initial editorial boards for accessible canonical journals
-  const [journals, boardPairs] = await Promise.all([
-    Promise.all(
-      accessibleJournals.map(async (j) => {
-        const meta = await getJournalMetadataWithOverrides(j.slug);
-        return meta ?? j;
-      }),
-    ),
-    Promise.all(
-      accessibleJournals.map(async (j) => {
-        const board = await getJournalEditorialBoard(j.slug);
-        return [j.slug, board] as [string, EditorialBoardMember[]];
-      }),
-    ),
-  ]);
+  // Load canonical journal metadata and initial editorial boards for accessible journals
+  const journals = accessibleJournals.map(
+    (j) => getJournalMetadata(j.slug) ?? j,
+  );
+  const boardPairs = await Promise.all(
+    accessibleJournals.map(async (j) => {
+      const board = await getJournalEditorialBoard(j.slug);
+      return [j.slug, board] as [string, EditorialBoardMember[]];
+    }),
+  );
 
   const initialBoards = Object.fromEntries(boardPairs);
 

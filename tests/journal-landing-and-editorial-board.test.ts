@@ -11,11 +11,12 @@ import {
   addEditorialBoardMember,
   deleteEditorialBoardMember,
   getJournalEditorialBoard,
+  isAuthorizedForJournal,
   resetEditorialBoard,
   updateEditorialBoardMember,
 } from "@/lib/editorial/editorial-board-store";
 
-test("Phase 2: Slug alias resolution maps legacy and canonical slugs properly", () => {
+test("Slug alias resolution maps legacy and canonical slugs properly", () => {
   assert.equal(resolveCanonicalJournalSlug("njcp"), "njcp");
   assert.equal(resolveCanonicalJournalSlug("psychology"), "njcp");
   assert.equal(resolveCanonicalJournalSlug("PSYCHOLOGY"), "njcp");
@@ -32,7 +33,7 @@ test("Phase 2: Slug alias resolution maps legacy and canonical slugs properly", 
   assert.equal(resolveCanonicalJournalSlug("GJSBR"), "gjcsr");
 });
 
-test("Phase 2: Database slug mapper expands aliases for relation queries", () => {
+test("Database slug mapper expands aliases for relation queries", () => {
   assert.deepEqual(getJournalDbSlugs("njcp"), ["njcp", "psychology"]);
   assert.deepEqual(getJournalDbSlugs("psychology"), ["njcp", "psychology"]);
   assert.deepEqual(getJournalDbSlugs("njsr"), ["njsr", "njsbr"]);
@@ -40,7 +41,51 @@ test("Phase 2: Database slug mapper expands aliases for relation queries", () =>
   assert.deepEqual(getJournalDbSlugs("ajsbs"), ["ajsbs"]);
 });
 
-test("Phase 2: Exact Institutional Editorial Board for Nigerian Journal of Contemporary Psychology (NJCP)", () => {
+test("Institutional Journal Metadata and ISSN isolation (Only AJSBS has registered ISSN & ISSN-L)", () => {
+  // AJSBS: African Journal of Social and Behavioural Sciences
+  const ajsbsMeta = getJournalMetadata("ajsbs");
+  assert.ok(ajsbsMeta);
+  assert.equal(
+    ajsbsMeta.title,
+    "African Journal of Social and Behavioural Sciences",
+  );
+  assert.equal(ajsbsMeta.shortName, "AJSBS");
+  assert.equal(ajsbsMeta.issnPrint, "2141-209X");
+  assert.equal(ajsbsMeta.issnOnline, "2141-209X");
+  assert.equal(ajsbsMeta.issnL, "2141-209X");
+
+  // NJCP: Nigerian Journal of Contemporary Psychology (No ISSN)
+  const njcpMeta = getJournalMetadata("njcp");
+  assert.ok(njcpMeta);
+  assert.equal(njcpMeta.title, "Nigerian Journal of Contemporary Psychology");
+  assert.equal(njcpMeta.shortName, "NJCP");
+  assert.equal(njcpMeta.issnPrint, undefined);
+  assert.equal(njcpMeta.issnOnline, undefined);
+  assert.equal(njcpMeta.issnL, undefined);
+
+  // NJSR: Nwaebere Journal of Scientific Research (No ISSN)
+  const njsrMeta = getJournalMetadata("njsr");
+  assert.ok(njsrMeta);
+  assert.equal(njsrMeta.title, "Nwaebere Journal of Scientific Research");
+  assert.equal(njsrMeta.shortName, "NJSR");
+  assert.equal(njsrMeta.issnPrint, undefined);
+  assert.equal(njsrMeta.issnOnline, undefined);
+  assert.equal(njsrMeta.issnL, undefined);
+
+  // GJCSR: Global Journal of Contemporary Social Research (No ISSN)
+  const gjcsrMeta = getJournalMetadata("gjcsr");
+  assert.ok(gjcsrMeta);
+  assert.equal(
+    gjcsrMeta.title,
+    "Global Journal of Contemporary Social Research",
+  );
+  assert.equal(gjcsrMeta.shortName, "GJCSR");
+  assert.equal(gjcsrMeta.issnPrint, undefined);
+  assert.equal(gjcsrMeta.issnOnline, undefined);
+  assert.equal(gjcsrMeta.issnL, undefined);
+});
+
+test("Exact Institutional Editorial Board for Nigerian Journal of Contemporary Psychology (NJCP)", () => {
   const meta = getJournalMetadata("njcp");
   assert.ok(meta);
   assert.equal(meta.title, "Nigerian Journal of Contemporary Psychology");
@@ -92,7 +137,7 @@ test("Phase 2: Exact Institutional Editorial Board for Nigerian Journal of Conte
   assert.ok(consultingNames.includes("Prof Nnamdi Obikeze"));
 });
 
-test("Phase 2: Default editorial board configurations for AJSBS, NJSR, GJCSR", () => {
+test("Default editorial board configurations for AJSBS, NJSR, GJCSR", () => {
   const ajsbsBoard = getDefaultEditorialBoard("ajsbs");
   assert.ok(ajsbsBoard.length > 0);
   assert.equal(
@@ -131,7 +176,7 @@ test("Phase 2: Default editorial board configurations for AJSBS, NJSR, GJCSR", (
   );
 });
 
-test("Phase 2: Editorial board store supports adding, editing, deleting, and resetting members safely", async () => {
+test("Editorial board store supports adding, editing, deleting, and resetting members safely", async () => {
   const superAdminActor = {
     id: "admin-1",
     email: "superadmin@imsu-foss.ng",
@@ -199,118 +244,7 @@ test("Phase 2: Editorial board store supports adding, editing, deleting, and res
   assert.equal(resetRes.success, true);
 });
 
-test("Phase 2: Journal metadata overrides and public homepage display toggle", async () => {
-  const {
-    getJournalMetadataWithOverrides,
-    updateJournalCustomMetadata,
-    resetJournalMetadata,
-  } = await import("@/lib/editorial/editorial-board-store");
-
-  const superAdminActor = {
-    id: "admin-1",
-    email: "superadmin@imsu-foss.ng",
-    globalRoles: [
-      { role: "SUPER_ADMIN" as const },
-      { role: "AUTHOR" as const },
-    ],
-    journalRoles: [],
-  };
-
-  // Reset metadata to ensure clean starting state
-  await resetJournalMetadata({
-    journalSlug: "njcp",
-    actor: superAdminActor,
-  });
-
-  // Base metadata has showMetadataOnHomepage = false by default
-  const baseMeta = await getJournalMetadataWithOverrides("njcp");
-  assert.ok(baseMeta);
-  assert.equal(baseMeta.showMetadataOnHomepage, false);
-
-  // Update metadata with custom ISSN and enable homepage display toggle
-  const updateRes = await updateJournalCustomMetadata({
-    journalSlug: "njcp",
-    metadata: {
-      issnPrint: "2736-0814",
-      issnOnline: "2736-0822",
-      frequency: "Quarterly",
-      referencingStyle: "APA 7th Edition",
-      showMetadataOnHomepage: true,
-    },
-    actor: superAdminActor,
-  });
-
-  assert.equal(updateRes.success, true);
-  assert.ok(updateRes.updated);
-  assert.equal(updateRes.updated.showMetadataOnHomepage, true);
-  assert.equal(updateRes.updated.issnPrint, "2736-0814");
-  assert.equal(updateRes.updated.issnOnline, "2736-0822");
-  assert.equal(updateRes.updated.frequency, "Quarterly");
-
-  // Verify getJournalMetadataWithOverrides returns updated values
-  const updatedMeta = await getJournalMetadataWithOverrides("njcp");
-  assert.ok(updatedMeta);
-  assert.equal(updatedMeta.showMetadataOnHomepage, true);
-  assert.equal(updatedMeta.issnPrint, "2736-0814");
-  assert.equal(updatedMeta.issnOnline, "2736-0822");
-  assert.equal(updatedMeta.frequency, "Quarterly");
-
-  // 1-Click Instant Visibility Toggle ON
-  const { toggleJournalMetadataVisibility } =
-    await import("@/lib/editorial/editorial-board-store");
-  const instantToggleOnRes = await toggleJournalMetadataVisibility({
-    journalSlug: "njcp",
-    isVisible: true,
-    actor: superAdminActor,
-  });
-  assert.equal(instantToggleOnRes.success, true);
-  assert.equal(instantToggleOnRes.isVisible, true);
-
-  const metaAfterInstantOn = await getJournalMetadataWithOverrides("njcp");
-  assert.equal(metaAfterInstantOn.showMetadataOnHomepage, true);
-
-  // 1-Click Instant Visibility Toggle OFF
-  const instantToggleOffRes = await toggleJournalMetadataVisibility({
-    journalSlug: "njcp",
-    isVisible: false,
-    actor: superAdminActor,
-  });
-  assert.equal(instantToggleOffRes.success, true);
-  assert.equal(instantToggleOffRes.isVisible, false);
-
-  const metaAfterInstantOff = await getJournalMetadataWithOverrides("njcp");
-  assert.equal(metaAfterInstantOff.showMetadataOnHomepage, false);
-
-  // Clearing optional ISSN fields persists as empty string and does not resurrect base default
-  const clearRes = await updateJournalCustomMetadata({
-    journalSlug: "njcp",
-    metadata: {
-      issnPrint: "",
-      issnOnline: "",
-      frequency: "Quarterly",
-      referencingStyle: "APA 7th Edition",
-      showMetadataOnHomepage: false,
-    },
-    actor: superAdminActor,
-  });
-  assert.equal(clearRes.success, true);
-  assert.equal(clearRes.updated?.issnPrint, "");
-  assert.equal(clearRes.updated?.issnOnline, "");
-
-  const metaAfterClear = await getJournalMetadataWithOverrides("njcp");
-  assert.ok(metaAfterClear);
-  assert.equal(metaAfterClear.issnPrint, "");
-  assert.equal(metaAfterClear.issnOnline, "");
-  assert.equal(metaAfterClear.showMetadataOnHomepage, false);
-});
-
-test("Phase 2 & Phase 8: Department-scoped authorization enforces boundary on metadata & board mutations", async () => {
-  const {
-    isAuthorizedForJournal,
-    updateJournalCustomMetadata,
-    addEditorialBoardMember,
-  } = await import("@/lib/editorial/editorial-board-store");
-
+test("Department-scoped authorization enforces boundary on governance mutations", async () => {
   const psychologyAdminActor = {
     id: "admin-psych",
     email: "psychadmin@imsu-foss.ng",
@@ -336,33 +270,30 @@ test("Phase 2 & Phase 8: Department-scoped authorization enforces boundary on me
   assert.equal(isAuthorizedForJournal(psychologyAdminActor, "ajsbs"), false);
   assert.equal(isAuthorizedForJournal(authorActor, "njcp"), false);
 
-  // 2. Psychology admin can update NJCP metadata
-  const allowedRes = await updateJournalCustomMetadata({
+  // 2. Psychology admin can add board member to NJCP
+  const allowedRes = await addEditorialBoardMember({
     journalSlug: "njcp",
-    metadata: {
-      issnPrint: "2736-0814",
-      showMetadataOnHomepage: true,
-    },
+    name: "Dr. Psychology Fellow",
+    role: "Editorial Assistant",
+    affiliation: "IMSU Psychology",
+    category: "BOARD_MEMBER",
     actor: psychologyAdminActor,
   });
   assert.equal(allowedRes.success, true);
 
-  // 3. Psychology admin is DENIED updating AJSBS metadata
-  const deniedMetaRes = await updateJournalCustomMetadata({
-    journalSlug: "ajsbs",
-    metadata: {
-      issnPrint: "9999-9999",
-      showMetadataOnHomepage: true,
-    },
-    actor: psychologyAdminActor,
-  });
-  assert.equal(deniedMetaRes.success, false);
-  assert.ok(deniedMetaRes.error?.includes("Unauthorized"));
+  // Clean up
+  if (allowedRes.member) {
+    await deleteEditorialBoardMember({
+      journalSlug: "njcp",
+      memberId: allowedRes.member.id,
+      actor: psychologyAdminActor,
+    });
+  }
 
-  // 4. Psychology admin is DENIED adding board members to AJSBS
+  // 3. Psychology admin is DENIED adding board members to AJSBS
   const deniedBoardRes = await addEditorialBoardMember({
     journalSlug: "ajsbs",
-    name: "Dr. Hacker",
+    name: "Dr. Intruder",
     role: "Intruder",
     affiliation: "Unknown",
     category: "BOARD_MEMBER",

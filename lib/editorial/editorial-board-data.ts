@@ -27,12 +27,12 @@ export type JournalMetadata = {
   institution: string;
   issnPrint?: string;
   issnOnline?: string;
+  issnL?: string;
   frequency: string;
   aimsAndScope: string;
   peerReviewPolicy: string;
   referencingStyle: string;
   contactEmail: string;
-  showMetadataOnHomepage?: boolean;
 };
 
 export const CANONICAL_JOURNAL_METADATA: Record<string, JournalMetadata> = {
@@ -45,8 +45,6 @@ export const CANONICAL_JOURNAL_METADATA: Record<string, JournalMetadata> = {
     department: "Department of Psychology",
     faculty: "Faculty of Social Sciences",
     institution: "Imo State University",
-    issnPrint: "2756-4924",
-    issnOnline: "2756-4932",
     frequency: "Bi-Annual (2 Issues / Year)",
     aimsAndScope:
       "The Nigerian Journal of Contemporary Psychology (NJCP) is a peer-reviewed, open-access scholarly periodical dedicated to publishing high-quality empirical, theoretical, and applied research in psychology. The journal publishes cutting-edge contributions across clinical, developmental, social, organizational, educational, experimental, and forensic psychology, with special focus on contemporary psychological issues in Nigerian, African, and global settings.",
@@ -54,7 +52,6 @@ export const CANONICAL_JOURNAL_METADATA: Record<string, JournalMetadata> = {
       "Double-blind peer review by at least two independent discipline specialists evaluating methodology, empirical rigor, and theoretical contribution.",
     referencingStyle: "APA 7th Edition",
     contactEmail: "psychology.journal@imsu.edu.ng",
-    showMetadataOnHomepage: false,
   },
   ajsbs: {
     slug: "ajsbs",
@@ -66,7 +63,8 @@ export const CANONICAL_JOURNAL_METADATA: Record<string, JournalMetadata> = {
     faculty: "Faculty of Social Sciences",
     institution: "Imo State University",
     issnPrint: "2141-209X",
-    issnOnline: "2756-5122",
+    issnOnline: "2141-209X",
+    issnL: "2141-209X",
     frequency: "Quarterly (4 Issues / Year)",
     aimsAndScope:
       "Launched in 2009, the African Journal of Social and Behavioural Sciences (AJSBS) is the official flagship interdisciplinary journal of the Faculty of Social Sciences at Imo State University. It publishes cutting-edge peer-reviewed research across political science, public administration, public relations, communication, geography, environmental management, information sciences, sociology, psychology, psychotherapy, criminology, and economics.",
@@ -74,7 +72,6 @@ export const CANONICAL_JOURNAL_METADATA: Record<string, JournalMetadata> = {
       "Rigorous double-blind peer review ensuring objective assessment and academic excellence across multidisciplinary fields.",
     referencingStyle: "APA 7th Edition",
     contactEmail: "fossjournals@gmail.com",
-    showMetadataOnHomepage: false,
   },
   njsr: {
     slug: "njsr",
@@ -85,8 +82,6 @@ export const CANONICAL_JOURNAL_METADATA: Record<string, JournalMetadata> = {
     department: "Faculty of Social Sciences",
     faculty: "Faculty of Social Sciences",
     institution: "Imo State University",
-    issnPrint: "2814-0826",
-    issnOnline: "2814-0834",
     frequency: "Bi-Annual (2 Issues / Year)",
     aimsAndScope:
       "Named to honour Imo State University academic heritage, the Nwaebere Journal of Scientific Research (NJSR) focuses on innovative empirical and theoretical scientific research inspired by African contexts while addressing global scientific and societal challenges.",
@@ -94,7 +89,6 @@ export const CANONICAL_JOURNAL_METADATA: Record<string, JournalMetadata> = {
       "Double-blind peer review conducted by senior scholars and methodological experts.",
     referencingStyle: "APA 7th Edition",
     contactEmail: "njsr.editor@imsu.edu.ng",
-    showMetadataOnHomepage: false,
   },
   gjcsr: {
     slug: "gjcsr",
@@ -105,8 +99,6 @@ export const CANONICAL_JOURNAL_METADATA: Record<string, JournalMetadata> = {
     department: "Faculty of Social Sciences",
     faculty: "Faculty of Social Sciences",
     institution: "Imo State University",
-    issnPrint: "2955-1218",
-    issnOnline: "2955-1226",
     frequency: "Bi-Annual (2 Issues / Year)",
     aimsAndScope:
       "The Global Journal of Contemporary Social Research (GJCSR) is dedicated to advancing international perspectives on contemporary societal, behavioural, economic, and institutional developments worldwide, encouraging cross-regional and interdisciplinary scholarship.",
@@ -114,7 +106,6 @@ export const CANONICAL_JOURNAL_METADATA: Record<string, JournalMetadata> = {
       "Double-blind international peer review emphasizing innovative methodologies and theoretical relevance.",
     referencingStyle: "APA 7th Edition",
     contactEmail: "gjcsr.journal@imsu.edu.ng",
-    showMetadataOnHomepage: false,
   },
 };
 

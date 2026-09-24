@@ -7,15 +7,12 @@ import { isSuperAdmin } from "@/lib/auth/permissions";
 import {
   type EditorialBoardMember,
   type EditorialMemberCategory,
-  type JournalMetadata,
   getDefaultEditorialBoard,
-  getJournalMetadata,
   resolveCanonicalJournalSlug,
 } from "@/lib/editorial/editorial-board-data";
 
-// Durable file-backed store structure
+// Durable file-backed store structure for governance / board overrides
 interface PersistedJournalStore {
-  metadata: Record<string, Partial<JournalMetadata>>;
   boards: Record<string, EditorialBoardMember[]>;
 }
 
@@ -40,21 +37,17 @@ function readPersistedStore(): PersistedJournalStore {
   try {
     const filePath = getStoreFilePath();
     if (!fs.existsSync(filePath)) {
-      return { metadata: {}, boards: {} };
+      return { boards: {} };
     }
     const raw = fs.readFileSync(filePath, "utf-8");
     const parsed = JSON.parse(raw);
     return {
-      metadata:
-        parsed.metadata && typeof parsed.metadata === "object"
-          ? parsed.metadata
-          : {},
       boards:
         parsed.boards && typeof parsed.boards === "object" ? parsed.boards : {},
     };
   } catch (error) {
     console.error("Failed to read persisted journal settings:", error);
-    return { metadata: {}, boards: {} };
+    return { boards: {} };
   }
 }
 
@@ -124,111 +117,6 @@ export async function getJournalEditorialBoard(
     return store.boards[canonical];
   }
   return getDefaultEditorialBoard(canonical);
-}
-
-export async function getJournalMetadataWithOverrides(
-  journalSlug: string,
-): Promise<JournalMetadata | null> {
-  const canonical = resolveCanonicalJournalSlug(journalSlug);
-  const base = getJournalMetadata(canonical);
-  if (!base) return null;
-
-  const store = readPersistedStore();
-  const overrides = store.metadata[canonical];
-  if (!overrides) return base;
-
-  return {
-    ...base,
-    ...overrides,
-    issnPrint:
-      overrides.issnPrint !== undefined ? overrides.issnPrint : base.issnPrint,
-    issnOnline:
-      overrides.issnOnline !== undefined
-        ? overrides.issnOnline
-        : base.issnOnline,
-    frequency:
-      overrides.frequency !== undefined && overrides.frequency !== ""
-        ? overrides.frequency
-        : base.frequency,
-    referencingStyle:
-      overrides.referencingStyle !== undefined &&
-      overrides.referencingStyle !== ""
-        ? overrides.referencingStyle
-        : base.referencingStyle,
-    showMetadataOnHomepage:
-      typeof overrides.showMetadataOnHomepage === "boolean"
-        ? overrides.showMetadataOnHomepage
-        : (base.showMetadataOnHomepage ?? false),
-  };
-}
-
-export async function updateJournalCustomMetadata({
-  journalSlug,
-  metadata,
-  actor,
-}: {
-  journalSlug: string;
-  metadata: {
-    issnPrint?: string;
-    issnOnline?: string;
-    frequency?: string;
-    referencingStyle?: string;
-    showMetadataOnHomepage: boolean;
-  };
-  actor: Parameters<typeof isSuperAdmin>[0];
-}): Promise<{ success: boolean; error?: string; updated?: JournalMetadata }> {
-  const canonical = resolveCanonicalJournalSlug(journalSlug);
-  if (!isAuthorizedForJournal(actor, canonical)) {
-    return {
-      success: false,
-      error:
-        "Unauthorized: Managing Editor permissions required for this journal.",
-    };
-  }
-
-  const base = getJournalMetadata(canonical);
-  if (!base) {
-    return { success: false, error: "Journal not found." };
-  }
-
-  const store = readPersistedStore();
-  const currentOverrides = store.metadata[canonical] || {};
-  const newOverrides: Partial<JournalMetadata> = {
-    ...currentOverrides,
-    issnPrint:
-      metadata.issnPrint !== undefined
-        ? metadata.issnPrint.trim()
-        : (currentOverrides.issnPrint ?? base.issnPrint ?? ""),
-    issnOnline:
-      metadata.issnOnline !== undefined
-        ? metadata.issnOnline.trim()
-        : (currentOverrides.issnOnline ?? base.issnOnline ?? ""),
-    frequency:
-      metadata.frequency !== undefined
-        ? metadata.frequency.trim() || base.frequency
-        : currentOverrides.frequency || base.frequency,
-    referencingStyle:
-      metadata.referencingStyle !== undefined
-        ? metadata.referencingStyle.trim() || base.referencingStyle
-        : currentOverrides.referencingStyle || base.referencingStyle,
-    showMetadataOnHomepage: Boolean(metadata.showMetadataOnHomepage),
-  };
-
-  store.metadata[canonical] = newOverrides;
-  writePersistedStore(store);
-
-  safeRevalidatePath(`/journals/${canonical}`);
-  safeRevalidatePath(`/journals/${journalSlug}`);
-  safeRevalidatePath("/editorial-board");
-  safeRevalidatePath("/admin/editorial-board");
-
-  return {
-    success: true,
-    updated: {
-      ...base,
-      ...newOverrides,
-    },
-  };
 }
 
 function safeRevalidatePath(path: string) {
@@ -408,66 +296,4 @@ export async function resetEditorialBoard({
   safeRevalidatePath("/admin/editorial-board");
 
   return { success: true };
-}
-
-export async function resetJournalMetadata({
-  journalSlug,
-  actor,
-}: {
-  journalSlug: string;
-  actor: Parameters<typeof isSuperAdmin>[0];
-}): Promise<{ success: boolean; error?: string }> {
-  const canonical = resolveCanonicalJournalSlug(journalSlug);
-  if (!isAuthorizedForJournal(actor, canonical)) {
-    return {
-      success: false,
-      error:
-        "Unauthorized: Managing Editor permissions required for this journal.",
-    };
-  }
-
-  const store = readPersistedStore();
-  delete store.metadata[canonical];
-  writePersistedStore(store);
-
-  safeRevalidatePath(`/journals/${canonical}`);
-  safeRevalidatePath(`/journals/${journalSlug}`);
-  safeRevalidatePath("/editorial-board");
-  safeRevalidatePath("/admin/editorial-board");
-
-  return { success: true };
-}
-
-export async function toggleJournalMetadataVisibility({
-  journalSlug,
-  isVisible,
-  actor,
-}: {
-  journalSlug: string;
-  isVisible: boolean;
-  actor: Parameters<typeof isSuperAdmin>[0];
-}): Promise<{ success: boolean; error?: string; isVisible?: boolean }> {
-  const canonical = resolveCanonicalJournalSlug(journalSlug);
-  if (!isAuthorizedForJournal(actor, canonical)) {
-    return {
-      success: false,
-      error:
-        "Unauthorized: Managing Editor permissions required for this journal.",
-    };
-  }
-
-  const store = readPersistedStore();
-  const existingOverrides = store.metadata[canonical] || {};
-  store.metadata[canonical] = {
-    ...existingOverrides,
-    showMetadataOnHomepage: Boolean(isVisible),
-  };
-  writePersistedStore(store);
-
-  safeRevalidatePath(`/journals/${canonical}`);
-  safeRevalidatePath(`/journals/${journalSlug}`);
-  safeRevalidatePath("/editorial-board");
-  safeRevalidatePath("/admin/editorial-board");
-
-  return { success: true, isVisible: Boolean(isVisible) };
 }

@@ -93,42 +93,6 @@ export async function deleteEditorialBoardMemberAction(
   return res;
 }
 
-export async function updateJournalMetadataAction(
-  _prevState: EditorialActionState,
-  formData: FormData,
-): Promise<EditorialActionState> {
-  const user = await getCurrentUser();
-  if (!user) {
-    return { error: "Authentication required." };
-  }
-
-  const journalSlug = formData.get("journalSlug")?.toString() ?? "";
-  const issnPrint = formData.get("issnPrint")?.toString() ?? "";
-  const issnOnline = formData.get("issnOnline")?.toString() ?? "";
-  const frequency = formData.get("frequency")?.toString() ?? "";
-  const referencingStyle = formData.get("referencingStyle")?.toString() ?? "";
-  const showMetadataOnHomepage =
-    formData.get("showMetadataOnHomepage") === "true" ||
-    formData.get("showMetadataOnHomepage") === "on";
-
-  const { updateJournalCustomMetadata } =
-    await import("@/lib/editorial/editorial-board-store");
-
-  const res = await updateJournalCustomMetadata({
-    journalSlug,
-    metadata: {
-      issnPrint,
-      issnOnline,
-      frequency,
-      referencingStyle,
-      showMetadataOnHomepage,
-    },
-    actor: user,
-  });
-
-  return res;
-}
-
 export async function resetEditorialBoardAction(
   _prevState: EditorialActionState,
   formData: FormData,
@@ -146,26 +110,4 @@ export async function resetEditorialBoardAction(
   });
 
   return res;
-}
-
-export async function toggleJournalMetadataVisibilityAction({
-  journalSlug,
-  isVisible,
-}: {
-  journalSlug: string;
-  isVisible: boolean;
-}): Promise<{ success?: boolean; error?: string; isVisible?: boolean }> {
-  const user = await getCurrentUser();
-  if (!user) {
-    return { error: "Authentication required." };
-  }
-
-  const { toggleJournalMetadataVisibility } =
-    await import("@/lib/editorial/editorial-board-store");
-
-  return toggleJournalMetadataVisibility({
-    journalSlug,
-    isVisible,
-    actor: user,
-  });
 }

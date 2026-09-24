@@ -10,9 +10,7 @@ import {
   addEditorialBoardMemberAction,
   deleteEditorialBoardMemberAction,
   resetEditorialBoardAction,
-  toggleJournalMetadataVisibilityAction,
   updateEditorialBoardMemberAction,
-  updateJournalMetadataAction,
 } from "@/app/admin/editorial-board/actions";
 
 const CATEGORIES: Array<{ value: EditorialMemberCategory; label: string }> = [
@@ -36,11 +34,7 @@ export function EditorialBoardManager({
   const [activeBoardSlug, setActiveBoardSlug] = useState<string>(
     journals[0]?.slug ?? "njcp",
   );
-  const [activeMetaSlug, setActiveMetaSlug] = useState<string>(
-    journals[0]?.slug ?? "njcp",
-  );
   const [showAddModal, setShowAddModal] = useState(false);
-  const [isMetadataExpanded, setIsMetadataExpanded] = useState(false);
   const [editingMember, setEditingMember] =
     useState<EditorialBoardMember | null>(null);
   const [feedback, setFeedback] = useState<{
@@ -57,112 +51,14 @@ export function EditorialBoardManager({
   const [addPending, startAddTransition] = useTransition();
   const [deletePending, startDeleteTransition] = useTransition();
   const [resetPending, startResetTransition] = useTransition();
-  const [metaPending, startMetaTransition] = useTransition();
-  const [togglePending, startToggleTransition] = useTransition();
 
   const currentBoardJournal =
     journals.find((j) => j.slug === activeBoardSlug) || journals[0];
-  const currentMetaJournal =
-    journals.find((j) => j.slug === activeMetaSlug) || journals[0];
   const members = initialBoards[activeBoardSlug] || [];
-  const showMetadataChecked =
-    currentMetaJournal?.showMetadataOnHomepage === true;
 
   const handleBoardTabChange = (slug: string) => {
     setActiveBoardSlug(slug);
-    setActiveMetaSlug(slug);
     setFeedback(null);
-  };
-
-  const handleMetaTabChange = (slug: string) => {
-    setActiveMetaSlug(slug);
-    setFeedback(null);
-  };
-
-  const handleToggleVisibility = (newChecked: boolean) => {
-    // 1. Immediate optimistic UI update
-    setJournals((prev) =>
-      prev.map((j) =>
-        j.slug === activeMetaSlug
-          ? { ...j, showMetadataOnHomepage: newChecked }
-          : j,
-      ),
-    );
-
-    // 2. Instant background server action
-    startToggleTransition(async () => {
-      const res = await toggleJournalMetadataVisibilityAction({
-        journalSlug: activeMetaSlug,
-        isVisible: newChecked,
-      });
-      if (res.success) {
-        setFeedback({
-          type: "success",
-          message: newChecked
-            ? `Metadata bar turned ON on public page (${currentMetaJournal.shortName})`
-            : `Metadata bar turned OFF on public page (${currentMetaJournal.shortName})`,
-        });
-      } else {
-        // Rollback on error
-        setJournals((prev) =>
-          prev.map((j) =>
-            j.slug === activeMetaSlug
-              ? { ...j, showMetadataOnHomepage: !newChecked }
-              : j,
-          ),
-        );
-        setFeedback({
-          type: "error",
-          message: res.error || "Failed to update visibility toggle.",
-        });
-      }
-    });
-  };
-
-  const handleMetadataSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
-    const form = e.currentTarget;
-    const formData = new FormData(form);
-    const issnPrint = formData.get("issnPrint")?.toString().trim() ?? "";
-    const issnOnline = formData.get("issnOnline")?.toString().trim() ?? "";
-    const frequency = formData.get("frequency")?.toString().trim() ?? "";
-    const referencingStyle =
-      formData.get("referencingStyle")?.toString().trim() ?? "";
-
-    formData.set("journalSlug", activeMetaSlug);
-    formData.set(
-      "showMetadataOnHomepage",
-      showMetadataChecked ? "true" : "false",
-    );
-
-    startMetaTransition(async () => {
-      const res = await updateJournalMetadataAction({}, formData);
-      if (res.success) {
-        setJournals((prev) =>
-          prev.map((j) =>
-            j.slug === activeMetaSlug
-              ? {
-                  ...j,
-                  issnPrint: issnPrint,
-                  issnOnline: issnOnline,
-                  frequency: frequency || j.frequency,
-                  referencingStyle: referencingStyle || j.referencingStyle,
-                  showMetadataOnHomepage: showMetadataChecked === true,
-                }
-              : j,
-          ),
-        );
-        setFeedback({
-          type: "success",
-          message: `Metadata details for ${currentMetaJournal.shortName} updated.`,
-        });
-      } else {
-        setFeedback({
-          type: "error",
-          message: res.error || "Failed to update journal metadata.",
-        });
-      }
-    });
   };
 
   const handleAddSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
@@ -339,7 +235,7 @@ export function EditorialBoardManager({
         </div>
       ) : null}
 
-      {/* ── SECTION 1 (TOP): Editorial Board Members Directory ── */}
+      {/* Editorial Board Members Directory */}
       <div className="rounded-[var(--radius-lg)] border border-[color:var(--color-border)] bg-[color:var(--color-surface)] p-4 sm:p-5">
         <div className="flex flex-col gap-2 border-b border-[color:var(--color-border)] pb-3 sm:flex-row sm:items-center sm:justify-between">
           <div>
@@ -411,180 +307,6 @@ export function EditorialBoardManager({
             ))
           )}
         </div>
-      </div>
-
-      {/* ── SECTION 2 (BOTTOM): Collapsible Publication Metadata & Visibility Settings ── */}
-      <div className="rounded-[var(--radius-lg)] border border-[color:var(--color-border)] bg-[color:var(--color-surface)]">
-        <button
-          type="button"
-          onClick={() => setIsMetadataExpanded((prev) => !prev)}
-          className="flex w-full items-center justify-between p-4 text-left transition hover:bg-[color:var(--color-surface-raised)]"
-        >
-          <div className="flex flex-wrap items-center gap-2.5">
-            <span className="font-mono text-sm text-[color:var(--color-accent)]">
-              ⚙️
-            </span>
-            <span className="font-serif text-base font-semibold text-[color:var(--color-foreground)]">
-              Publication Metadata &amp; Visibility Settings (
-              {currentMetaJournal.shortName})
-            </span>
-            <span
-              className={`rounded-full px-2 py-0.5 font-mono text-[10px] font-bold ${
-                currentMetaJournal.showMetadataOnHomepage
-                  ? "bg-emerald-500/15 text-emerald-400"
-                  : "bg-zinc-500/15 text-[color:var(--color-subtle)]"
-              }`}
-            >
-              Public Bar:{" "}
-              {currentMetaJournal.showMetadataOnHomepage ? "ON" : "OFF"}
-            </span>
-          </div>
-          <div className="flex items-center gap-1.5 font-mono text-xs text-[color:var(--color-muted)]">
-            <span>{isMetadataExpanded ? "Collapse" : "Click to expand"}</span>
-            <span className="text-xs">{isMetadataExpanded ? "▲" : "▼"}</span>
-          </div>
-        </button>
-
-        {isMetadataExpanded ? (
-          <div className="border-t border-[color:var(--color-border)] p-4 sm:p-5">
-            <p className="text-xs text-[color:var(--color-muted)]">
-              Configure ISSN identifiers, publication frequency, referencing
-              style, and toggle the public metadata bar displayed under the
-              title on{" "}
-              <code className="text-[color:var(--color-accent)]">
-                /journals/{currentMetaJournal.slug}
-              </code>
-              .
-            </p>
-
-            {/* Dedicated Metadata Journal Selector Tabs */}
-            {journals.length > 1 ? (
-              <div className="mt-3 mb-2 flex gap-2 overflow-x-auto border-b border-[color:var(--color-border)] pb-3">
-                {journals.map((j) => (
-                  <button
-                    key={j.slug}
-                    type="button"
-                    onClick={() => handleMetaTabChange(j.slug)}
-                    className={`rounded-full px-4 py-1.5 text-xs font-semibold whitespace-nowrap transition ${
-                      activeMetaSlug === j.slug
-                        ? "bg-[color:var(--color-accent)] text-black"
-                        : "border border-[color:var(--color-border)] bg-[color:var(--color-surface-raised)] text-[color:var(--color-muted)] hover:text-[color:var(--color-foreground)]"
-                    }`}
-                  >
-                    {j.shortName || j.slug.toUpperCase()}
-                  </button>
-                ))}
-              </div>
-            ) : null}
-
-            <form
-              key={`${currentMetaJournal.slug}-${currentMetaJournal.issnPrint ?? ""}-${currentMetaJournal.issnOnline ?? ""}-${currentMetaJournal.frequency ?? ""}-${currentMetaJournal.referencingStyle ?? ""}-${currentMetaJournal.showMetadataOnHomepage}`}
-              onSubmit={handleMetadataSubmit}
-              className="mt-4 space-y-4"
-            >
-              <div className="grid gap-3 sm:grid-cols-2">
-                <div>
-                  <label className="block text-xs font-semibold text-[color:var(--color-foreground)]">
-                    Print ISSN{" "}
-                    <span className="font-normal text-[color:var(--color-subtle)]">
-                      (Optional)
-                    </span>
-                  </label>
-                  <input
-                    type="text"
-                    name="issnPrint"
-                    defaultValue={currentMetaJournal.issnPrint ?? ""}
-                    placeholder="e.g. 2141-209X (leave blank if none)"
-                    className="app-field mt-1 w-full text-xs"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-xs font-semibold text-[color:var(--color-foreground)]">
-                    Online eISSN{" "}
-                    <span className="font-normal text-[color:var(--color-subtle)]">
-                      (Optional)
-                    </span>
-                  </label>
-                  <input
-                    type="text"
-                    name="issnOnline"
-                    defaultValue={currentMetaJournal.issnOnline ?? ""}
-                    placeholder="e.g. 2756-5122 (leave blank if none)"
-                    className="app-field mt-1 w-full text-xs"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-xs font-semibold text-[color:var(--color-foreground)]">
-                    Publication Frequency
-                  </label>
-                  <input
-                    type="text"
-                    name="frequency"
-                    defaultValue={currentMetaJournal.frequency ?? "Bi-Annual"}
-                    placeholder="e.g. Bi-Annual (June & December)"
-                    className="app-field mt-1 w-full text-xs"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-xs font-semibold text-[color:var(--color-foreground)]">
-                    Citation &amp; Referencing Standard
-                  </label>
-                  <input
-                    type="text"
-                    name="referencingStyle"
-                    defaultValue={
-                      currentMetaJournal.referencingStyle ?? "APA 7th Edition"
-                    }
-                    placeholder="e.g. APA 7th Edition"
-                    className="app-field mt-1 w-full text-xs"
-                  />
-                </div>
-              </div>
-
-              <div className="flex flex-col gap-2 rounded-[var(--radius-md)] border border-[color:var(--color-border)] bg-[color:var(--color-surface-raised)] p-3 sm:flex-row sm:items-center sm:justify-between">
-                <div>
-                  <p className="text-xs font-semibold text-[color:var(--color-foreground)]">
-                    Display Metadata Bar on Public Journal Homepage
-                  </p>
-                  <p className="text-[11px] text-[color:var(--color-muted)]">
-                    When enabled, the ISSN, Frequency, and Standard bar will be
-                    rendered on{" "}
-                    <code className="text-[color:var(--color-accent)]">
-                      /journals/{currentMetaJournal.slug}
-                    </code>
-                    .
-                  </p>
-                </div>
-                <label className="relative inline-flex cursor-pointer items-center">
-                  <input
-                    type="checkbox"
-                    name="showMetadataOnHomepage"
-                    checked={showMetadataChecked}
-                    disabled={togglePending}
-                    onChange={(e) => handleToggleVisibility(e.target.checked)}
-                    className="peer sr-only"
-                  />
-                  <div className="peer h-6 w-11 rounded-full bg-[color:var(--color-surface-strong)] peer-checked:bg-[color:var(--color-accent)] peer-focus:outline-none after:absolute after:top-[2px] after:left-[2px] after:h-5 after:w-5 after:rounded-full after:border after:border-gray-300 after:bg-white after:transition-all after:content-[''] peer-checked:after:translate-x-full peer-checked:after:border-white"></div>
-                </label>
-              </div>
-
-              <div className="flex justify-end pt-1">
-                <button
-                  type="submit"
-                  disabled={metaPending}
-                  className="button-primary text-xs"
-                >
-                  {metaPending
-                    ? "Saving Metadata Details…"
-                    : "Save Metadata Details"}
-                </button>
-              </div>
-            </form>
-          </div>
-        ) : null}
       </div>
 
       {/* Add Modal */}
