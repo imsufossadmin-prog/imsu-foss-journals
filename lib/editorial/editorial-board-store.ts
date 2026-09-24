@@ -140,6 +140,21 @@ export async function getJournalMetadataWithOverrides(
   return {
     ...base,
     ...overrides,
+    issnPrint:
+      overrides.issnPrint !== undefined ? overrides.issnPrint : base.issnPrint,
+    issnOnline:
+      overrides.issnOnline !== undefined
+        ? overrides.issnOnline
+        : base.issnOnline,
+    frequency:
+      overrides.frequency !== undefined && overrides.frequency !== ""
+        ? overrides.frequency
+        : base.frequency,
+    referencingStyle:
+      overrides.referencingStyle !== undefined &&
+      overrides.referencingStyle !== ""
+        ? overrides.referencingStyle
+        : base.referencingStyle,
     showMetadataOnHomepage:
       typeof overrides.showMetadataOnHomepage === "boolean"
         ? overrides.showMetadataOnHomepage
@@ -180,11 +195,22 @@ export async function updateJournalCustomMetadata({
   const currentOverrides = store.metadata[canonical] || {};
   const newOverrides: Partial<JournalMetadata> = {
     ...currentOverrides,
-    issnPrint: metadata.issnPrint?.trim() || undefined,
-    issnOnline: metadata.issnOnline?.trim() || undefined,
-    frequency: metadata.frequency?.trim() || base.frequency,
+    issnPrint:
+      metadata.issnPrint !== undefined
+        ? metadata.issnPrint.trim()
+        : (currentOverrides.issnPrint ?? base.issnPrint ?? ""),
+    issnOnline:
+      metadata.issnOnline !== undefined
+        ? metadata.issnOnline.trim()
+        : (currentOverrides.issnOnline ?? base.issnOnline ?? ""),
+    frequency:
+      metadata.frequency !== undefined
+        ? metadata.frequency.trim() || base.frequency
+        : currentOverrides.frequency || base.frequency,
     referencingStyle:
-      metadata.referencingStyle?.trim() || base.referencingStyle,
+      metadata.referencingStyle !== undefined
+        ? metadata.referencingStyle.trim() || base.referencingStyle
+        : currentOverrides.referencingStyle || base.referencingStyle,
     showMetadataOnHomepage: Boolean(metadata.showMetadataOnHomepage),
   };
 

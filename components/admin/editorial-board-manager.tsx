@@ -47,6 +47,12 @@ export function EditorialBoardManager({
     type: "success" | "error";
     message: string;
   } | null>(null);
+  const [prevInitialJournals, setPrevInitialJournals] =
+    useState(initialJournals);
+  if (initialJournals !== prevInitialJournals) {
+    setPrevInitialJournals(initialJournals);
+    setJournals(initialJournals);
+  }
 
   const [addPending, startAddTransition] = useTransition();
   const [deletePending, startDeleteTransition] = useTransition();
@@ -64,6 +70,7 @@ export function EditorialBoardManager({
 
   const handleBoardTabChange = (slug: string) => {
     setActiveBoardSlug(slug);
+    setActiveMetaSlug(slug);
     setFeedback(null);
   };
 
@@ -116,6 +123,12 @@ export function EditorialBoardManager({
     e.preventDefault();
     const form = e.currentTarget;
     const formData = new FormData(form);
+    const issnPrint = formData.get("issnPrint")?.toString().trim() ?? "";
+    const issnOnline = formData.get("issnOnline")?.toString().trim() ?? "";
+    const frequency = formData.get("frequency")?.toString().trim() ?? "";
+    const referencingStyle =
+      formData.get("referencingStyle")?.toString().trim() ?? "";
+
     formData.set("journalSlug", activeMetaSlug);
     formData.set(
       "showMetadataOnHomepage",
@@ -130,15 +143,10 @@ export function EditorialBoardManager({
             j.slug === activeMetaSlug
               ? {
                   ...j,
-                  issnPrint:
-                    formData.get("issnPrint")?.toString().trim() || undefined,
-                  issnOnline:
-                    formData.get("issnOnline")?.toString().trim() || undefined,
-                  frequency:
-                    formData.get("frequency")?.toString().trim() || j.frequency,
-                  referencingStyle:
-                    formData.get("referencingStyle")?.toString().trim() ||
-                    j.referencingStyle,
+                  issnPrint: issnPrint,
+                  issnOnline: issnOnline,
+                  frequency: frequency || j.frequency,
+                  referencingStyle: referencingStyle || j.referencingStyle,
                   showMetadataOnHomepage: showMetadataChecked === true,
                 }
               : j,
@@ -470,7 +478,7 @@ export function EditorialBoardManager({
             ) : null}
 
             <form
-              key={currentMetaJournal.slug}
+              key={`${currentMetaJournal.slug}-${currentMetaJournal.issnPrint ?? ""}-${currentMetaJournal.issnOnline ?? ""}-${currentMetaJournal.frequency ?? ""}-${currentMetaJournal.referencingStyle ?? ""}-${currentMetaJournal.showMetadataOnHomepage}`}
               onSubmit={handleMetadataSubmit}
               className="mt-4 space-y-4"
             >

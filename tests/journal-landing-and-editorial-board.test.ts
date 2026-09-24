@@ -280,6 +280,28 @@ test("Phase 2: Journal metadata overrides and public homepage display toggle", a
 
   const metaAfterInstantOff = await getJournalMetadataWithOverrides("njcp");
   assert.equal(metaAfterInstantOff.showMetadataOnHomepage, false);
+
+  // Clearing optional ISSN fields persists as empty string and does not resurrect base default
+  const clearRes = await updateJournalCustomMetadata({
+    journalSlug: "njcp",
+    metadata: {
+      issnPrint: "",
+      issnOnline: "",
+      frequency: "Quarterly",
+      referencingStyle: "APA 7th Edition",
+      showMetadataOnHomepage: false,
+    },
+    actor: superAdminActor,
+  });
+  assert.equal(clearRes.success, true);
+  assert.equal(clearRes.updated?.issnPrint, "");
+  assert.equal(clearRes.updated?.issnOnline, "");
+
+  const metaAfterClear = await getJournalMetadataWithOverrides("njcp");
+  assert.ok(metaAfterClear);
+  assert.equal(metaAfterClear.issnPrint, "");
+  assert.equal(metaAfterClear.issnOnline, "");
+  assert.equal(metaAfterClear.showMetadataOnHomepage, false);
 });
 
 test("Phase 2 & Phase 8: Department-scoped authorization enforces boundary on metadata & board mutations", async () => {
