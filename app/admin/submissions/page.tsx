@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import type { SubmissionStatus } from "@prisma/client";
 
 import { AuthenticatedShell } from "@/components/app/authenticated-shell";
+import { DeleteManuscriptButton } from "@/components/admin/delete-manuscript-button";
 import { SubmissionsFilterBar } from "@/components/admin/submissions-filter-bar";
 import { SubmissionStatus as StatusBadge } from "@/components/submissions/submission-status";
 import { requireApplicationArea } from "@/lib/auth/authorization";
@@ -106,7 +107,10 @@ export default async function PlatformSubmissionsPage({
         <SubmissionsFilterBar
           journals={activeJournals.map((j) => ({
             id: j.id,
-            name: j.shortName ? `${j.name} (${j.shortName})` : j.name,
+            name:
+              j.shortName && !j.name.includes(j.shortName)
+                ? `${j.name} (${j.shortName})`
+                : j.name,
             slug: j.slug,
           }))}
           statusOptions={statusOptions}
@@ -142,7 +146,7 @@ export default async function PlatformSubmissionsPage({
                     {date.format(submission.updatedAt)}
                   </p>
                 </div>
-                <div className="flex shrink-0 items-center gap-4">
+                <div className="flex shrink-0 items-center gap-3">
                   <StatusBadge status={submission.status} />
                   <Link
                     href={`/admin/${submission.journal.slug}/submissions/${submission.id}`}
@@ -150,6 +154,12 @@ export default async function PlatformSubmissionsPage({
                   >
                     Open manuscript →
                   </Link>
+                  <DeleteManuscriptButton
+                    submissionId={submission.id}
+                    submissionTitle={submission.title ?? "Untitled manuscript"}
+                    journalSlug={submission.journal.slug}
+                    variant="icon"
+                  />
                 </div>
               </div>
             ))

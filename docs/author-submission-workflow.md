@@ -1,6 +1,6 @@
 # Author submission workflow
 
-The operational intake journey is `Request → Conversation → Receipt → Permission → Article → Tracking ID`. Authors no longer start with a manuscript wizard. They first open a durable request with Psychology journal operations and use its conversation as the central place for payment instructions, attachments, status, and the eventual tracking ID.
+The operational intake journey is `Request → Conversation → Receipt → Permission → Article → Tracking ID`. Authors no longer start with a manuscript wizard. They first open a durable request with the Nigerian Journal of Contemporary Psychology (NJCP) editorial directorate and use its conversation as the central place for payment instructions, attachments, status, and the eventual tracking ID.
 
 ## Canonical routes
 

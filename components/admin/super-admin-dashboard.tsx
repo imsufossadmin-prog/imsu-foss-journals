@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from "react";
 import Link from "next/link";
+import { getJournalOrderPriority } from "@/lib/editorial/editorial-board-data";
 
 type OperationalCounts = {
   newRequests?: number;
@@ -121,7 +122,10 @@ export function SuperAdminDashboard({
       const aActive = a.isActivated !== false ? 1 : 0;
       const bActive = b.isActivated !== false ? 1 : 0;
       if (aActive !== bActive) return bActive - aActive;
-      return 0;
+      const diff =
+        getJournalOrderPriority(a.slug) - getJournalOrderPriority(b.slug);
+      if (diff !== 0) return diff;
+      return a.name.localeCompare(b.name);
     });
   }, [journals]);
 

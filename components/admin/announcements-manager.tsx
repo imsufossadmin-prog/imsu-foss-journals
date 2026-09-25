@@ -371,10 +371,18 @@ export function AnnouncementsManager({
                     className="app-field mt-1 w-full text-xs"
                   >
                     <option value="ALL">All Faculty Journals</option>
-                    <option value="njcp">NJCP (Psychology)</option>
-                    <option value="ajsbs">AJSBS</option>
-                    <option value="njsr">NJSR</option>
-                    <option value="gjcsr">GJCSR</option>
+                    <option value="ajsbs">
+                      African Journal of Social and Behavioural Sciences (AJSBS)
+                    </option>
+                    <option value="njsr">
+                      Nwaebere Journal of Scientific Research (NJSR)
+                    </option>
+                    <option value="gjcsr">
+                      Global Journal of Contemporary Social Research (GJCSR)
+                    </option>
+                    <option value="njcp">
+                      Nigerian Journal of Contemporary Psychology (NJCP)
+                    </option>
                   </select>
                 </div>
               </div>
@@ -497,10 +505,18 @@ export function AnnouncementsManager({
                     className="app-field mt-1 w-full text-xs"
                   >
                     <option value="ALL">All Faculty Journals</option>
-                    <option value="njcp">NJCP (Psychology)</option>
-                    <option value="ajsbs">AJSBS</option>
-                    <option value="njsr">NJSR</option>
-                    <option value="gjcsr">GJCSR</option>
+                    <option value="ajsbs">
+                      African Journal of Social and Behavioural Sciences (AJSBS)
+                    </option>
+                    <option value="njsr">
+                      Nwaebere Journal of Scientific Research (NJSR)
+                    </option>
+                    <option value="gjcsr">
+                      Global Journal of Contemporary Social Research (GJCSR)
+                    </option>
+                    <option value="njcp">
+                      Nigerian Journal of Contemporary Psychology (NJCP)
+                    </option>
                   </select>
                 </div>
               </div>

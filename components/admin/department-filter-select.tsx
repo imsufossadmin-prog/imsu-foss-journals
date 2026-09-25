@@ -2,6 +2,7 @@
 
 import { useRouter, useSearchParams } from "next/navigation";
 import { useTransition } from "react";
+import { sortJournalsByCanonicalOrder } from "@/lib/editorial/editorial-board-data";
 
 export function DepartmentFilterSelect({
   journals,
@@ -47,7 +48,7 @@ export function DepartmentFilterSelect({
         className="app-field max-w-xs cursor-pointer rounded-[var(--radius-md)] border border-[color:var(--color-border)] bg-[color:var(--color-surface-raised)] px-3 py-2 text-xs font-semibold text-[color:var(--color-foreground)] transition hover:border-[color:var(--color-accent)] focus:ring-1 focus:ring-[color:var(--color-accent)] focus:outline-none"
       >
         <option value="all">All Journals ({totalCount})</option>
-        {journals.map((journal) => (
+        {sortJournalsByCanonicalOrder(journals).map((journal) => (
           <option key={journal.id} value={journal.slug}>
             {journal.department?.name ?? journal.name}
           </option>

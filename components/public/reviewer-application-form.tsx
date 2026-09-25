@@ -216,9 +216,6 @@ export function ReviewerApplicationForm({
             className="app-field mt-1 w-full text-xs"
           >
             <option value="ALL">All Faculty of Social Sciences Journals</option>
-            <option value="njcp">
-              Nigerian Journal of Contemporary Psychology (NJCP)
-            </option>
             <option value="ajsbs">
               African Journal of Social and Behavioural Sciences (AJSBS)
             </option>
@@ -227,6 +224,9 @@ export function ReviewerApplicationForm({
             </option>
             <option value="gjcsr">
               Global Journal of Contemporary Social Research (GJCSR)
+            </option>
+            <option value="njcp">
+              Nigerian Journal of Contemporary Psychology (NJCP)
             </option>
           </select>
         </div>

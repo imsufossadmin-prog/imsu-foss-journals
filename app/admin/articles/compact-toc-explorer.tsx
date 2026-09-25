@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { sortJournalsByCanonicalOrder } from "@/lib/editorial/editorial-board-data";
 import { AdminIssueRowActions } from "./actions-client";
 
 export type CompactIssueData = {
@@ -39,7 +40,7 @@ export function CompactTOCExplorer({ issues }: { issues: CompactIssueData[] }) {
         });
       }
     }
-    return Array.from(map.values());
+    return sortJournalsByCanonicalOrder(Array.from(map.values()));
   }, [issues]);
 
   const [selectedJournalSlug, setSelectedJournalSlug] = useState<string>("all");

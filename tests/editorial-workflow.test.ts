@@ -621,3 +621,33 @@ test("35. Phase 2: Copy Review Report text extraction safely isolates general re
   assert.equal(copiedText.includes("MAJOR_REVISION"), false);
   assert.equal(copiedText.includes("7 / 10"), false);
 });
+
+test("36. Manuscript deletion authorization policy and file collection", () => {
+  // Super Admin can delete any manuscript
+  const superAdminActor: EditorialActor = {
+    id: "super-admin",
+    active: true,
+    adminJournalIds: [ownJournal, otherJournal],
+    editorJournalIds: [],
+  };
+
+  // Journal Admin can only delete manuscripts in their assigned journal
+  const journalAdminActor: EditorialActor = {
+    id: "journal-admin",
+    active: true,
+    adminJournalIds: [ownJournal],
+    editorJournalIds: [],
+  };
+
+  // Inactive admin cannot manage/delete
+  const inactiveAdmin: EditorialActor = {
+    ...journalAdminActor,
+    active: false,
+  };
+
+  assert.equal(canManageSubmission(superAdminActor, submission), true);
+  assert.equal(canManageSubmission(superAdminActor, otherSubmission), true);
+  assert.equal(canManageSubmission(journalAdminActor, submission), true);
+  assert.equal(canManageSubmission(journalAdminActor, otherSubmission), false);
+  assert.equal(canManageSubmission(inactiveAdmin, submission), false);
+});

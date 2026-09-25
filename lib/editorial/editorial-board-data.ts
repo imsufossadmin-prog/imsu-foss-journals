@@ -35,24 +35,42 @@ export type JournalMetadata = {
   contactEmail: string;
 };
 
+export const CANONICAL_JOURNAL_ORDER = [
+  "ajsbs",
+  "njsr",
+  "njsbr",
+  "gjcsr",
+  "gjsbr",
+  "political-science",
+  "sociology",
+  "economics",
+  "public-administration",
+  "criminology-security-studies",
+  "library-information-science",
+  "njcp",
+  "psychology",
+];
+
+export function getJournalOrderPriority(slug: string): number {
+  const norm = slug.trim().toLowerCase();
+  const index = CANONICAL_JOURNAL_ORDER.indexOf(norm);
+  return index === -1 ? 999 : index;
+}
+
+export function sortJournalsByCanonicalOrder<
+  T extends { slug: string; name?: string; title?: string },
+>(journals: T[]): T[] {
+  return [...journals].sort((a, b) => {
+    const diff =
+      getJournalOrderPriority(a.slug) - getJournalOrderPriority(b.slug);
+    if (diff !== 0) return diff;
+    const nameA = a.name ?? a.title ?? a.slug;
+    const nameB = b.name ?? b.title ?? b.slug;
+    return nameA.localeCompare(nameB);
+  });
+}
+
 export const CANONICAL_JOURNAL_METADATA: Record<string, JournalMetadata> = {
-  njcp: {
-    slug: "njcp",
-    canonicalSlug: "njcp",
-    dbSlugs: ["njcp", "psychology"],
-    title: "Nigerian Journal of Contemporary Psychology",
-    shortName: "NJCP",
-    department: "Department of Psychology",
-    faculty: "Faculty of Social Sciences",
-    institution: "Imo State University",
-    frequency: "Bi-Annual (2 Issues / Year)",
-    aimsAndScope:
-      "The Nigerian Journal of Contemporary Psychology (NJCP) is a peer-reviewed, open-access scholarly periodical dedicated to publishing high-quality empirical, theoretical, and applied research in psychology. The journal publishes cutting-edge contributions across clinical, developmental, social, organizational, educational, experimental, and forensic psychology, with special focus on contemporary psychological issues in Nigerian, African, and global settings.",
-    peerReviewPolicy:
-      "Double-blind peer review by at least two independent discipline specialists evaluating methodology, empirical rigor, and theoretical contribution.",
-    referencingStyle: "APA 7th Edition",
-    contactEmail: "psychology.journal@imsu.edu.ng",
-  },
   ajsbs: {
     slug: "ajsbs",
     canonicalSlug: "ajsbs",
@@ -107,6 +125,23 @@ export const CANONICAL_JOURNAL_METADATA: Record<string, JournalMetadata> = {
     referencingStyle: "APA 7th Edition",
     contactEmail: "gjcsr.journal@imsu.edu.ng",
   },
+  njcp: {
+    slug: "njcp",
+    canonicalSlug: "njcp",
+    dbSlugs: ["njcp", "psychology"],
+    title: "Nigerian Journal of Contemporary Psychology",
+    shortName: "NJCP",
+    department: "Department of Psychology",
+    faculty: "Faculty of Social Sciences",
+    institution: "Imo State University",
+    frequency: "Bi-Annual (2 Issues / Year)",
+    aimsAndScope:
+      "The Nigerian Journal of Contemporary Psychology (NJCP) is a peer-reviewed, open-access scholarly periodical dedicated to publishing high-quality empirical, theoretical, and applied research in psychology. The journal publishes cutting-edge contributions across clinical, developmental, social, organizational, educational, experimental, and forensic psychology, with special focus on contemporary psychological issues in Nigerian, African, and global settings.",
+    peerReviewPolicy:
+      "Double-blind peer review by at least two independent discipline specialists evaluating methodology, empirical rigor, and theoretical contribution.",
+    referencingStyle: "APA 7th Edition",
+    contactEmail: "psychology.journal@imsu.edu.ng",
+  },
 };
 
 export function resolveCanonicalJournalSlug(slug: string): string {
@@ -133,137 +168,6 @@ export function getJournalDbSlugs(slug: string): string[] {
 // ---------------------------------------------------------------------------
 // Canonical Editorial Board Definitions
 // ---------------------------------------------------------------------------
-
-export const NJCP_EDITORIAL_BOARD: EditorialBoardMember[] = [
-  {
-    id: "njcp-chief",
-    name: "Prof Nkwam C. Uwaoma",
-    role: "Chief Editor",
-    affiliation:
-      "Department of Psychology, Imo State University, Owerri, Nigeria",
-    category: "CHIEF_EDITOR",
-    order: 1,
-  },
-  {
-    id: "njcp-deputy",
-    name: "Ethelbert Njoku PhD",
-    role: "Deputy Editor",
-    affiliation:
-      "Department of Psychology, Imo State University, Owerri, Nigeria",
-    category: "DEPUTY_EDITOR",
-    order: 2,
-  },
-  {
-    id: "njcp-assoc",
-    name: "Ann Ukachi Madukwe PhD",
-    role: "Associate Editor",
-    affiliation:
-      "Department of Psychology, Imo State University, Owerri, Nigeria",
-    category: "ASSOCIATE_EDITOR",
-    order: 3,
-  },
-  {
-    id: "njcp-managing",
-    name: "Richards E. Ebeh, PhD",
-    role: "Managing Editor",
-    affiliation:
-      "Department of Psychology, Imo State University, Owerri, Nigeria",
-    category: "MANAGING_EDITOR",
-    order: 4,
-  },
-  // Board Members
-  {
-    id: "njcp-bm-1",
-    name: "Prof Charles I. Mbaeze",
-    role: "Editorial Board Member",
-    affiliation:
-      "Department of Psychology, Imo State University, Owerri, Nigeria",
-    category: "BOARD_MEMBER",
-    order: 5,
-  },
-  {
-    id: "njcp-bm-2",
-    name: "Prof Cletus N. Offor",
-    role: "Editorial Board Member",
-    affiliation:
-      "Department of Psychology, Imo State University, Owerri, Nigeria",
-    category: "BOARD_MEMBER",
-    order: 6,
-  },
-  {
-    id: "njcp-bm-3",
-    name: "Ngozi Sydney-Agbor, PhD",
-    role: "Editorial Board Member",
-    affiliation:
-      "Department of Psychology, Imo State University, Owerri, Nigeria",
-    category: "BOARD_MEMBER",
-    order: 7,
-  },
-  {
-    id: "njcp-bm-4",
-    name: "Leonard C. Onwukwe, PhD",
-    role: "Editorial Board Member",
-    affiliation:
-      "Department of Psychology, Imo State University, Owerri, Nigeria",
-    category: "BOARD_MEMBER",
-    order: 8,
-  },
-  {
-    id: "njcp-bm-5",
-    name: "Helen Ihuoma Nnamdi-Annozie, PhD",
-    role: "Editorial Board Member",
-    affiliation:
-      "Department of Psychology, Imo State University, Owerri, Nigeria",
-    category: "BOARD_MEMBER",
-    order: 9,
-  },
-  {
-    id: "njcp-bm-6",
-    name: "Miracle Ifeoma Mbagwu, PhD",
-    role: "Editorial Board Member",
-    affiliation:
-      "Department of Psychology, Imo State University, Owerri, Nigeria",
-    category: "BOARD_MEMBER",
-    order: 10,
-  },
-  // Consulting Editors
-  {
-    id: "njcp-ce-1",
-    name: "Prof R.N. Ugokwe-Ossai",
-    role: "Consulting Editor",
-    affiliation:
-      "Department of Psychology, Nnamdi Azikiwe University, Awka, Nigeria",
-    category: "CONSULTING_EDITOR",
-    order: 11,
-  },
-  {
-    id: "njcp-ce-2",
-    name: "Prof Benjamin O. Ehighie",
-    role: "Consulting Editor",
-    affiliation:
-      "Department of Psychology, University of Ibadan, Ibadan, Nigeria",
-    category: "CONSULTING_EDITOR",
-    order: 12,
-  },
-  {
-    id: "njcp-ce-3",
-    name: "Prof Ike Ernest Onyishi",
-    role: "Consulting Editor",
-    affiliation:
-      "Department of Psychology, University of Nigeria, Nsukka, Nigeria",
-    category: "CONSULTING_EDITOR",
-    order: 13,
-  },
-  {
-    id: "njcp-ce-4",
-    name: "Prof Nnamdi Obikeze",
-    role: "Consulting Editor",
-    affiliation:
-      "Chukwuemeka Odumegwu Ojukwu University, Anambra State, Nigeria",
-    category: "CONSULTING_EDITOR",
-    order: 14,
-  },
-];
 
 export const AJSBS_EDITORIAL_BOARD: EditorialBoardMember[] = [
   {
@@ -661,14 +565,145 @@ export const GJCSR_EDITORIAL_BOARD: EditorialBoardMember[] = [
   },
 ];
 
+export const NJCP_EDITORIAL_BOARD: EditorialBoardMember[] = [
+  {
+    id: "njcp-chief",
+    name: "Prof Nkwam C. Uwaoma",
+    role: "Chief Editor",
+    affiliation:
+      "Department of Psychology, Imo State University, Owerri, Nigeria",
+    category: "CHIEF_EDITOR",
+    order: 1,
+  },
+  {
+    id: "njcp-deputy",
+    name: "Ethelbert Njoku PhD",
+    role: "Deputy Editor",
+    affiliation:
+      "Department of Psychology, Imo State University, Owerri, Nigeria",
+    category: "DEPUTY_EDITOR",
+    order: 2,
+  },
+  {
+    id: "njcp-assoc",
+    name: "Ann Ukachi Madukwe PhD",
+    role: "Associate Editor",
+    affiliation:
+      "Department of Psychology, Imo State University, Owerri, Nigeria",
+    category: "ASSOCIATE_EDITOR",
+    order: 3,
+  },
+  {
+    id: "njcp-managing",
+    name: "Richards E. Ebeh, PhD",
+    role: "Managing Editor",
+    affiliation:
+      "Department of Psychology, Imo State University, Owerri, Nigeria",
+    category: "MANAGING_EDITOR",
+    order: 4,
+  },
+  // Board Members
+  {
+    id: "njcp-bm-1",
+    name: "Prof Charles I. Mbaeze",
+    role: "Editorial Board Member",
+    affiliation:
+      "Department of Psychology, Imo State University, Owerri, Nigeria",
+    category: "BOARD_MEMBER",
+    order: 5,
+  },
+  {
+    id: "njcp-bm-2",
+    name: "Prof Cletus N. Offor",
+    role: "Editorial Board Member",
+    affiliation:
+      "Department of Psychology, Imo State University, Owerri, Nigeria",
+    category: "BOARD_MEMBER",
+    order: 6,
+  },
+  {
+    id: "njcp-bm-3",
+    name: "Ngozi Sydney-Agbor, PhD",
+    role: "Editorial Board Member",
+    affiliation:
+      "Department of Psychology, Imo State University, Owerri, Nigeria",
+    category: "BOARD_MEMBER",
+    order: 7,
+  },
+  {
+    id: "njcp-bm-4",
+    name: "Leonard C. Onwukwe, PhD",
+    role: "Editorial Board Member",
+    affiliation:
+      "Department of Psychology, Imo State University, Owerri, Nigeria",
+    category: "BOARD_MEMBER",
+    order: 8,
+  },
+  {
+    id: "njcp-bm-5",
+    name: "Helen Ihuoma Nnamdi-Annozie, PhD",
+    role: "Editorial Board Member",
+    affiliation:
+      "Department of Psychology, Imo State University, Owerri, Nigeria",
+    category: "BOARD_MEMBER",
+    order: 9,
+  },
+  {
+    id: "njcp-bm-6",
+    name: "Miracle Ifeoma Mbagwu, PhD",
+    role: "Editorial Board Member",
+    affiliation:
+      "Department of Psychology, Imo State University, Owerri, Nigeria",
+    category: "BOARD_MEMBER",
+    order: 10,
+  },
+  // Consulting Editors
+  {
+    id: "njcp-ce-1",
+    name: "Prof R.N. Ugokwe-Ossai",
+    role: "Consulting Editor",
+    affiliation:
+      "Department of Psychology, Nnamdi Azikiwe University, Awka, Nigeria",
+    category: "CONSULTING_EDITOR",
+    order: 11,
+  },
+  {
+    id: "njcp-ce-2",
+    name: "Prof Benjamin O. Ehighie",
+    role: "Consulting Editor",
+    affiliation:
+      "Department of Psychology, University of Ibadan, Ibadan, Nigeria",
+    category: "CONSULTING_EDITOR",
+    order: 12,
+  },
+  {
+    id: "njcp-ce-3",
+    name: "Prof Ike Ernest Onyishi",
+    role: "Consulting Editor",
+    affiliation:
+      "Department of Psychology, University of Nigeria, Nsukka, Nigeria",
+    category: "CONSULTING_EDITOR",
+    order: 13,
+  },
+  {
+    id: "njcp-ce-4",
+    name: "Prof Nnamdi Obikeze",
+    role: "Consulting Editor",
+    affiliation:
+      "Chukwuemeka Odumegwu Ojukwu University, Anambra State, Nigeria",
+    category: "CONSULTING_EDITOR",
+    order: 14,
+  },
+];
+
 export const CANONICAL_EDITORIAL_BOARDS: Record<
   string,
   EditorialBoardMember[]
 > = {
-  njcp: NJCP_EDITORIAL_BOARD,
   ajsbs: AJSBS_EDITORIAL_BOARD,
   njsr: NJSR_EDITORIAL_BOARD,
   gjcsr: GJCSR_EDITORIAL_BOARD,
+  njcp: NJCP_EDITORIAL_BOARD,
 };
 
 export function getDefaultEditorialBoard(slug: string): EditorialBoardMember[] {

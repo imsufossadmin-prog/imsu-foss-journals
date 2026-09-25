@@ -231,10 +231,18 @@ export function ReviewerApplicationsManager({
             className="app-field py-1 text-xs"
           >
             <option value="ALL">All Journals</option>
-            <option value="njcp">NJCP (Psychology)</option>
-            <option value="ajsbs">AJSBS</option>
-            <option value="njsr">NJSR</option>
-            <option value="gjcsr">GJCSR</option>
+            <option value="ajsbs">
+              African Journal of Social and Behavioural Sciences (AJSBS)
+            </option>
+            <option value="njsr">
+              Nwaebere Journal of Scientific Research (NJSR)
+            </option>
+            <option value="gjcsr">
+              Global Journal of Contemporary Social Research (GJCSR)
+            </option>
+            <option value="njcp">
+              Nigerian Journal of Contemporary Psychology (NJCP)
+            </option>
           </select>
         </div>
       </div>

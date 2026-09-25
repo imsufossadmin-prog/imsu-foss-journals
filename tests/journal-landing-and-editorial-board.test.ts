@@ -2,10 +2,12 @@ import assert from "node:assert/strict";
 import test from "node:test";
 
 import {
+  CANONICAL_JOURNAL_ORDER,
   getJournalDbSlugs,
   getJournalMetadata,
   getDefaultEditorialBoard,
   resolveCanonicalJournalSlug,
+  sortJournalsByCanonicalOrder,
 } from "@/lib/editorial/editorial-board-data";
 import {
   addEditorialBoardMember,
@@ -15,6 +17,45 @@ import {
   resetEditorialBoard,
   updateEditorialBoardMember,
 } from "@/lib/editorial/editorial-board-store";
+
+test("Canonical journal ordering enforces AJSBS first and NJCP last across platform", () => {
+  assert.equal(CANONICAL_JOURNAL_ORDER[0], "ajsbs");
+  assert.ok(CANONICAL_JOURNAL_ORDER.includes("njcp"));
+  assert.ok(
+    CANONICAL_JOURNAL_ORDER.indexOf("ajsbs") <
+      CANONICAL_JOURNAL_ORDER.indexOf("njsr"),
+  );
+  assert.ok(
+    CANONICAL_JOURNAL_ORDER.indexOf("njsr") <
+      CANONICAL_JOURNAL_ORDER.indexOf("gjcsr"),
+  );
+  assert.ok(
+    CANONICAL_JOURNAL_ORDER.indexOf("gjcsr") <
+      CANONICAL_JOURNAL_ORDER.indexOf("njcp"),
+  );
+
+  const rawList = [
+    {
+      slug: "njcp",
+      name: "Nigerian Journal of Contemporary Psychology (NJCP)",
+    },
+    {
+      slug: "gjcsr",
+      name: "Global Journal of Contemporary Social Research (GJCSR)",
+    },
+    {
+      slug: "ajsbs",
+      name: "African Journal of Social and Behavioural Sciences (AJSBS)",
+    },
+    { slug: "njsr", name: "Nwaebere Journal of Scientific Research (NJSR)" },
+  ];
+
+  const sorted = sortJournalsByCanonicalOrder(rawList);
+  assert.deepEqual(
+    sorted.map((j) => j.slug),
+    ["ajsbs", "njsr", "gjcsr", "njcp"],
+  );
+});
 
 test("Slug alias resolution maps legacy and canonical slugs properly", () => {
   assert.equal(resolveCanonicalJournalSlug("njcp"), "njcp");

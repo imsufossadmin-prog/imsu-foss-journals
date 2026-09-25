@@ -132,7 +132,9 @@ export function DirectArticleSubmissionForm({
         >
           {journals.map((j) => (
             <option key={j.id} value={j.slug}>
-              {j.name} {j.shortName ? `(${j.shortName})` : ""}
+              {j.shortName && !j.name.includes(j.shortName)
+                ? `${j.name} (${j.shortName})`
+                : j.name}
             </option>
           ))}
         </select>

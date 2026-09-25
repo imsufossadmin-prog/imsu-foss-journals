@@ -84,13 +84,15 @@ export async function searchRoleManagementUsers(query: string) {
   });
 }
 
+import { sortJournalsByCanonicalOrder } from "@/lib/editorial/editorial-board-data";
+
 export async function listRoleManagementJournals() {
   const actor = await requireAuthenticatedUser();
   if (!actor.globalRoles.some(({ role }) => role === "SUPER_ADMIN")) {
     throw new RoleManagementError("Only a Super Admin can manage staff roles.");
   }
 
-  return prisma.journal.findMany({
+  const journals = await prisma.journal.findMany({
     where: {
       isActive: true,
       OR: [{ departmentId: null }, { department: { isActive: true } }],
@@ -103,4 +105,6 @@ export async function listRoleManagementJournals() {
     },
     orderBy: { name: "asc" },
   });
+
+  return sortJournalsByCanonicalOrder(journals);
 }

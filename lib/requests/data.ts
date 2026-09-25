@@ -183,20 +183,7 @@ export async function getPlatformStaffCounts() {
   return { journalAdmins, editors };
 }
 
-const CANONICAL_ORDER = [
-  "njcp",
-  "psychology",
-  "ajsbs",
-  "njsr",
-  "njsbr",
-  "gjcsr",
-  "gjsbr",
-];
-
-function getJournalPriority(slug: string): number {
-  const index = CANONICAL_ORDER.indexOf(slug.toLowerCase());
-  return index === -1 ? 999 : index;
-}
+import { sortJournalsByCanonicalOrder } from "@/lib/editorial/editorial-board-data";
 
 export async function getActiveJournals() {
   const journals = await prisma.journal.findMany({
@@ -214,11 +201,7 @@ export async function getActiveJournals() {
     orderBy: { name: "asc" },
   });
 
-  return journals.sort((a, b) => {
-    const diff = getJournalPriority(a.slug) - getJournalPriority(b.slug);
-    if (diff !== 0) return diff;
-    return a.name.localeCompare(b.name);
-  });
+  return sortJournalsByCanonicalOrder(journals);
 }
 
 export const getActiveDepartmentJournals = getActiveJournals;

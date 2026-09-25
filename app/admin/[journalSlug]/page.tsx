@@ -1,5 +1,6 @@
 import Link from "next/link";
 
+import { DeleteManuscriptButton } from "@/components/admin/delete-manuscript-button";
 import {
   SubmissionStatus,
   getSubmissionStatusLabel,
@@ -82,11 +83,14 @@ export default async function JournalAdminPage({
         {submissions.length ? (
           <ol className="divide-y divide-[color:var(--color-border)]">
             {submissions.map((submission) => (
-              <li key={submission.id}>
+              <li
+                key={submission.id}
+                className="flex items-center justify-between transition hover:bg-[color:var(--color-surface)]"
+              >
                 <Link
                   href={`/admin/${journal.slug}/submissions/${submission.id}`}
                   prefetch={true}
-                  className="grid gap-4 p-5 transition hover:bg-[color:var(--color-surface)] sm:grid-cols-[minmax(0,1fr)_11rem_9rem] sm:items-center"
+                  className="grid min-w-0 flex-1 gap-4 p-5 sm:grid-cols-[minmax(0,1fr)_11rem_9rem] sm:items-center"
                 >
                   <div>
                     <SubmissionStatus status={submission.status} />
@@ -108,6 +112,14 @@ export default async function JournalAdminPage({
                     {shortDate.format(submission.updatedAt)}
                   </p>
                 </Link>
+                <div className="shrink-0 pr-5 pl-2">
+                  <DeleteManuscriptButton
+                    submissionId={submission.id}
+                    submissionTitle={submission.title ?? "Untitled manuscript"}
+                    journalSlug={journal.slug}
+                    variant="icon"
+                  />
+                </div>
               </li>
             ))}
           </ol>

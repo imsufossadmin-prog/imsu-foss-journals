@@ -7,6 +7,7 @@ import {
 } from "@prisma/client";
 
 import { prisma } from "@/lib/db/prisma";
+import { createAdminClient } from "@/lib/supabase/admin";
 import {
   decisionSubmissionStatus,
   isRevisionDecision,
@@ -1415,4 +1416,130 @@ export async function publishArticle(input: {
 
     return article;
   });
+}
+
+export async function deleteManuscriptSubmission(input: {
+  adminId: string;
+  submissionId: string;
+  journalIds?: string[] | null;
+}) {
+  const submission = await prisma.submission.findFirst({
+    where: {
+      id: input.submissionId,
+      ...(input.journalIds ? { journalId: { in: input.journalIds } } : {}),
+    },
+    include: {
+      journal: { select: { id: true, slug: true } },
+      files: { include: { storedFile: true } },
+      manuscriptVersions: {
+        include: {
+          manuscriptStoredFile: true,
+          responseStoredFile: true,
+        },
+      },
+      reviewRounds: {
+        include: {
+          assignments: {
+            include: {
+              review: {
+                include: {
+                  attachments: {
+                    include: { storedFile: true },
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
+      request: { select: { id: true, status: true } },
+    },
+  });
+
+  if (!submission) {
+    throw new EditorialMutationError(
+      "Manuscript submission not found or you do not have permission to delete it.",
+    );
+  }
+
+  // 1. Gather all StoredFile records
+  const storedFiles: Array<{ id: string; bucket: string; objectPath: string }> =
+    [];
+
+  for (const f of submission.files) {
+    if (f.storedFile) storedFiles.push(f.storedFile);
+  }
+
+  for (const v of submission.manuscriptVersions) {
+    if (v.manuscriptStoredFile) storedFiles.push(v.manuscriptStoredFile);
+    if (v.responseStoredFile) storedFiles.push(v.responseStoredFile);
+  }
+
+  for (const r of submission.reviewRounds) {
+    for (const a of r.assignments) {
+      if (a.review?.attachments) {
+        for (const att of a.review.attachments) {
+          if (att.storedFile) storedFiles.push(att.storedFile);
+        }
+      }
+    }
+  }
+
+  // 2. Remove binary files from Supabase Storage
+  if (storedFiles.length > 0) {
+    try {
+      const supabase = createAdminClient();
+      const byBucket = new Map<string, string[]>();
+      for (const sf of storedFiles) {
+        const paths = byBucket.get(sf.bucket) ?? [];
+        paths.push(sf.objectPath);
+        byBucket.set(sf.bucket, paths);
+      }
+      for (const [bucket, paths] of byBucket) {
+        const { error } = await supabase.storage.from(bucket).remove(paths);
+        if (error) {
+          console.error(
+            `Storage cleanup failed for bucket ${bucket}:`,
+            error.message,
+          );
+        }
+      }
+    } catch (storageErr) {
+      console.error(
+        "Storage client error during manuscript deletion:",
+        storageErr,
+      );
+    }
+  }
+
+  const storedFileIds = Array.from(new Set(storedFiles.map((sf) => sf.id)));
+
+  // 3. Disconnect linked submission request if any
+  if (submission.request) {
+    await prisma.submissionRequest.update({
+      where: { id: submission.request.id },
+      data: {
+        submissionId: null,
+        status: ["MANUSCRIPT_SUBMITTED", "TRACKING_ASSIGNED"].includes(
+          submission.request.status,
+        )
+          ? "SUBMISSION_ENABLED"
+          : undefined,
+      },
+    });
+  }
+
+  // 4. Delete the submission record
+  await prisma.submission.delete({
+    where: { id: submission.id },
+  });
+
+  // 5. Clean up storedFile rows
+  if (storedFileIds.length > 0) {
+    await prisma.storedFile.deleteMany({
+      where: { id: { in: storedFileIds } },
+    });
+  }
+
+  return { success: true, journalSlug: submission.journal.slug };
 }

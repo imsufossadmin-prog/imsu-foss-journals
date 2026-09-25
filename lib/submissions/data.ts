@@ -93,8 +93,10 @@ export async function getAuthorSubmission(ownerId: string, id: string) {
   return submission ? submissionDTO(submission) : null;
 }
 
+import { sortJournalsByCanonicalOrder } from "@/lib/editorial/editorial-board-data";
+
 export async function getEligibleJournals() {
-  return prisma.journal.findMany({
+  const journals = await prisma.journal.findMany({
     where: {
       isActive: true,
       OR: [{ departmentId: null }, { department: { isActive: true } }],
@@ -109,4 +111,6 @@ export async function getEligibleJournals() {
       department: { select: { name: true, isActive: true } },
     },
   });
+
+  return sortJournalsByCanonicalOrder(journals);
 }

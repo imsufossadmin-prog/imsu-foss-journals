@@ -7,22 +7,9 @@ import { publicSubmissionEntryPath } from "@/lib/auth/submission-entry";
 import { prisma } from "@/lib/db/prisma";
 import { getJournalActivationMap } from "@/lib/editorial/journal-activation";
 
+import { getJournalOrderPriority } from "@/lib/editorial/editorial-board-data";
+
 export const dynamic = "force-dynamic";
-
-const CANONICAL_ORDER = [
-  "njcp",
-  "psychology",
-  "ajsbs",
-  "njsr",
-  "njsbr",
-  "gjcsr",
-  "gjsbr",
-];
-
-function getJournalPriority(slug: string): number {
-  const index = CANONICAL_ORDER.indexOf(slug.toLowerCase());
-  return index === -1 ? 999 : index;
-}
 
 export default async function Home() {
   const [publishedArticles, allActiveJournals, activationMap] =
@@ -100,7 +87,8 @@ export default async function Home() {
       };
     })
     .sort((a, b) => {
-      const diff = getJournalPriority(a.slug) - getJournalPriority(b.slug);
+      const diff =
+        getJournalOrderPriority(a.slug) - getJournalOrderPriority(b.slug);
       if (diff !== 0) return diff;
       return a.name.localeCompare(b.name);
     });
