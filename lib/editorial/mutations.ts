@@ -16,6 +16,15 @@ import {
   validateAdherenceReport,
   validateReview,
 } from "@/lib/editorial/validation";
+import {
+  handleCorrectionRequested,
+  handleReviewerAssigned,
+  handleReviewSubmitted,
+  handleAdherenceReportSubmitted,
+  handleEditorialDecisionIssued,
+  handleRevisionSubmitted,
+  handleArticlePublished,
+} from "@/lib/notifications/event-handlers";
 
 export class EditorialMutationError extends Error {
   constructor(
@@ -115,7 +124,7 @@ export async function returnForCorrection(input: {
       message: "Correction guidance is required.",
     });
   }
-  await prisma.$transaction(async (transaction) => {
+  const result = await prisma.$transaction(async (transaction) => {
     const submission = await transaction.submission.findFirst({
       where: {
         id: input.submissionId,
@@ -153,9 +162,10 @@ export async function returnForCorrection(input: {
       );
     }
 
-    await transaction.submission.update({
+    const updated = await transaction.submission.update({
       where: { id: submission.id },
       data: { status: "CORRECTION_REQUESTED", version: { increment: 1 } },
+      select: { version: true },
     });
 
     // Create stored files for any attachments provided by admin
@@ -231,6 +241,14 @@ export async function returnForCorrection(input: {
         });
       }
     }
+
+    return updated;
+  });
+
+  await handleCorrectionRequested({
+    submissionId: input.submissionId,
+    note: message,
+    versionNumber: result?.version,
   });
 }
 
@@ -394,7 +412,7 @@ export async function assignReviewer(input: {
     );
   }
 
-  return prisma.$transaction(async (transaction) => {
+  const result = await prisma.$transaction(async (transaction) => {
     const submission = await transaction.submission.findFirst({
       where: {
         id: input.submissionId,
@@ -465,6 +483,13 @@ export async function assignReviewer(input: {
     });
     return assignment;
   });
+
+  await handleReviewerAssigned({
+    submissionId: input.submissionId,
+    editorId: input.editorId,
+  });
+
+  return result;
 }
 
 export async function cancelReviewerAssignment(input: {
@@ -557,7 +582,7 @@ export async function saveEditorReview(input: {
       validation.fieldErrors,
     );
   }
-  return prisma.$transaction(async (transaction) => {
+  const result = await prisma.$transaction(async (transaction) => {
     const assignment = await transaction.reviewAssignment.findFirst({
       where: {
         id: input.assignmentId,
@@ -736,7 +761,17 @@ export async function saveEditorReview(input: {
         });
       }
     }
+    return { submissionId: assignment.reviewRound.submissionId };
   });
+
+  if (input.final && result?.submissionId) {
+    await handleReviewSubmitted({
+      submissionId: result.submissionId,
+      recommendation: input.review.recommendation,
+    });
+  }
+
+  return result;
 }
 
 export async function submitAdherenceReport(input: {
@@ -818,7 +853,7 @@ export async function submitAdherenceReport(input: {
 
   const latestVersion = submission.manuscriptVersions[0];
 
-  return prisma.$transaction(async (tx) => {
+  const result = await prisma.$transaction(async (tx) => {
     const adherence = await tx.adherenceReport.create({
       data: {
         submissionId: submission.id,
@@ -849,6 +884,12 @@ export async function submitAdherenceReport(input: {
 
     return adherence;
   });
+
+  await handleAdherenceReportSubmitted({
+    submissionId: input.submissionId,
+  });
+
+  return result;
 }
 
 export async function issueEditorialDecision(input: {
@@ -873,7 +914,7 @@ export async function issueEditorialDecision(input: {
       revisionDueAt: "A due date is required for revision decisions.",
     });
   }
-  return prisma.$transaction(async (transaction) => {
+  const result = await prisma.$transaction(async (transaction) => {
     const round = await transaction.reviewRound.findFirst({
       where: {
         id: input.roundId,
@@ -947,6 +988,13 @@ export async function issueEditorialDecision(input: {
     }
     return decision;
   });
+
+  await handleEditorialDecisionIssued({
+    submissionId: input.submissionId,
+    decision: input.type,
+  });
+
+  return result;
 }
 
 type UploadedFileMetadata = {
@@ -973,7 +1021,7 @@ export async function recordRevision(input: {
       { authorNote: "A revision note is required." },
     );
   }
-  return prisma.$transaction(
+  const result = await prisma.$transaction(
     async (transaction) => {
       const submission = await transaction.submission.findFirst({
         where: {
@@ -1100,6 +1148,13 @@ export async function recordRevision(input: {
       timeout: 20_000,
     },
   );
+
+  await handleRevisionSubmitted({
+    submissionId: input.submissionId,
+    roundNumber: result.versionNumber,
+  });
+
+  return result;
 }
 
 export async function skipToPublishing(input: {
@@ -1201,7 +1256,7 @@ export async function publishArticle(input: {
     .filter(Boolean)
     .join(" · ");
 
-  return prisma.$transaction(async (tx) => {
+  const article = await prisma.$transaction(async (tx) => {
     await tx.submission.update({
       where: { id: submission.id },
       data: {
@@ -1426,6 +1481,16 @@ export async function publishArticle(input: {
 
     return article;
   });
+
+  await handleArticlePublished({
+    articleId: article.id,
+    submissionId: input.submissionId,
+    title: submission.title || "Untitled Article",
+    articleSlug: article.slug,
+    journalId: input.journalId,
+  });
+
+  return article;
 }
 
 export async function deleteManuscriptSubmission(input: {

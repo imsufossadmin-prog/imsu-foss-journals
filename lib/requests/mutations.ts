@@ -13,6 +13,12 @@ import {
 } from "@/lib/requests/validation";
 import { createTrackingNumber } from "@/lib/submissions/tracking";
 import { isJournalActivated } from "@/lib/editorial/journal-activation";
+import {
+  handleManuscriptSubmitted,
+  handleRequestMessageSent,
+  handleSubmissionRequestCreated,
+  handleTrackingAssigned,
+} from "@/lib/notifications/event-handlers";
 export class RequestMutationError extends Error {
   constructor(
     message: string,
@@ -126,7 +132,7 @@ export async function startSubmissionRequest({
     );
 
   const teamName = operations.department?.name ?? operations.name;
-  return prisma.submissionRequest.create({
+  const created = await prisma.submissionRequest.create({
     data: {
       authorId,
       departmentId: operations.departmentId,
@@ -140,6 +146,10 @@ export async function startSubmissionRequest({
     },
     select: { id: true },
   });
+
+  await handleSubmissionRequestCreated(created.id);
+
+  return created;
 }
 
 export async function sendRequestMessage(input: {
@@ -150,18 +160,26 @@ export async function sendRequestMessage(input: {
   const error = validateMessageBody(input.body);
   if (error) throw new RequestMutationError(error, { body: error });
   const { request } = await actorAccess(input.actorId, input.requestId);
-  await prisma.$transaction(async (transaction) => {
-    await transaction.submissionConversationMessage.create({
+  const message = await prisma.$transaction(async (transaction) => {
+    const msg = await transaction.submissionConversationMessage.create({
       data: {
         requestId: request.id,
         senderId: input.actorId,
         body: input.body.trim(),
       },
+      select: { id: true },
     });
     await transaction.submissionRequest.update({
       where: { id: request.id },
       data: { updatedAt: new Date() },
     });
+    return msg;
+  });
+
+  await handleRequestMessageSent({
+    requestId: request.id,
+    messageId: message.id,
+    senderId: input.actorId,
   });
 }
 
@@ -392,6 +410,8 @@ export async function finalizeRequestSubmission(
       },
     });
   });
+
+  await handleManuscriptSubmitted(submissionId);
 }
 
 export async function assignTrackingIdBySubmissionId(input: {
@@ -471,6 +491,11 @@ export async function assignTrackingIdBySubmissionId(input: {
           },
         },
       },
+    });
+
+    await handleTrackingAssigned({
+      submissionId: submission.id,
+      trackingNumber: trackingId,
     });
   } catch (error) {
     if (

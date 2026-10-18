@@ -20,6 +20,7 @@ import {
   saveJournalAction,
 } from "@/app/author/submissions/actions";
 import { PendingButton } from "@/components/submissions/pending-button";
+import { SubmissionConfirmationDialog } from "@/components/submissions/submission-confirmation-dialog";
 import {
   firstSubmissionFileTypes,
   maxSubmissionFileLabel,
@@ -709,14 +710,54 @@ export function DeclarationsStepForm({
 export function FinalSubmitForm({
   submissionId,
   issues,
+  journalName,
+  journalShortName,
+  title,
 }: {
   submissionId: string;
   issues: string[];
+  journalName?: string;
+  journalShortName?: string | null;
+  title?: string;
 }) {
   const bound = finalizeSubmissionAction.bind(null, submissionId);
-  const [state, action] = useActionState(bound, initialActionState);
+  const [state, action, isPending] = useActionState(bound, initialActionState);
+  const [isConfirmOpen, setIsConfirmOpen] = useState<boolean>(false);
+  const [prevError, setPrevError] = useState(state.error);
+  const formRef = useRef<HTMLFormElement>(null);
+  const isConfirmedRef = useRef<boolean>(false);
+
+  if (state.error !== prevError) {
+    setPrevError(state.error);
+    if (state.error && isConfirmOpen) {
+      setIsConfirmOpen(false);
+    }
+  }
+
+  const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
+    if (issues.length > 0) return;
+    if (journalName && !isConfirmedRef.current) {
+      e.preventDefault();
+      setIsConfirmOpen(true);
+      return;
+    }
+    isConfirmedRef.current = false;
+  };
+
+  const handleConfirmSubmit = () => {
+    if (isPending) return;
+    isConfirmedRef.current = true;
+    formRef.current?.requestSubmit();
+  };
+
+  const handleGoBack = () => {
+    if (isPending) return;
+    setIsConfirmOpen(false);
+    isConfirmedRef.current = false;
+  };
+
   return (
-    <form action={action}>
+    <form ref={formRef} action={action} onSubmit={handleSubmit}>
       {issues.length > 0 ? (
         <div className="rounded-[var(--radius-md)] border border-[color:var(--color-danger-border)] bg-[color:var(--color-danger-surface)] p-4">
           <p className="text-sm font-semibold text-[color:var(--color-danger)]">
@@ -741,6 +782,18 @@ export function FinalSubmitForm({
           Submit manuscript
         </PendingButton>
       </StepActions>
+
+      {journalName ? (
+        <SubmissionConfirmationDialog
+          isOpen={isConfirmOpen}
+          onClose={handleGoBack}
+          onConfirm={handleConfirmSubmit}
+          journalName={journalName}
+          journalShortName={journalShortName}
+          manuscriptTitle={title || ""}
+          isSubmitting={isPending}
+        />
+      ) : null}
     </form>
   );
 }

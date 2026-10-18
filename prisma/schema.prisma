@@ -169,6 +169,7 @@ model Journal {
   roleChangeEvents     RoleChangeEvent[]
   submissionRequests   SubmissionRequest[]
   internalChatMessages InternalChatMessage[]
+  notifications        Notification[]
 
   @@index([departmentId])
 }
@@ -275,6 +276,8 @@ model User {
   roleChangesReceived      RoleChangeEvent[]               @relation("RoleChangeTarget")
   adherenceReports         AdherenceReport[]               @relation("AdherenceReportEditor")
   internalChatMessagesSent InternalChatMessage[]           @relation("InternalMessageSender")
+  notifications            Notification[]                  @relation("UserNotifications")
+  pushSubscriptions        PushSubscription[]              @relation("UserPushSubscriptions")
 }
 
 model UserGlobalRole {
@@ -734,5 +737,60 @@ model ReviewerApplication {
   @@index([targetJournal, status])
   @@index([email])
   @@index([submittedAt])
+}
+
+enum NotificationType {
+  MANUSCRIPT_SUBMITTED
+  TRACKING_ASSIGNED
+  CORRECTION_REQUESTED
+  REVIEWER_ASSIGNED
+  REVIEW_SUBMITTED
+  ADHERENCE_REPORT_SUBMITTED
+  EDITORIAL_DECISION
+  REVISION_SUBMITTED
+  ARTICLE_PUBLISHED
+  REQUEST_MESSAGE
+  INTERNAL_CHAT_MESSAGE
+  REVIEWER_APPLICATION_RECEIVED
+  REVIEWER_APPLICATION_STATUS
+}
+
+model Notification {
+  id             String           @id @default(cuid())
+  userId         String           @db.Uuid
+  journalId      String?
+  type           NotificationType
+  title          String
+  message        String
+  actionUrl      String
+  resourceType   String?
+  resourceId     String?
+  idempotencyKey String?          @unique
+  isRead         Boolean          @default(false)
+  readAt         DateTime?
+  createdAt      DateTime         @default(now())
+
+  user           User             @relation("UserNotifications", fields: [userId], references: [id], onDelete: Cascade)
+  journal        Journal?         @relation(fields: [journalId], references: [id], onDelete: SetNull)
+
+  @@index([userId, isRead, createdAt])
+  @@index([userId, createdAt])
+  @@index([journalId, createdAt])
+  @@index([resourceType, resourceId])
+}
+
+model PushSubscription {
+  id        String   @id @default(cuid())
+  userId    String   @db.Uuid
+  endpoint  String   @unique
+  p256dh    String
+  auth      String
+  userAgent String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user      User     @relation("UserPushSubscriptions", fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
 }
 

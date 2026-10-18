@@ -2,6 +2,7 @@
 
 import { useActionState, useRef, useState } from "react";
 import { submitDirectArticleAction } from "@/app/author/submissions/actions";
+import { SubmissionConfirmationDialog } from "@/components/submissions/submission-confirmation-dialog";
 import type {
   ActionState,
   SubmissionAuthorInput,
@@ -42,6 +43,23 @@ export function DirectArticleSubmissionForm({
     }
     return journals[0]?.slug ?? "";
   });
+
+  const [title, setTitle] = useState<string>("");
+  const [isConfirmOpen, setIsConfirmOpen] = useState<boolean>(false);
+  const [prevError, setPrevError] = useState(state.error);
+  const formRef = useRef<HTMLFormElement>(null);
+  const isConfirmedRef = useRef<boolean>(false);
+
+  // Automatically close modal if server action returns an error
+  if (state.error !== prevError) {
+    setPrevError(state.error);
+    if (state.error && isConfirmOpen) {
+      setIsConfirmOpen(false);
+    }
+  }
+
+  const selectedJournal =
+    journals.find((j) => j.slug === selectedJournalSlug) ?? journals[0];
 
   const [authors, setAuthors] = useState<SubmissionAuthorInput[]>([
     {
@@ -101,8 +119,45 @@ export function DirectArticleSubmissionForm({
     );
   };
 
+  const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
+    if (!isConfirmedRef.current) {
+      e.preventDefault();
+      // Check HTML5 validity of all inputs in the form
+      if (!e.currentTarget.checkValidity()) {
+        e.currentTarget.reportValidity();
+        return;
+      }
+      if (!selectedFile) {
+        if (fileInputRef.current) {
+          fileInputRef.current.reportValidity();
+        }
+        return;
+      }
+      setIsConfirmOpen(true);
+      return;
+    }
+    isConfirmedRef.current = false;
+  };
+
+  const handleConfirmSubmit = () => {
+    if (isPending) return;
+    isConfirmedRef.current = true;
+    formRef.current?.requestSubmit();
+  };
+
+  const handleGoBack = () => {
+    if (isPending) return;
+    setIsConfirmOpen(false);
+    isConfirmedRef.current = false;
+  };
+
   return (
-    <form action={formAction} className="space-y-8">
+    <form
+      ref={formRef}
+      action={formAction}
+      onSubmit={handleSubmit}
+      className="space-y-8"
+    >
       {state.error ? (
         <div
           className="rounded-[var(--radius-md)] border border-red-500/30 bg-red-500/10 p-4 text-xs font-semibold text-red-400"
@@ -155,6 +210,8 @@ export function DirectArticleSubmissionForm({
           id="title"
           name="title"
           type="text"
+          value={title}
+          onChange={(e) => setTitle(e.target.value)}
           placeholder="e.g. Cognitive Behavioral Interventions in Post-Primary Education"
           className="app-field !w-full text-sm font-medium"
           required
@@ -429,6 +486,16 @@ export function DirectArticleSubmissionForm({
           )}
         </button>
       </div>
+
+      <SubmissionConfirmationDialog
+        isOpen={isConfirmOpen}
+        onClose={handleGoBack}
+        onConfirm={handleConfirmSubmit}
+        journalName={selectedJournal?.name ?? ""}
+        journalShortName={selectedJournal?.shortName ?? null}
+        manuscriptTitle={title}
+        isSubmitting={isPending}
+      />
     </form>
   );
 }

@@ -1,6 +1,7 @@
 import "server-only";
 
 import { prisma } from "@/lib/db/prisma";
+import { handleInternalChatMessageSent } from "@/lib/notifications/event-handlers";
 
 export type InternalChatMessageDTO = {
   id: string;
@@ -148,7 +149,7 @@ export async function sendInternalChatMessage(input: {
     throw new Error("Message or attachment is required.");
   }
 
-  return prisma.$transaction(async (tx) => {
+  const message = await prisma.$transaction(async (tx) => {
     const message = await tx.internalChatMessage.create({
       data: {
         journalId: input.journalId,
@@ -181,4 +182,12 @@ export async function sendInternalChatMessage(input: {
 
     return message;
   });
+
+  await handleInternalChatMessageSent({
+    journalId: input.journalId,
+    messageId: message.id,
+    senderId: input.senderId,
+  });
+
+  return message;
 }

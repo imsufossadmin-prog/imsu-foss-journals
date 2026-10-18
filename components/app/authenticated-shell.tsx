@@ -10,6 +10,7 @@ import { BrandMark } from "@/components/ui/brand-mark";
 import type { ProductWorkspace } from "@/lib/auth/workspaces";
 
 import { ThemeToggle } from "@/components/app/theme-toggle";
+import { NotificationBell } from "@/components/notifications/notification-bell";
 
 type ShellUser = {
   displayName: string;
@@ -171,6 +172,7 @@ export function AuthenticatedShell({
                 ) : null}
               </div>
             </details>
+            <NotificationBell />
             <ThemeToggle />
             <AccountMenu
               user={user}

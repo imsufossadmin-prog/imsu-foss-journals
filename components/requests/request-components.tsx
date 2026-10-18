@@ -12,6 +12,7 @@ import {
 
 import type { RequestActionState } from "@/app/author/requests/actions";
 import { PendingButton } from "@/components/submissions/pending-button";
+import { SubmissionConfirmationDialog } from "@/components/submissions/submission-confirmation-dialog";
 import { requestStatusContent } from "@/lib/requests/validation";
 
 const initialState: RequestActionState = {};
@@ -1663,6 +1664,8 @@ export function CanonicalArticleSubmissionForm({
   version = 1,
   initial,
   fileName: initialFileName,
+  journalName,
+  journalShortName,
 }: {
   action: (
     state: RequestActionState,
@@ -1683,11 +1686,50 @@ export function CanonicalArticleSubmissionForm({
     }>;
   };
   fileName?: string;
+  journalName?: string;
+  journalShortName?: string | null;
 }) {
   const [title, setTitle] = useState(initial.title);
   const [abstract, setAbstract] = useState(initial.abstract);
   const [keywords, setKeywords] = useState(initial.keywords);
-  const [state, formAction] = useActionState(action, initialState);
+  const [state, formAction, isPending] = useActionState(action, initialState);
+  const [isConfirmOpen, setIsConfirmOpen] = useState(false);
+  const [prevError, setPrevError] = useState(state.error);
+  const formRef = useRef<HTMLFormElement>(null);
+  const isConfirmedRef = useRef(false);
+
+  if (state.error !== prevError) {
+    setPrevError(state.error);
+    if (state.error && isConfirmOpen) {
+      setIsConfirmOpen(false);
+    }
+  }
+
+  const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
+    if (journalName && !isConfirmedRef.current) {
+      e.preventDefault();
+      if (!e.currentTarget.checkValidity()) {
+        e.currentTarget.reportValidity();
+        return;
+      }
+      setIsConfirmOpen(true);
+      return;
+    }
+    isConfirmedRef.current = false;
+  };
+
+  const handleConfirmSubmit = () => {
+    if (isPending) return;
+    isConfirmedRef.current = true;
+    formRef.current?.requestSubmit();
+  };
+
+  const handleGoBack = () => {
+    if (isPending) return;
+    setIsConfirmOpen(false);
+    isConfirmedRef.current = false;
+  };
+
   const [authors, setAuthors] = useState(
     initial.authors.length > 0
       ? initial.authors
@@ -1703,7 +1745,12 @@ export function CanonicalArticleSubmissionForm({
   );
 
   return (
-    <form action={formAction} className="space-y-6">
+    <form
+      ref={formRef}
+      action={formAction}
+      onSubmit={handleSubmit}
+      className="space-y-6"
+    >
       <input type="hidden" name="version" value={version} />
       <input type="hidden" name="authors" value={JSON.stringify(authors)} />
       <label className="block text-sm font-semibold">
@@ -1852,6 +1899,18 @@ export function CanonicalArticleSubmissionForm({
         <p className="text-xs text-[color:var(--color-danger)]">
           {state.error}
         </p>
+      ) : null}
+
+      {journalName ? (
+        <SubmissionConfirmationDialog
+          isOpen={isConfirmOpen}
+          onClose={handleGoBack}
+          onConfirm={handleConfirmSubmit}
+          journalName={journalName}
+          journalShortName={journalShortName}
+          manuscriptTitle={title || ""}
+          isSubmitting={isPending}
+        />
       ) : null}
     </form>
   );

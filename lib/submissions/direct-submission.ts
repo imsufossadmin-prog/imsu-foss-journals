@@ -17,6 +17,7 @@ import {
 } from "@/lib/submissions/validation";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { normalizeOrcid } from "@/lib/utils/orcid";
+import { handleManuscriptSubmitted } from "@/lib/notifications/event-handlers";
 
 export class DirectSubmissionError extends Error {
   constructor(
@@ -239,6 +240,8 @@ export async function createDirectArticleSubmission(input: {
         },
       },
     });
+
+    await handleManuscriptSubmitted(submission.id);
 
     return { submissionId: submission.id };
   } catch (err: unknown) {

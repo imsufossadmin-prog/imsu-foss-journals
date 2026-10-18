@@ -55,6 +55,8 @@ export default async function SimpleSubmissionPage({
           submissionId={submission.id}
           version={submission.version}
           fileName={manuscript?.storedFile.originalFileName}
+          journalName={submission.journal.name}
+          journalShortName={submission.journal.shortName}
           initial={{
             title: submission.title ?? "",
             abstract: submission.abstract ?? "",

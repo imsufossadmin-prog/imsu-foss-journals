@@ -6,6 +6,10 @@ import { assertSafeDatabaseForDestructiveOps } from "@/lib/db/guard";
 import { prisma } from "@/lib/db/prisma";
 import { resolveCanonicalJournalSlug } from "@/lib/editorial/editorial-board-data";
 import { isAuthorizedForJournal } from "@/lib/editorial/editorial-board-store";
+import {
+  handleReviewerApplicationReceived,
+  handleReviewerApplicationStatusChanged,
+} from "@/lib/notifications/event-handlers";
 
 export type ReviewerApplicationStatus = "PENDING" | "APPROVED" | "DECLINED";
 
@@ -186,6 +190,12 @@ export async function createReviewerApplication(input: {
     if (input.applicantUserId && !mapped.applicantUserId) {
       mapped.applicantUserId = input.applicantUserId;
     }
+
+    await handleReviewerApplicationReceived({
+      applicationId: created.id,
+      applicantName: formatAcademicName(input.academicTitle, input.fullName),
+      targetJournal: input.targetJournal,
+    });
 
     return { success: true, trackingCode, application: mapped };
   } catch (error) {
@@ -409,6 +419,23 @@ export async function updateReviewerApplicationStatus({
     } catch {
       // ignore outside Next.js request context
     }
+
+    const applicantUserId =
+      app.applicantUserId ||
+      (await prisma.user
+        .findUnique({
+          where: { email: app.email },
+          select: { id: true },
+        })
+        .then((u) => u?.id ?? null)
+        .catch(() => null));
+
+    await handleReviewerApplicationStatusChanged({
+      applicationId,
+      applicantUserId,
+      status,
+      targetJournal: app.targetJournal,
+    });
 
     return { success: true };
   } catch (error) {

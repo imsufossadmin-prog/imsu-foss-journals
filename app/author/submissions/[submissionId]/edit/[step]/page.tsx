@@ -201,7 +201,13 @@ function ReviewSummary({
         Submitting locks this version for editorial consideration. Future
         changes will require an explicit revision workflow.
       </div>
-      <FinalSubmitForm submissionId={submission.id} issues={issues} />
+      <FinalSubmitForm
+        submissionId={submission.id}
+        issues={issues}
+        journalName={submission.journal.name}
+        journalShortName={submission.journal.shortName}
+        title={submission.title ?? ""}
+      />
     </div>
   );
 }
