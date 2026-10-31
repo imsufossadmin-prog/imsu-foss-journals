@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { serveArticlePdf } from "@/lib/editorial/article-pdf-stream";
 
 export async function GET(
-  _request: Request,
+  request: Request,
   {
     params,
   }: {
@@ -22,5 +22,5 @@ export async function GET(
     return NextResponse.json({ error: "Not found" }, { status: 404 });
   }
 
-  return serveArticlePdf(articleSlug);
+  return serveArticlePdf(articleSlug, request);
 }

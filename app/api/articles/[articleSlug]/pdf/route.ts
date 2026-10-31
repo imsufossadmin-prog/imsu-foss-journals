@@ -1,9 +1,9 @@
 import { serveArticlePdf } from "@/lib/editorial/article-pdf-stream";
 
 export async function GET(
-  _request: Request,
+  request: Request,
   { params }: { params: Promise<{ articleSlug: string }> },
 ) {
   const { articleSlug } = await params;
-  return serveArticlePdf(articleSlug);
+  return serveArticlePdf(articleSlug, request);
 }

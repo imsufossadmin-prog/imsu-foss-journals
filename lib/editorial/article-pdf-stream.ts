@@ -4,7 +4,10 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db/prisma";
 import { createAdminClient } from "@/lib/supabase/admin";
 
-export async function serveArticlePdf(articleSlug: string): Promise<Response> {
+export async function serveArticlePdf(
+  articleSlug: string,
+  request?: Request,
+): Promise<Response> {
   const article = await prisma.article.findUnique({
     where: { slug: articleSlug },
     include: {
@@ -22,6 +25,50 @@ export async function serveArticlePdf(articleSlug: string): Promise<Response> {
       { error: "Article unavailable." },
       { status: 404 },
     );
+  }
+
+  // Generate deterministic ETag based on article slug and update timestamp
+  const lastModifiedTime = article.updatedAt ? article.updatedAt.getTime() : 0;
+  const etag = `"${article.slug}-${lastModifiedTime}"`;
+
+  const commonCacheHeaders: Record<string, string> = {
+    ETag: etag,
+    "Cache-Control":
+      "public, max-age=86400, s-maxage=31536000, stale-while-revalidate=86400",
+    "CDN-Cache-Control": "public, s-maxage=31536000",
+    "Vercel-CDN-Cache-Control": "public, s-maxage=31536000",
+    "X-Robots-Tag": "all",
+  };
+
+  if (article.updatedAt) {
+    commonCacheHeaders["Last-Modified"] = article.updatedAt.toUTCString();
+  }
+
+  // Handle conditional GET: If-None-Match
+  const clientEtag = request?.headers.get("if-none-match");
+  if (clientEtag) {
+    // Matches exact etag or weak etag
+    const cleanClientEtag = clientEtag.trim().replace(/^W\//, "");
+    if (cleanClientEtag === etag || clientEtag.includes(etag)) {
+      return new Response(null, {
+        status: 304,
+        headers: commonCacheHeaders,
+      });
+    }
+  }
+
+  // Handle conditional GET: If-Modified-Since
+  const clientModifiedSince = request?.headers.get("if-modified-since");
+  if (clientModifiedSince && article.updatedAt) {
+    const clientTime = new Date(clientModifiedSince).getTime();
+    // Compare at second-level granularity since HTTP dates do not include milliseconds
+    const lastModifiedSec = Math.floor(lastModifiedTime / 1000) * 1000;
+    if (!isNaN(clientTime) && clientTime >= lastModifiedSec) {
+      return new Response(null, {
+        status: 304,
+        headers: commonCacheHeaders,
+      });
+    }
   }
 
   let fileBucket: string | null = null;
@@ -68,12 +115,10 @@ export async function serveArticlePdf(articleSlug: string): Promise<Response> {
   return new Response(data.stream(), {
     status: 200,
     headers: {
+      ...commonCacheHeaders,
       "Content-Type": "application/pdf",
       "Content-Disposition": `inline; filename="${filename}"`,
       "Content-Length": String(data.size),
-      "Cache-Control":
-        "public, max-age=86400, s-maxage=86400, stale-while-revalidate=604800",
-      "X-Robots-Tag": "all",
     },
   });
 }
