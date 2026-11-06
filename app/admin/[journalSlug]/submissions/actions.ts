@@ -24,6 +24,7 @@ import {
 import { createArticleObjectPath, storageBuckets } from "@/lib/storage/paths";
 import { createAdminClient } from "@/lib/supabase/admin";
 import type { ActionState } from "@/lib/submissions/types";
+import { invalidateArticlePublicCaches } from "@/lib/editorial/cache-invalidation";
 
 const decisionTypes: EditorialDecisionType[] = [
   "ACCEPT",
@@ -461,7 +462,7 @@ export async function publishArticleAction(
     const issueOrderRaw = String(formData.get("issueOrder") ?? "").trim();
     const issueOrder = issueOrderRaw ? parseInt(issueOrderRaw, 10) : undefined;
 
-    await publishArticle({
+    const publishedArticle = await publishArticle({
       adminId: user.id,
       journalId: journal.id,
       submissionId,
@@ -476,10 +477,17 @@ export async function publishArticleAction(
     });
 
     refresh(journalSlug, submissionId);
-    revalidatePath("/");
-    revalidatePath("/current-issue");
-    revalidatePath("/archives");
-    revalidatePath("/admin/articles");
+    if (publishedArticle?.slug) {
+      invalidateArticlePublicCaches({
+        slug: publishedArticle.slug,
+        journalSlug,
+      });
+    } else {
+      revalidatePath("/");
+      revalidatePath("/current-issue");
+      revalidatePath("/archives");
+      revalidatePath("/admin/articles");
+    }
   } catch (error) {
     const supabase = createAdminClient();
     if (productionObjectPath) {

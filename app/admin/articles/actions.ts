@@ -6,6 +6,7 @@ import { redirect } from "next/navigation";
 import { requireApplicationArea } from "@/lib/auth/authorization";
 import { hasJournalRole, isSuperAdmin } from "@/lib/auth/permissions";
 import { prisma } from "@/lib/db/prisma";
+import { invalidateArticlePublicCaches } from "@/lib/editorial/cache-invalidation";
 import {
   deleteArticle,
   publishArticle as setArticlePublishedStatus,
@@ -238,8 +239,9 @@ export async function createDirectLegacyArticleAction(
     };
   }
 
+  let createdArticleSlug: string | null = null;
   try {
-    await publishDirectLegacyArticle({
+    const createdArticle = await publishDirectLegacyArticle({
       adminId: user.id,
       journalSlug,
       title,
@@ -263,6 +265,7 @@ export async function createDirectLegacyArticleAction(
       },
       authors,
     });
+    createdArticleSlug = createdArticle.slug;
   } catch (err: unknown) {
     const uploadedPaths = [pdfPath, coverImagePath].filter(Boolean);
     if (uploadedPaths.length > 0) {
@@ -290,10 +293,17 @@ export async function createDirectLegacyArticleAction(
     return { error: message };
   }
 
-  revalidatePath("/admin/articles");
-  revalidatePath("/");
-  revalidatePath("/current-issue");
-  revalidatePath("/archives");
+  if (createdArticleSlug) {
+    invalidateArticlePublicCaches({
+      slug: createdArticleSlug,
+      journalSlug,
+    });
+  } else {
+    revalidatePath("/admin/articles");
+    revalidatePath("/");
+    revalidatePath("/current-issue");
+    revalidatePath("/archives");
+  }
 
   redirect("/admin/articles?success=published");
 }
@@ -304,24 +314,60 @@ export async function toggleArticlePublicationAction(
 ) {
   const user = await requireApplicationArea("admin");
   const journalIds = manageableJournalIds(user);
+  const article = await prisma.article.findUnique({
+    where: { id: articleId },
+    select: {
+      slug: true,
+      issue: {
+        select: { volume: { select: { journal: { select: { slug: true } } } } },
+      },
+    },
+  });
+
   if (currentlyPublished) {
     assertChanged(await unpublishArticle(articleId, journalIds));
   } else {
     assertChanged(await setArticlePublishedStatus(articleId, journalIds));
   }
-  revalidatePath("/admin/articles");
-  revalidatePath("/");
-  revalidatePath("/current-issue");
-  revalidatePath("/archives");
+
+  if (article) {
+    invalidateArticlePublicCaches({
+      slug: article.slug,
+      journalSlug: article.issue?.volume?.journal?.slug,
+    });
+  } else {
+    revalidatePath("/admin/articles");
+    revalidatePath("/");
+    revalidatePath("/current-issue");
+    revalidatePath("/archives");
+  }
 }
 
 export async function deleteArticleAction(articleId: string) {
   const user = await requireApplicationArea("admin");
+  const article = await prisma.article.findUnique({
+    where: { id: articleId },
+    select: {
+      slug: true,
+      issue: {
+        select: { volume: { select: { journal: { select: { slug: true } } } } },
+      },
+    },
+  });
+
   await deleteArticle(articleId, manageableJournalIds(user));
-  revalidatePath("/admin/articles");
-  revalidatePath("/");
-  revalidatePath("/current-issue");
-  revalidatePath("/archives");
+
+  if (article) {
+    invalidateArticlePublicCaches({
+      slug: article.slug,
+      journalSlug: article.issue?.volume?.journal?.slug,
+    });
+  } else {
+    revalidatePath("/admin/articles");
+    revalidatePath("/");
+    revalidatePath("/current-issue");
+    revalidatePath("/archives");
+  }
 }
 
 export async function closeIssueAdminAction(issueId: string) {
@@ -631,13 +677,15 @@ export async function updateArticleAction(
     return { error: message };
   }
 
-  revalidatePath("/admin/articles");
+  invalidateArticlePublicCaches({
+    slug: updatedArticleSlug,
+    previousSlug:
+      existingArticle.slug !== updatedArticleSlug
+        ? existingArticle.slug
+        : undefined,
+    journalSlug: journal.slug,
+  });
   revalidatePath(`/admin/articles/${articleId}/edit`);
-  revalidatePath(`/articles/${updatedArticleSlug}`);
-  revalidatePath(`/journals/${journal.slug}`);
-  revalidatePath("/");
-  revalidatePath("/current-issue");
-  revalidatePath("/archives");
 
   redirect("/admin/articles?success=updated");
 }
