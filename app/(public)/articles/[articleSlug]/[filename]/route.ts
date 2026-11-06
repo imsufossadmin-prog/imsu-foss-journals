@@ -24,3 +24,12 @@ export async function GET(
 
   return serveArticlePdf(articleSlug, request);
 }
+
+export async function HEAD(
+  request: Request,
+  props: {
+    params: Promise<{ articleSlug: string; filename: string }>;
+  },
+) {
+  return GET(request, props);
+}
