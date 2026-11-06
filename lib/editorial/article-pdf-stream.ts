@@ -13,6 +13,35 @@ interface ParsedRange {
   end: number;
 }
 
+export function evaluateIfRange(
+  ifRangeHeader: string | null | undefined,
+  currentEtag: string,
+  lastModifiedTime?: number | null,
+): boolean {
+  if (!ifRangeHeader) return true;
+
+  const cleanHeader = ifRangeHeader.trim();
+  const cleanCurrentEtag = currentEtag.trim();
+
+  // Strong ETag comparison (RFC 9110 Section 13.1.5)
+  if (cleanHeader.startsWith('"') || cleanHeader.startsWith('W/"')) {
+    const rawClient = cleanHeader.replace(/^W\//, "");
+    const rawCurrent = cleanCurrentEtag.replace(/^W\//, "");
+    return rawClient === rawCurrent;
+  }
+
+  // HTTP-Date comparison (RFC 9110 Section 13.1.5)
+  if (lastModifiedTime) {
+    const clientTime = new Date(cleanHeader).getTime();
+    if (!isNaN(clientTime)) {
+      const lastModifiedSec = Math.floor(lastModifiedTime / 1000) * 1000;
+      return clientTime === lastModifiedSec;
+    }
+  }
+
+  return false;
+}
+
 export function parseRangeHeader(
   rangeHeader: string,
   totalSize: number,
@@ -145,7 +174,9 @@ export async function serveArticlePdf(
     }
   }
 
-  if (!fileBucket || !fileObjectPath) {
+  // Strict trust-boundary check: Public article routes must ONLY serve from 'published-articles'.
+  // Objects in 'academic-private' or other buckets must NEVER be served publicly.
+  if (!fileBucket || !fileObjectPath || fileBucket !== "published-articles") {
     return NextResponse.json({ error: "PDF unavailable." }, { status: 404 });
   }
 
@@ -166,22 +197,32 @@ export async function serveArticlePdf(
     });
   }
 
-  // Handle Range requests
+  // Handle Range and If-Range requests (RFC 9110 Section 13.1.5)
   const rangeHeader = request?.headers.get("range");
+  const ifRangeHeader = request?.headers.get("if-range");
   let parsedRange: ParsedRange | null = null;
 
   if (rangeHeader && totalSize !== null) {
-    const rangeResult = parseRangeHeader(rangeHeader, totalSize);
-    if (rangeResult === "unsatisfiable") {
-      return new Response(null, {
-        status: 416,
-        headers: {
-          ...commonCacheHeaders,
-          "Content-Range": `bytes */${totalSize}`,
-        },
-      });
-    } else if (rangeResult !== "invalid") {
-      parsedRange = rangeResult;
+    // If-Range: if validator fails, Range MUST be ignored and full 200 OK representation served
+    const ifRangeMatches = evaluateIfRange(
+      ifRangeHeader,
+      etag,
+      lastModifiedTime,
+    );
+
+    if (ifRangeMatches) {
+      const rangeResult = parseRangeHeader(rangeHeader, totalSize);
+      if (rangeResult === "unsatisfiable") {
+        return new Response(null, {
+          status: 416,
+          headers: {
+            ...commonCacheHeaders,
+            "Content-Range": `bytes */${totalSize}`,
+          },
+        });
+      } else if (rangeResult !== "invalid") {
+        parsedRange = rangeResult;
+      }
     }
   }
 
@@ -269,7 +310,12 @@ export async function serveArticlePdf(
     return streamResponse;
   }
 
-  // Fallback: Admin SDK download
+  // Fallback: Admin SDK download strictly for 'published-articles'
+  // Under no circumstances should private files ever be downloaded here
+  if (fileBucket !== "published-articles") {
+    return NextResponse.json({ error: "PDF unavailable." }, { status: 404 });
+  }
+
   try {
     const supabase = createAdminClient();
     const { data, error } = await supabase.storage
