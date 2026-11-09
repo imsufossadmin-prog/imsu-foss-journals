@@ -7,6 +7,10 @@ import type {
   SubmissionFileDTO,
 } from "@/lib/submissions/types";
 import { prisma } from "@/lib/db/prisma";
+import {
+  normalizeJournalRecord,
+  sortJournalsByCanonicalOrder,
+} from "@/lib/editorial/editorial-board-data";
 
 const authorSubmissionInclude = {
   journal: {
@@ -58,7 +62,7 @@ export function submissionDTO(record: SubmissionRecord): AuthorSubmissionDTO {
     submittedAt: record.submittedAt,
     createdAt: record.createdAt,
     updatedAt: record.updatedAt,
-    journal: record.journal,
+    journal: normalizeJournalRecord(record.journal),
     request: record.request ? { id: record.request.id } : null,
     authors: record.authors.map((author) => ({
       id: author.id,
@@ -93,8 +97,6 @@ export async function getAuthorSubmission(ownerId: string, id: string) {
   return submission ? submissionDTO(submission) : null;
 }
 
-import { sortJournalsByCanonicalOrder } from "@/lib/editorial/editorial-board-data";
-
 export async function getEligibleJournals() {
   const journals = await prisma.journal.findMany({
     where: {
@@ -112,5 +114,5 @@ export async function getEligibleJournals() {
     },
   });
 
-  return sortJournalsByCanonicalOrder(journals);
+  return sortJournalsByCanonicalOrder(journals).map(normalizeJournalRecord);
 }

@@ -1,4 +1,5 @@
 import { PDFDocument, PDFFont, rgb, StandardFonts } from "pdf-lib";
+import { getOfficialJournalFullName } from "@/lib/editorial/editorial-board-data";
 
 export type IssueTOCData = {
   id: string;
@@ -85,7 +86,10 @@ export async function generateIssueTOCPdf(
 
   // 2. Journal Title
   const journalTitleLines = wrapText(
-    issue.volume.journal.name,
+    getOfficialJournalFullName(
+      issue.volume.journal.slug,
+      issue.volume.journal.name,
+    ),
     fontBold,
     18,
     contentWidth,

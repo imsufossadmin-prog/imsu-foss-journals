@@ -101,9 +101,7 @@ export function AdminLegacyUploadForm({
             </option>
             {journals.map((j) => (
               <option key={j.id} value={j.slug}>
-                {j.department?.name
-                  ? `${j.name} (${j.department.name})`
-                  : j.name}
+                {j.name}
               </option>
             ))}
           </select>

@@ -1,4 +1,5 @@
 import type { ArchiveIssueGroup } from "@/components/public/issue-archive-explorer";
+import { getOfficialJournalFullName } from "@/lib/editorial/editorial-board-data";
 import { splitAuthorNames } from "@/lib/metadata/scholar";
 
 export function CrawlableArticleDirectory({
@@ -52,7 +53,9 @@ export function CrawlableArticleDirectory({
                 className="pt-6 first:pt-0"
               >
                 <div className="flex flex-wrap items-center gap-2 text-xs font-bold text-[color:var(--color-accent)] uppercase">
-                  <span>{journal.name}</span>
+                  <span>
+                    {getOfficialJournalFullName(journal.slug, journal.name)}
+                  </span>
                   <span>·</span>
                   <span>
                     Volume {volNumber}, Issue {issueNumber} ({year})

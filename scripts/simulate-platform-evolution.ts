@@ -96,12 +96,12 @@ const ACADEMIC_TOPICS = [
   {
     dept: "Sociology",
     journalSlug: "gjsbr",
-    journalName: "Global Journal of Social and Behavioural Research",
+    journalName: "Global Journal of Contemporary Social Research",
   },
   {
     dept: "Criminology",
     journalSlug: "njsbr",
-    journalName: "Nwaebere Journal of Social and Behavioural Research",
+    journalName: "Nwaebere Journal of Scientific Research",
   },
 ];
 

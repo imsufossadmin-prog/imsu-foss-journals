@@ -3,6 +3,7 @@ import { NextResponse } from "next/server";
 import { getCurrentUser } from "@/lib/auth/authorization";
 import { isSuperAdmin } from "@/lib/auth/permissions";
 import { prisma } from "@/lib/db/prisma";
+import { handleRequestMessageSent } from "@/lib/notifications/event-handlers";
 import { createRequestObjectPath, storageBuckets } from "@/lib/storage/paths";
 import { matchesUploadSignature } from "@/lib/submissions/validation";
 import { createAdminClient } from "@/lib/supabase/admin";
@@ -122,6 +123,7 @@ export async function POST(
       { status: 502 },
     );
 
+  let createdMessageId: string | null = null;
   try {
     await prisma.$transaction(async (transaction) => {
       const stored = await transaction.storedFile.create({
@@ -134,7 +136,7 @@ export async function POST(
           uploaderId: user.id,
         },
       });
-      await transaction.submissionConversationMessage.create({
+      const msg = await transaction.submissionConversationMessage.create({
         data: {
           requestId,
           senderId: user.id,
@@ -147,7 +149,9 @@ export async function POST(
             create: { storedFileId: stored.id, type: attachmentType },
           },
         },
+        select: { id: true },
       });
+      createdMessageId = msg.id;
       await transaction.submissionRequest.update({
         where: { id: requestId },
         data: { updatedAt: new Date() },
@@ -160,5 +164,11 @@ export async function POST(
       { status: 409 },
     );
   }
+  await handleRequestMessageSent({
+    requestId,
+    messageId: createdMessageId ?? undefined,
+    senderId: user.id,
+    senderName: user.displayName,
+  });
   return NextResponse.json({ ok: true });
 }

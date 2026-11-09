@@ -4,6 +4,7 @@ import { notFound, redirect } from "next/navigation";
 import { requireApplicationArea } from "@/lib/auth/authorization";
 import { hasJournalRole, isSuperAdmin } from "@/lib/auth/permissions";
 import { prisma } from "@/lib/db/prisma";
+import { getOfficialJournalFullName } from "@/lib/editorial/editorial-board-data";
 import { AdminArticleEditForm } from "./form";
 
 export default async function AdminEditArticlePage({
@@ -72,7 +73,7 @@ export default async function AdminEditArticlePage({
         number: article.issue.volume.number,
         year: article.issue.volume.year,
         journal: {
-          name: journal.name,
+          name: getOfficialJournalFullName(journal.slug, journal.name),
           slug: journal.slug,
           departmentName: journal.department?.name || null,
         },

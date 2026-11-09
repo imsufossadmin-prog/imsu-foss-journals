@@ -1,6 +1,11 @@
 import "server-only";
 
 import type { PrismaClient } from "@prisma/client";
+import {
+  getJournalDbSlugs,
+  getOfficialJournalShortName,
+  resolveCanonicalJournalSlug,
+} from "@/lib/editorial/editorial-board-data";
 import { generateIdempotencyKey, createNotification } from "./service";
 import {
   resolveJournalAdminRecipients,
@@ -53,7 +58,12 @@ export async function handleManuscriptSubmitted(
     );
     const journalSlug = submission.journal?.slug || "general";
     const journalLabel =
-      submission.journal?.shortName || submission.journal?.name || "Journal";
+      getOfficialJournalShortName(
+        submission.journal?.slug,
+        submission.journal?.shortName,
+      ) ||
+      submission.journal?.name ||
+      "Journal";
     const titleText = submission.title
       ? `"${submission.title}"`
       : "New Manuscript";
@@ -120,6 +130,11 @@ export async function handleSubmissionRequestCreated(
       new Set([...superAdmins, ...journalAdmins]),
     );
     const journalSlug = request.journal?.slug || "general";
+    const journalLabel =
+      getOfficialJournalShortName(
+        request.journal?.slug,
+        request.journal?.shortName,
+      ) || "the journal";
     const authorName = request.author?.displayName || "An author";
 
     for (const userId of recipientIds) {
@@ -132,7 +147,7 @@ export async function handleSubmissionRequestCreated(
           journalId: request.journalId,
           type: "REQUEST_MESSAGE",
           title: "New Submission Request Started",
-          message: `${authorName} initiated a submission request in ${request.journal?.shortName || "the journal"}.`,
+          message: `${authorName} initiated a submission request in ${journalLabel}.`,
           actionUrl: `/admin/${journalSlug}/requests/${request.id}`,
           resourceType: "SubmissionRequest",
           resourceId: request.id,
@@ -816,6 +831,9 @@ export async function handleInternalChatMessageSent(
     ).filter((id) => id !== input.senderId);
 
     const senderLabel = input.senderName || "A team member";
+    const journalLabel =
+      getOfficialJournalShortName(journal.slug, journal.shortName) ||
+      journal.slug.toUpperCase();
 
     for (const userId of recipientIds) {
       await createNotification(
@@ -824,7 +842,7 @@ export async function handleInternalChatMessageSent(
           journalId: journal.id,
           type: "INTERNAL_CHAT_MESSAGE",
           title: "New Internal Staff Message",
-          message: `${senderLabel} posted in the ${journal.shortName} internal editorial chat.`,
+          message: `${senderLabel} posted in the ${journalLabel} internal editorial chat.`,
           actionUrl: `/admin/${journal.slug}/chat`,
           resourceType: "InternalChatMessage",
           resourceId: input.messageId,
@@ -864,9 +882,22 @@ export async function handleReviewerApplicationReceived(
     let journalAdmins: string[] = [];
     let journalId: string | null = null;
 
-    if (input.targetJournal && input.targetJournal !== "ALL") {
+    const rawTarget = (input.targetJournal || "").trim();
+    const isAll = !rawTarget || rawTarget.toUpperCase() === "ALL";
+    const canonicalTarget = isAll
+      ? "ALL"
+      : resolveCanonicalJournalSlug(rawTarget);
+    const targetLabel = isAll
+      ? "All Faculty Journals"
+      : getOfficialJournalShortName(canonicalTarget, rawTarget.toUpperCase()) ||
+        canonicalTarget.toUpperCase();
+
+    if (!isAll) {
+      const dbSlugs = getJournalDbSlugs(rawTarget);
       const journal = await client.journal.findFirst({
-        where: { slug: input.targetJournal },
+        where: {
+          slug: dbSlugs.length === 1 ? dbSlugs[0] : { in: dbSlugs },
+        },
         select: { id: true },
       });
       if (journal) {
@@ -886,7 +917,7 @@ export async function handleReviewerApplicationReceived(
           journalId,
           type: "REVIEWER_APPLICATION_RECEIVED",
           title: "New Reviewer Application",
-          message: `${input.applicantName} submitted an application to join the peer reviewer pool for ${input.targetJournal}.`,
+          message: `${input.applicantName} submitted an application to join the peer reviewer pool for ${targetLabel}.`,
           actionUrl: "/admin/reviewers",
           resourceType: "ReviewerApplication",
           resourceId: input.applicationId,
@@ -924,6 +955,15 @@ export async function handleReviewerApplicationStatusChanged(
     if (!input.applicantUserId) return;
 
     const client = await getDb(db);
+    const rawTarget = (input.targetJournal || "").trim();
+    const isAll = !rawTarget || rawTarget.toUpperCase() === "ALL";
+    const canonicalTarget = isAll
+      ? "ALL"
+      : resolveCanonicalJournalSlug(rawTarget);
+    const targetLabel = isAll
+      ? "All Faculty Journals"
+      : getOfficialJournalShortName(canonicalTarget, rawTarget.toUpperCase()) ||
+        canonicalTarget.toUpperCase();
     const statusLabel =
       input.status === "APPROVED"
         ? "approved! You now have Editor workspace privileges."
@@ -936,7 +976,7 @@ export async function handleReviewerApplicationStatusChanged(
         userId: input.applicantUserId,
         type: "REVIEWER_APPLICATION_STATUS",
         title: "Reviewer Application Update",
-        message: `Your reviewer application for ${input.targetJournal} has been ${statusLabel}`,
+        message: `Your reviewer application for ${targetLabel} has been ${statusLabel}`,
         actionUrl: "/author/apply-reviewer",
         resourceType: "ReviewerApplication",
         resourceId: input.applicationId,

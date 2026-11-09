@@ -105,6 +105,8 @@ export function NotificationDrawer({
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [isLoadingMore, setIsLoadingMore] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
+  const [reloadSeq, setReloadSeq] = useState<number>(0);
+  const markingIdsRef = useRef<Set<string>>(new Set());
 
   // Browser Web Push capability and state
   const isIosRestricted = useSyncExternalStore(
@@ -241,7 +243,7 @@ export function NotificationDrawer({
     return () => {
       active = false;
     };
-  }, [isOpen, filter]);
+  }, [isOpen, filter, reloadSeq]);
 
   // Load more notifications for pagination
   const handleLoadMore = async () => {
@@ -266,28 +268,41 @@ export function NotificationDrawer({
 
   // Mark single notification as read
   const handleMarkAsRead = async (notifId: string) => {
-    // Optimistic UI update
-    setNotifications((prev) =>
-      prev.map((item) =>
-        item.id === notifId
-          ? { ...item, isRead: true, readAt: new Date() }
-          : item,
-      ),
-    );
-    const newUnread = Math.max(0, unreadCount - 1);
-    setUnreadCount(newUnread);
-    onUnreadCountChangeRef.current?.(newUnread);
+    if (markingIdsRef.current.has(notifId)) return;
+    const target = notifications.find((item) => item.id === notifId);
+    if (target?.isRead) return;
+    markingIdsRef.current.add(notifId);
 
-    await markNotificationReadAction(notifId);
+    try {
+      // Optimistic UI update: remove from displayed list when in "unread" filter
+      setNotifications((prev) =>
+        filter === "unread"
+          ? prev.filter((item) => item.id !== notifId)
+          : prev.map((item) =>
+              item.id === notifId
+                ? { ...item, isRead: true, readAt: new Date() }
+                : item,
+            ),
+      );
+      const newUnread = Math.max(0, unreadCount - 1);
+      setUnreadCount(newUnread);
+      onUnreadCountChangeRef.current?.(newUnread);
+
+      await markNotificationReadAction(notifId);
+    } finally {
+      markingIdsRef.current.delete(notifId);
+    }
   };
 
   // Mark all notifications as read
   const handleMarkAllAsRead = async () => {
     if (unreadCount === 0) return;
 
-    // Optimistic UI update
+    // Optimistic UI update: clear list when in "unread" filter
     setNotifications((prev) =>
-      prev.map((item) => ({ ...item, isRead: true, readAt: new Date() })),
+      filter === "unread"
+        ? []
+        : prev.map((item) => ({ ...item, isRead: true, readAt: new Date() })),
     );
     setUnreadCount(0);
     onUnreadCountChangeRef.current?.(0);
@@ -790,7 +805,7 @@ export function NotificationDrawer({
               <p className="text-xs font-medium text-rose-300">{error}</p>
               <button
                 type="button"
-                onClick={() => setFilter(filter)}
+                onClick={() => setReloadSeq((prev) => prev + 1)}
                 className="mt-3 rounded-xl border border-rose-500/40 bg-rose-500/10 px-4 py-1.5 text-xs font-semibold text-rose-200 transition hover:bg-rose-500/20"
               >
                 Retry

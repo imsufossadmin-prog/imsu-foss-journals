@@ -1,5 +1,6 @@
 import type { MetadataRoute } from "next";
 import { prisma } from "@/lib/db/prisma";
+import { DIRECT_PUBLISH_JOURNAL_ORDER } from "@/lib/editorial/editorial-board-data";
 
 export const dynamic = "force-dynamic";
 
@@ -15,6 +16,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     "/archives",
     "/submit",
     "/contact",
+    ...DIRECT_PUBLISH_JOURNAL_ORDER.map((slug) => `/journals/${slug}`),
   ].map((route) => ({
     url: `${baseUrl}${route}`,
     lastModified: new Date(),

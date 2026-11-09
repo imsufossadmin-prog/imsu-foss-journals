@@ -170,9 +170,9 @@ const mockJournals = [
   },
   {
     slug: "njsr",
-    name: "Nigerian Journal of Sociological Review",
+    name: "Nwaebere Journal of Scientific Research",
     shortName: "NJSR",
-    department: "Sociology",
+    department: "Social Sciences",
     activeSubmissions: 2,
     awaitingTracking: 0,
     underReview: 2,
@@ -182,9 +182,9 @@ const mockJournals = [
   },
   {
     slug: "gjcsr",
-    name: "Global Journal of Criminology and Security Research",
+    name: "Global Journal of Contemporary Social Research",
     shortName: "GJCSR",
-    department: "Criminology",
+    department: "Social Sciences",
     activeSubmissions: 1,
     awaitingTracking: 0,
     underReview: 1,

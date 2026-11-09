@@ -6,7 +6,12 @@ import { CrawlableArticleDirectory } from "@/components/public/crawlable-article
 import { prisma } from "@/lib/db/prisma";
 import { getJournalActivationMap } from "@/lib/editorial/journal-activation";
 
-import { getJournalOrderPriority } from "@/lib/editorial/editorial-board-data";
+import {
+  getJournalDbSlugs,
+  getJournalOrderPriority,
+  getOfficialJournalFullName,
+  normalizeJournalRecord,
+} from "@/lib/editorial/editorial-board-data";
 
 export const dynamic = "force-dynamic";
 
@@ -36,6 +41,7 @@ export default async function ArchivesPage({
 
   const activeJournals = allActiveJournals
     .filter((j) => activationMap[j.slug] === true)
+    .map(normalizeJournalRecord)
     .sort((a, b) => {
       const diff =
         getJournalOrderPriority(a.slug) - getJournalOrderPriority(b.slug);
@@ -44,12 +50,13 @@ export default async function ArchivesPage({
     });
 
   const activeJournalSlugs = activeJournals.map((j) => j.slug);
+  const journalDbSlugs = journal ? getJournalDbSlugs(journal) : [];
 
   const articles = await prisma.article.findMany({
     where: {
       isPublished: true,
       ...(journal
-        ? { issue: { volume: { journal: { slug: journal } } } }
+        ? { issue: { volume: { journal: { slug: { in: journalDbSlugs } } } } }
         : {
             issue: {
               volume: { journal: { slug: { in: activeJournalSlugs } } },
@@ -111,7 +118,9 @@ export default async function ArchivesPage({
     },
   });
 
-  const activeJournalObj = activeJournals.find((j) => j.slug === journal);
+  const activeJournalObj = journal
+    ? activeJournals.find((j) => journalDbSlugs.includes(j.slug))
+    : undefined;
 
   // Group articles by issue for Issue Collection Mode
   type PublishedArticle = (typeof articles)[0];
@@ -200,12 +209,12 @@ export default async function ArchivesPage({
                   key={j.id}
                   href={href}
                   className={`rounded-full px-4 py-1.5 text-xs font-semibold whitespace-nowrap transition ${
-                    journal === j.slug
+                    activeJournalObj?.id === j.id
                       ? "bg-[color:var(--color-accent)] text-black"
                       : "border border-[color:var(--color-border)] bg-[color:var(--color-surface-raised)] text-[color:var(--color-muted)] hover:text-[color:var(--color-foreground)]"
                   }`}
                 >
-                  {(j.slug === "psychology" ? "NJCP" : j.shortName) || j.name}
+                  {j.shortName || j.name}
                 </Link>
               );
             })}
@@ -299,7 +308,12 @@ export default async function ArchivesPage({
                     ) : null}
                     <div>
                       <div className="flex items-center gap-2 font-mono text-xs font-semibold text-[color:var(--color-accent)] uppercase">
-                        <span>{article.issue.volume.journal.name}</span>
+                        <span>
+                          {getOfficialJournalFullName(
+                            article.issue.volume.journal.slug,
+                            article.issue.volume.journal.name,
+                          )}
+                        </span>
                         <span>·</span>
                         <span>
                           Vol. {article.issue.volume.number}, Issue{" "}

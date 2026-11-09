@@ -7,6 +7,7 @@ import { Container } from "@/components/ui/container";
 import { CitationBlock } from "@/components/articles/citation-block";
 import { type CitationArticleMetadata } from "@/lib/citations/generator";
 import { prisma } from "@/lib/db/prisma";
+import { getOfficialJournalFullName } from "@/lib/editorial/editorial-board-data";
 import { formatLongDate } from "@/lib/formatting/dates";
 import { getOrcidUrl } from "@/lib/utils/orcid";
 
@@ -79,10 +80,14 @@ export default async function PublicArticlePage({
     ),
   );
 
+  const officialJournalName = getOfficialJournalFullName(
+    article.issue.volume.journal.slug,
+    article.issue.volume.journal.name,
+  );
   const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "https://imsufoss.com";
   const citationMeta: CitationArticleMetadata = {
     title: article.title,
-    journalName: article.issue.volume.journal.name,
+    journalName: officialJournalName,
     journalSlug: article.issue.volume.journal.slug,
     volume: article.issue.volume.number,
     issue: article.issue.number,
@@ -109,17 +114,14 @@ export default async function PublicArticlePage({
           </Link>{" "}
           /{" "}
           <Link href="/current-issue" className="hover:underline">
-            {article.issue.volume.journal.name}
+            {officialJournalName}
           </Link>{" "}
           / Vol. {article.issue.volume.number}, Issue {article.issue.number}
         </nav>
 
         <div className="rounded-[var(--radius-lg)] border border-[color:var(--color-border)] bg-[color:var(--color-surface-raised)] p-6 sm:p-8">
           <div className="flex flex-wrap items-center gap-3 text-xs font-bold text-[color:var(--color-accent)] uppercase">
-            <span>
-              {article.issue.volume.journal.department?.name ??
-                article.issue.volume.journal.name}
-            </span>
+            <span>{officialJournalName}</span>
             <span>·</span>
             <span>
               Volume {article.issue.volume.number}, Issue {article.issue.number}

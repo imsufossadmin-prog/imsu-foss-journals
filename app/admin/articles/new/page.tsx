@@ -3,7 +3,7 @@ import Link from "next/link";
 import { requireApplicationArea } from "@/lib/auth/authorization";
 import { prisma } from "@/lib/db/prisma";
 import { isSuperAdmin } from "@/lib/auth/permissions";
-import { sortJournalsByCanonicalOrder } from "@/lib/editorial/editorial-board-data";
+import { filterAndFormatDirectPublishJournals } from "@/lib/editorial/editorial-board-data";
 import { AdminLegacyUploadForm } from "./form";
 
 export default async function NewLegacyArticlePage() {
@@ -29,7 +29,7 @@ export default async function NewLegacyArticlePage() {
     orderBy: { name: "asc" },
   });
 
-  const journals = sortJournalsByCanonicalOrder(rawJournals);
+  const journals = filterAndFormatDirectPublishJournals(rawJournals);
 
   return (
     <div className="mx-auto max-w-4xl min-w-0 space-y-6 px-4 py-8 sm:px-6 lg:px-8">

@@ -661,3 +661,46 @@ test("List Notifications: Pagination and unread filtering", async () => {
   assert.equal(unreadOnly.totalCount, 4);
   assert.equal(unreadOnly.unreadCount, 4);
 });
+
+test("Empty Notification List & Error Safety: Empty user inbox returns empty array and 0 unread without fabricated fallback data", async () => {
+  const db = createInMemoryNotificationDb();
+
+  // Populate notifications only for VALID_USER_UUID (Admin)
+  await createNotification(
+    {
+      userId: VALID_USER_UUID,
+      type: "REVIEWER_APPLICATION_RECEIVED",
+      title: "New Reviewer Application",
+      message: "Real admin notification",
+      actionUrl: "/admin/reviewers",
+    },
+    db,
+  );
+
+  // THIRD_USER_UUID (Ordinary user / empty inbox) retrieves their notifications
+  const emptyList = await listNotifications(
+    THIRD_USER_UUID,
+    { filter: "all", page: 1, pageSize: 25 },
+    db,
+  );
+  assert.deepEqual(emptyList.notifications, []);
+  assert.equal(emptyList.unreadCount, 0);
+  assert.equal(emptyList.totalCount, 0);
+  assert.equal(emptyList.hasMore, false);
+
+  // Database failure rejects cleanly without returning fabricated demo notifications
+  const failingDb = {
+    notification: {
+      findMany: async () => {
+        throw new Error("Connection timeout");
+      },
+      count: async () => {
+        throw new Error("Connection timeout");
+      },
+    },
+  };
+
+  await assert.rejects(async () => {
+    await listNotifications(VALID_USER_UUID, { filter: "all" }, failingDb);
+  }, /Connection timeout/);
+});

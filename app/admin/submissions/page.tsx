@@ -10,6 +10,7 @@ import { requireApplicationArea } from "@/lib/auth/authorization";
 import { isSuperAdmin } from "@/lib/auth/permissions";
 import { getAvailableWorkspaces } from "@/lib/auth/workspaces";
 import { listPlatformSubmissions } from "@/lib/editorial/data";
+import { getOfficialJournalFullName } from "@/lib/editorial/editorial-board-data";
 import { getActiveDepartmentJournals } from "@/lib/requests/data";
 
 import { getJournalActivationMap } from "@/lib/editorial/journal-activation";
@@ -129,8 +130,10 @@ export default async function PlatformSubmissionsPage({
                 <div className="min-w-0 space-y-1.5">
                   <div className="flex items-center gap-2">
                     <span className="rounded-md bg-[color:var(--color-accent-soft)] px-2 py-0.5 text-[10px] font-semibold text-[color:var(--color-accent)] uppercase">
-                      {submission.journal.department?.name ??
-                        submission.journal.name}
+                      {getOfficialJournalFullName(
+                        submission.journal.slug,
+                        submission.journal.name,
+                      )}
                     </span>
                     {submission.trackingNumber ? (
                       <span className="font-mono text-xs font-semibold text-[color:var(--color-accent)]">

@@ -2,6 +2,7 @@ import "server-only";
 
 import { randomUUID } from "node:crypto";
 import { prisma } from "@/lib/db/prisma";
+import { getOfficialJournalFullName } from "@/lib/editorial/editorial-board-data";
 import { isJournalActivated } from "@/lib/editorial/journal-activation";
 import {
   createSubmissionObjectPath,
@@ -223,7 +224,7 @@ export async function createDirectArticleSubmission(input: {
     });
 
     // 5. Create linked SubmissionRequest with initial system message
-    const journalLabel = journal.department?.name ?? journal.name;
+    const journalLabel = getOfficialJournalFullName(journal.slug, journal.name);
     await prisma.submissionRequest.create({
       data: {
         journalId: journal.id,

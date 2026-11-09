@@ -105,6 +105,9 @@ function mapDbReviewerApplication(row: {
 export async function resetReviewerApplications(): Promise<void> {
   assertSafeDatabaseForDestructiveOps("resetReviewerApplications");
   try {
+    await prisma.notification.deleteMany({
+      where: { resourceType: "ReviewerApplication" },
+    });
     await prisma.reviewerApplication.deleteMany({});
   } catch (error) {
     console.error("Failed to reset reviewer applications:", error);
@@ -119,19 +122,22 @@ function generateTrackingCode(targetJournal: string): string {
   return `REV-${prefix}-${year}-${random}`;
 }
 
-export async function createReviewerApplication(input: {
-  fullName: string;
-  academicTitle: string;
-  email: string;
-  phone: string;
-  affiliation: string;
-  academicRank: string;
-  specializationKeywords: string;
-  targetJournal: string;
-  profileUrl?: string;
-  statement: string;
-  applicantUserId?: string;
-}): Promise<{
+export async function createReviewerApplication(
+  input: {
+    fullName: string;
+    academicTitle: string;
+    email: string;
+    phone: string;
+    affiliation: string;
+    academicRank: string;
+    specializationKeywords: string;
+    targetJournal: string;
+    profileUrl?: string;
+    statement: string;
+    applicantUserId?: string;
+  },
+  options?: { notifyClient?: unknown },
+): Promise<{
   success: boolean;
   error?: string;
   trackingCode?: string;
@@ -191,11 +197,14 @@ export async function createReviewerApplication(input: {
       mapped.applicantUserId = input.applicantUserId;
     }
 
-    await handleReviewerApplicationReceived({
-      applicationId: created.id,
-      applicantName: formatAcademicName(input.academicTitle, input.fullName),
-      targetJournal: input.targetJournal,
-    });
+    await handleReviewerApplicationReceived(
+      {
+        applicationId: created.id,
+        applicantName: formatAcademicName(input.academicTitle, input.fullName),
+        targetJournal: input.targetJournal,
+      },
+      options?.notifyClient,
+    );
 
     return { success: true, trackingCode, application: mapped };
   } catch (error) {
@@ -290,10 +299,12 @@ export async function updateReviewerApplicationStatus({
   applicationId,
   status,
   actor,
+  notifyClient,
 }: {
   applicationId: string;
   status: ReviewerApplicationStatus;
   actor: Parameters<typeof isSuperAdmin>[0];
+  notifyClient?: unknown;
 }): Promise<{ success: boolean; error?: string }> {
   try {
     const app = await prisma.reviewerApplication.findUnique({
@@ -430,12 +441,15 @@ export async function updateReviewerApplicationStatus({
         .then((u) => u?.id ?? null)
         .catch(() => null));
 
-    await handleReviewerApplicationStatusChanged({
-      applicationId,
-      applicantUserId,
-      status,
-      targetJournal: app.targetJournal,
-    });
+    await handleReviewerApplicationStatusChanged(
+      {
+        applicationId,
+        applicantUserId,
+        status,
+        targetJournal: app.targetJournal,
+      },
+      notifyClient,
+    );
 
     return { success: true };
   } catch (error) {
@@ -475,6 +489,13 @@ export async function deleteReviewerApplication({
           "Unauthorized: You do not have permission to delete this application.",
       };
     }
+
+    await prisma.notification.deleteMany({
+      where: {
+        resourceType: "ReviewerApplication",
+        resourceId: applicationId,
+      },
+    });
 
     await prisma.reviewerApplication.delete({
       where: { id: applicationId },

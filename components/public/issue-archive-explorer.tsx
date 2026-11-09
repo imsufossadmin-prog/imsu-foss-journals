@@ -3,6 +3,10 @@
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { TOCDownloadMenu } from "@/components/editorial/toc-download-menu";
+import {
+  getOfficialJournalFullName,
+  getOfficialJournalShortName,
+} from "@/lib/editorial/editorial-board-data";
 
 export type ArchiveArticle = {
   id: string;
@@ -117,7 +121,15 @@ export function IssueArchiveExplorer({
           {issueGroups.map((group) => {
             const { issue, coverImageUrl, articles } = group;
             const journal = issue.volume.journal;
-            const journalLabel = journal.department?.name ?? journal.name;
+            const officialJournalName = getOfficialJournalFullName(
+              journal.slug,
+              journal.name,
+            );
+            const officialShortName = getOfficialJournalShortName(
+              journal.slug,
+              journal.shortName,
+            );
+            const journalLabel = officialJournalName;
 
             return (
               <div
@@ -133,16 +145,16 @@ export function IssueArchiveExplorer({
                     // eslint-disable-next-line @next/next/no-img-element
                     <img
                       src={coverImageUrl}
-                      alt={`${journal.name} Vol. ${issue.volume.number} Issue ${issue.number}`}
+                      alt={`${officialJournalName} Vol. ${issue.volume.number} Issue ${issue.number}`}
                       className="max-h-44 w-auto object-contain shadow-lg transition-transform duration-500 group-hover:scale-105"
                     />
                   ) : (
                     <div className="flex flex-col items-center justify-center space-y-2 text-center">
                       <div className="grid size-14 place-items-center rounded-2xl border border-[color:var(--color-accent)]/40 bg-[color:var(--color-surface)] font-serif text-xl font-bold text-[color:var(--color-accent)] shadow-md">
-                        {journal.shortName || "FJ"}
+                        {officialShortName || "FJ"}
                       </div>
                       <p className="font-serif text-sm font-semibold text-[color:var(--color-foreground)]">
-                        {journal.name}
+                        {officialJournalName}
                       </p>
                       <span className="font-mono text-[10px] text-[color:var(--color-subtle)] uppercase">
                         Academic Periodical
@@ -184,8 +196,8 @@ export function IssueArchiveExplorer({
                     </h3>
 
                     <p className="line-clamp-2 text-xs text-[color:var(--color-muted)]">
-                      {journal.name} — Official Faculty of Social Sciences
-                      publishing edition.
+                      {officialJournalName} — Official Faculty of Social
+                      Sciences publishing edition.
                     </p>
                   </div>
 
@@ -239,8 +251,10 @@ export function IssueArchiveExplorer({
                 <div className="space-y-1">
                   <div className="flex flex-wrap items-center gap-2 font-mono text-[11px] font-bold text-[color:var(--color-accent)] uppercase">
                     <span>
-                      {activeIssue.issue.volume.journal.department?.name ??
-                        activeIssue.issue.volume.journal.name}
+                      {getOfficialJournalFullName(
+                        activeIssue.issue.volume.journal.slug,
+                        activeIssue.issue.volume.journal.name,
+                      )}
                     </span>
                     <span>·</span>
                     <span>
@@ -260,7 +274,10 @@ export function IssueArchiveExplorer({
                   </div>
 
                   <h2 className="font-serif text-xl font-bold text-[color:var(--color-foreground)] sm:text-2xl">
-                    {activeIssue.issue.volume.journal.name}
+                    {getOfficialJournalFullName(
+                      activeIssue.issue.volume.journal.slug,
+                      activeIssue.issue.volume.journal.name,
+                    )}
                   </h2>
                   <p className="text-xs text-[color:var(--color-muted)]">
                     Table of Contents — {activeIssue.articles.length}{" "}

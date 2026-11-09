@@ -7,6 +7,8 @@ import { requireApplicationArea } from "@/lib/auth/authorization";
 import { hasJournalRole, isSuperAdmin } from "@/lib/auth/permissions";
 import { prisma } from "@/lib/db/prisma";
 import { invalidateArticlePublicCaches } from "@/lib/editorial/cache-invalidation";
+import { getJournalDbSlugs } from "@/lib/editorial/editorial-board-data";
+import { parsePageRange } from "@/lib/metadata/scholar";
 import {
   deleteArticle,
   publishArticle as setArticlePublishedStatus,
@@ -57,8 +59,11 @@ export async function createDirectLegacyArticleAction(
   const yearStr = formData.get("year") as string;
   const issueOrderStr = (formData.get("issueOrder") as string)?.trim();
   const publishedAtStr = (formData.get("publishedAt") as string)?.trim();
-  const pageStart = (formData.get("pageStart") as string)?.trim() || null;
-  const pageEnd = (formData.get("pageEnd") as string)?.trim() || null;
+  const rawPageStart = (formData.get("pageStart") as string)?.trim() || null;
+  const rawPageEnd = (formData.get("pageEnd") as string)?.trim() || null;
+  const parsedPages = parsePageRange(rawPageStart, rawPageEnd);
+  const pageStart = parsedPages.firstPage ?? rawPageStart;
+  const pageEnd = parsedPages.lastPage ?? rawPageEnd;
   const abstract = (formData.get("abstract") as string)?.trim() || null;
   const keywordsStr = (formData.get("keywords") as string)?.trim();
   const doi = (formData.get("doi") as string)?.trim() || null;
@@ -90,9 +95,9 @@ export async function createDirectLegacyArticleAction(
     };
   }
 
-  const targetJournal = await prisma.journal.findUnique({
-    where: { slug: journalSlug },
-    select: { id: true },
+  const targetJournal = await prisma.journal.findFirst({
+    where: { slug: { in: getJournalDbSlugs(journalSlug) } },
+    select: { id: true, slug: true },
   });
 
   if (!targetJournal) {
@@ -296,7 +301,7 @@ export async function createDirectLegacyArticleAction(
   if (createdArticleSlug) {
     invalidateArticlePublicCaches({
       slug: createdArticleSlug,
-      journalSlug,
+      journalSlug: targetJournal.slug,
     });
   } else {
     revalidatePath("/admin/articles");
@@ -418,8 +423,11 @@ export async function updateArticleAction(
   const yearStr = formData.get("year") as string;
   const issueOrderStr = (formData.get("issueOrder") as string)?.trim();
   const publishedAtStr = (formData.get("publishedAt") as string)?.trim();
-  const pageStart = (formData.get("pageStart") as string)?.trim() || null;
-  const pageEnd = (formData.get("pageEnd") as string)?.trim() || null;
+  const rawPageStart = (formData.get("pageStart") as string)?.trim() || null;
+  const rawPageEnd = (formData.get("pageEnd") as string)?.trim() || null;
+  const parsedPages = parsePageRange(rawPageStart, rawPageEnd);
+  const pageStart = parsedPages.firstPage ?? rawPageStart;
+  const pageEnd = parsedPages.lastPage ?? rawPageEnd;
   const abstract = (formData.get("abstract") as string)?.trim() || null;
   const keywordsStr = (formData.get("keywords") as string)?.trim();
   const doi = (formData.get("doi") as string)?.trim() || null;

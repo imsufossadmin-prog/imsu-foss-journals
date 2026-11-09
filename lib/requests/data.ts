@@ -3,6 +3,11 @@ import "server-only";
 import type { Prisma } from "@prisma/client";
 
 import { prisma } from "@/lib/db/prisma";
+import {
+  getJournalDbSlugs,
+  normalizeJournalRecord,
+  sortJournalsByCanonicalOrder,
+} from "@/lib/editorial/editorial-board-data";
 
 const requestListSelect = {
   id: true,
@@ -46,7 +51,7 @@ export function listAllPlatformRequests(journalSlug?: string) {
   return prisma.submissionRequest.findMany({
     where:
       journalSlug && journalSlug !== "all"
-        ? { journal: { slug: journalSlug } }
+        ? { journal: { slug: { in: getJournalDbSlugs(journalSlug) } } }
         : undefined,
     orderBy: { updatedAt: "desc" },
     select: requestListSelect,
@@ -183,8 +188,6 @@ export async function getPlatformStaffCounts() {
   return { journalAdmins, editors };
 }
 
-import { sortJournalsByCanonicalOrder } from "@/lib/editorial/editorial-board-data";
-
 export async function getActiveJournals() {
   const journals = await prisma.journal.findMany({
     where: {
@@ -201,7 +204,7 @@ export async function getActiveJournals() {
     orderBy: { name: "asc" },
   });
 
-  return sortJournalsByCanonicalOrder(journals);
+  return sortJournalsByCanonicalOrder(journals).map(normalizeJournalRecord);
 }
 
 export const getActiveDepartmentJournals = getActiveJournals;

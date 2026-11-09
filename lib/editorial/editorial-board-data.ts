@@ -165,6 +165,111 @@ export function getJournalDbSlugs(slug: string): string[] {
   return [norm];
 }
 
+export const DIRECT_PUBLISH_JOURNAL_ORDER = [
+  "ajsbs",
+  "njcp",
+  "gjcsr",
+  "njsr",
+] as const;
+
+/**
+ * Returns the official full display name with abbreviation for the 4 active faculty journals,
+ * e.g. "African Journal of Social and Behavioural Sciences (AJSBS)",
+ * or falls back to the provided name for non-canonical/departmental records.
+ */
+export function getOfficialJournalFullName(
+  slug: string,
+  fallbackName?: string,
+): string {
+  const meta = getJournalMetadata(slug);
+  if (meta) {
+    return `${meta.title} (${meta.shortName})`;
+  }
+  return fallbackName ?? slug;
+}
+
+/**
+ * Returns the official journal title (without trailing parenthesized abbreviation)
+ * for the 4 active faculty journals, or falls back to the provided name.
+ */
+export function getOfficialJournalTitle(
+  slug: string,
+  fallbackName?: string,
+): string {
+  const meta = getJournalMetadata(slug);
+  if (meta) {
+    return meta.title;
+  }
+  return fallbackName ?? slug;
+}
+
+/**
+ * Returns the official uppercase abbreviation (AJSBS, NJCP, GJCSR, NJSR)
+ * for the 4 active faculty journals, or falls back to the provided shortName.
+ */
+export function getOfficialJournalShortName(
+  slug: string,
+  fallbackShortName?: string | null,
+): string | null {
+  const meta = getJournalMetadata(slug);
+  if (meta) {
+    return meta.shortName;
+  }
+  return fallbackShortName ?? null;
+}
+
+/**
+ * Normalizes a database Journal record so its `name` and `shortName` reflect
+ * the canonical official display names while preserving `id`, `slug`, and all other fields.
+ */
+export function normalizeJournalRecord<
+  T extends { slug: string; name: string; shortName?: string | null },
+>(journal: T): T {
+  const meta = getJournalMetadata(journal.slug);
+  if (!meta) return journal;
+  return {
+    ...journal,
+    name: `${meta.title} (${meta.shortName})`,
+    ...("shortName" in journal ? { shortName: meta.shortName } : {}),
+  };
+}
+
+/**
+ * Filters and formats journal options for the Admin Direct Publish Manuscript dropdown.
+ * Retains only the 4 official faculty journals, deduplicates alias slugs, preserves
+ * database IDs/slugs, and orders them: AJSBS, NJCP, GJCSR, NJSR.
+ */
+export function filterAndFormatDirectPublishJournals<
+  T extends {
+    id: string;
+    slug: string;
+    name: string;
+    shortName?: string | null;
+    department?: { name: string } | null;
+  },
+>(rawJournals: T[]): T[] {
+  const byCanonical = new Map<string, T>();
+
+  for (const journal of rawJournals) {
+    const canonical = resolveCanonicalJournalSlug(journal.slug);
+    const meta = CANONICAL_JOURNAL_METADATA[canonical];
+    if (!meta) continue;
+
+    const existing = byCanonical.get(canonical);
+    if (!existing || journal.slug.trim().toLowerCase() === canonical) {
+      byCanonical.set(canonical, {
+        ...journal,
+        name: `${meta.title} (${meta.shortName})`,
+        ...("shortName" in journal ? { shortName: meta.shortName } : {}),
+      });
+    }
+  }
+
+  return DIRECT_PUBLISH_JOURNAL_ORDER.map((slug) =>
+    byCanonical.get(slug),
+  ).filter((j): j is T => Boolean(j));
+}
+
 // ---------------------------------------------------------------------------
 // Canonical Editorial Board Definitions
 // ---------------------------------------------------------------------------

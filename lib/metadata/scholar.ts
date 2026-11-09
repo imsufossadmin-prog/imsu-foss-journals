@@ -1,4 +1,7 @@
-import { getJournalMetadata } from "@/lib/editorial/editorial-board-data";
+import {
+  getJournalMetadata,
+  getOfficialJournalFullName,
+} from "@/lib/editorial/editorial-board-data";
 
 /**
  * Splits raw author strings into distinct, individual author names.
@@ -102,7 +105,10 @@ export function buildGoogleScholarMetadata(
 } {
   const cleanBaseUrl = baseUrl.replace(/\/$/, "");
   const journalSlug = article.issue.volume.journal.slug;
-  const journalName = article.issue.volume.journal.name;
+  const journalName = getOfficialJournalFullName(
+    journalSlug,
+    article.issue.volume.journal.name,
+  );
   const journalMeta = getJournalMetadata(journalSlug);
 
   const pubDate = article.publishedAt

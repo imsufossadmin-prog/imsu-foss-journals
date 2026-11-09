@@ -1,7 +1,11 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { sortJournalsByCanonicalOrder } from "@/lib/editorial/editorial-board-data";
+import {
+  getOfficialJournalFullName,
+  getOfficialJournalShortName,
+  sortJournalsByCanonicalOrder,
+} from "@/lib/editorial/editorial-board-data";
 import { AdminIssueRowActions } from "./actions-client";
 
 export type CompactIssueData = {
@@ -32,11 +36,13 @@ export function CompactTOCExplorer({ issues }: { issues: CompactIssueData[] }) {
     for (const iss of issues) {
       const j = iss.volume.journal;
       if (!map.has(j.slug)) {
+        const officialName = getOfficialJournalFullName(j.slug, j.name);
+        const officialShort = getOfficialJournalShortName(j.slug, null);
         map.set(j.slug, {
           id: j.id,
-          name: j.name,
+          name: officialName,
           slug: j.slug,
-          label: j.departmentName || j.name.replace(/\s*\(.*\)/, ""),
+          label: officialShort || officialName.replace(/\s*\(.*\)/, ""),
         });
       }
     }
@@ -138,7 +144,10 @@ export function CompactTOCExplorer({ issues }: { issues: CompactIssueData[] }) {
             >
               {filteredIssues.map((iss) => {
                 const journal = iss.volume.journal;
-                const journalLabel = journal.departmentName || journal.name;
+                const journalLabel = getOfficialJournalFullName(
+                  journal.slug,
+                  journal.name,
+                );
                 const issueTitle =
                   iss.title ||
                   `Vol. ${iss.volume.number} No. ${iss.number} (${iss.volume.year})`;

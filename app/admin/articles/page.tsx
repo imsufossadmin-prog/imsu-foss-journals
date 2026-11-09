@@ -6,6 +6,7 @@ import { requireApplicationArea } from "@/lib/auth/authorization";
 import { isSuperAdmin } from "@/lib/auth/permissions";
 import { getAvailableWorkspaces } from "@/lib/auth/workspaces";
 import { prisma } from "@/lib/db/prisma";
+import { getOfficialJournalFullName } from "@/lib/editorial/editorial-board-data";
 import { AdminArticleRowActions } from "./actions-client";
 import {
   CompactTOCExplorer,
@@ -120,7 +121,10 @@ export default async function AdminArticlesDirectoryPage({
       year: iss.volume.year,
       journal: {
         id: iss.volume.journal.id,
-        name: iss.volume.journal.name,
+        name: getOfficialJournalFullName(
+          iss.volume.journal.slug,
+          iss.volume.journal.name,
+        ),
         slug: iss.volume.journal.slug,
         departmentName: iss.volume.journal.department?.name ?? null,
       },
@@ -218,8 +222,10 @@ export default async function AdminArticlesDirectoryPage({
                   <div className="min-w-0 flex-1 space-y-1">
                     <div className="flex items-center gap-2 text-[11px] font-semibold text-[color:var(--color-accent)] uppercase">
                       <span>
-                        {article.issue.volume.journal.department?.name ??
-                          article.issue.volume.journal.name}
+                        {getOfficialJournalFullName(
+                          article.issue.volume.journal.slug,
+                          article.issue.volume.journal.name,
+                        )}
                       </span>
                       <span>·</span>
                       <span>

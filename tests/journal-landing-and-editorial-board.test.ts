@@ -3,9 +3,13 @@ import test from "node:test";
 
 import {
   CANONICAL_JOURNAL_ORDER,
+  DIRECT_PUBLISH_JOURNAL_ORDER,
+  filterAndFormatDirectPublishJournals,
   getJournalDbSlugs,
   getJournalMetadata,
   getDefaultEditorialBoard,
+  getOfficialJournalFullName,
+  normalizeJournalRecord,
   resolveCanonicalJournalSlug,
   sortJournalsByCanonicalOrder,
 } from "@/lib/editorial/editorial-board-data";
@@ -54,6 +58,139 @@ test("Canonical journal ordering enforces AJSBS first and NJCP last across platf
   assert.deepEqual(
     sorted.map((j) => j.slug),
     ["ajsbs", "njsr", "gjcsr", "njcp"],
+  );
+});
+
+test("Direct Publish Manuscript dropdown filters out departmental journals and displays the exact 4 official journals in order", () => {
+  assert.deepEqual(DIRECT_PUBLISH_JOURNAL_ORDER, [
+    "ajsbs",
+    "njcp",
+    "gjcsr",
+    "njsr",
+  ]);
+
+  const allDatabaseJournals = [
+    {
+      id: "j-ajsbs",
+      slug: "ajsbs",
+      name: "African Journal of Social and Behavioural Sciences (AJSBS)",
+      shortName: "AJSBS",
+      department: null,
+    },
+    {
+      id: "j-crim",
+      slug: "criminology-security-studies",
+      name: "Criminology & Security Studies Journal Operations",
+      shortName: "CSSJO",
+      department: { name: "Criminology & Security Studies" },
+    },
+    {
+      id: "j-econ",
+      slug: "economics",
+      name: "Economics Journal Operations",
+      shortName: "EJO",
+      department: { name: "Economics" },
+    },
+    {
+      id: "j-gjsbr",
+      slug: "gjsbr",
+      name: "Global Journal of Social and Behavioural Research",
+      shortName: "GJSBR",
+      department: null,
+    },
+    {
+      id: "j-lis",
+      slug: "library-information-science",
+      name: "Library & Information Science Journal Operations",
+      shortName: "LISJO",
+      department: { name: "Library & Information Science" },
+    },
+    {
+      id: "j-psych",
+      slug: "psychology",
+      name: "Nigerian Journal of Contemporary Psychology (NJCP)",
+      shortName: "NJCP",
+      department: { name: "Psychology" },
+    },
+    {
+      id: "j-njsbr",
+      slug: "njsbr",
+      name: "Nigerian Journal of Social and Behavioural Research",
+      shortName: "NJSBR",
+      department: null,
+    },
+    {
+      id: "j-pol",
+      slug: "political-science",
+      name: "Political Science Journal Operations",
+      shortName: "PSJO",
+      department: { name: "Political Science" },
+    },
+    {
+      id: "j-pub",
+      slug: "public-administration",
+      name: "Public Administration Journal Operations",
+      shortName: "PAJO",
+      department: { name: "Public Administration" },
+    },
+    {
+      id: "j-soc",
+      slug: "sociology",
+      name: "Sociology Journal Operations",
+      shortName: "SJO",
+      department: { name: "Sociology" },
+    },
+  ];
+
+  const directPublishOptions =
+    filterAndFormatDirectPublishJournals(allDatabaseJournals);
+
+  assert.equal(directPublishOptions.length, 4);
+  assert.deepEqual(
+    directPublishOptions.map((j) => ({
+      id: j.id,
+      slug: j.slug,
+      name: j.name,
+      shortName: j.shortName,
+    })),
+    [
+      {
+        id: "j-ajsbs",
+        slug: "ajsbs",
+        name: "African Journal of Social and Behavioural Sciences (AJSBS)",
+        shortName: "AJSBS",
+      },
+      {
+        id: "j-psych",
+        slug: "psychology",
+        name: "Nigerian Journal of Contemporary Psychology (NJCP)",
+        shortName: "NJCP",
+      },
+      {
+        id: "j-gjsbr",
+        slug: "gjsbr",
+        name: "Global Journal of Contemporary Social Research (GJCSR)",
+        shortName: "GJCSR",
+      },
+      {
+        id: "j-njsbr",
+        slug: "njsbr",
+        name: "Nwaebere Journal of Scientific Research (NJSR)",
+        shortName: "NJSR",
+      },
+    ],
+  );
+
+  // Verify normalizeJournalRecord and getOfficialJournalFullName
+  const normalizedGjsbr = normalizeJournalRecord(allDatabaseJournals[3]);
+  assert.equal(
+    normalizedGjsbr.name,
+    "Global Journal of Contemporary Social Research (GJCSR)",
+  );
+  assert.equal(normalizedGjsbr.shortName, "GJCSR");
+  assert.equal(
+    getOfficialJournalFullName("psychology", "Psychology"),
+    "Nigerian Journal of Contemporary Psychology (NJCP)",
   );
 });
 

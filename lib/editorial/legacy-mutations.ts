@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/db/prisma";
+import { getJournalDbSlugs } from "@/lib/editorial/editorial-board-data";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { normalizeOrcid } from "@/lib/utils/orcid";
 
@@ -35,8 +36,8 @@ export type DirectLegacyArticleInput = {
 export async function publishDirectLegacyArticle(
   input: DirectLegacyArticleInput,
 ) {
-  const journal = await prisma.journal.findUnique({
-    where: { slug: input.journalSlug },
+  const journal = await prisma.journal.findFirst({
+    where: { slug: { in: getJournalDbSlugs(input.journalSlug) } },
   });
 
   if (!journal) {

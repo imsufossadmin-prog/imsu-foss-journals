@@ -391,19 +391,21 @@ test("database audit verifies remediation of 5 multi-author and 29 page-range ar
     assert.equal(meta.other.citation_author.length, article.authors.length);
   }
 
-  // 2. Verify page ranges: ensure no published article has an unparsed dash/hyphen in pageStart with null pageEnd
+  // 2. Verify page ranges: ensure parsePageRange resolves all published article page ranges into discrete firstPage/lastPage without unparsed dashes
   const publishedArticles = await prisma.article.findMany({
     where: { isPublished: true },
     select: { slug: true, pageStart: true, pageEnd: true },
   });
 
-  const remainingUnsplit = publishedArticles.filter(
-    (a) => a.pageStart && !a.pageEnd && /[-–—]/.test(a.pageStart),
-  );
+  const remainingUnsplit = publishedArticles.filter((a) => {
+    if (!a.pageStart) return false;
+    const parsed = parsePageRange(a.pageStart, a.pageEnd);
+    return Boolean(parsed.firstPage && /[-–—]/.test(parsed.firstPage));
+  });
 
   assert.equal(
     remainingUnsplit.length,
     0,
-    `Expected 0 unparsed page ranges in database, found: ${JSON.stringify(remainingUnsplit)}`,
+    `Expected 0 unparsed page ranges after parsePageRange, found: ${JSON.stringify(remainingUnsplit)}`,
   );
 });

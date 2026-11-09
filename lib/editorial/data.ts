@@ -3,6 +3,7 @@ import "server-only";
 import type { Prisma, SubmissionStatus } from "@prisma/client";
 
 import { prisma } from "@/lib/db/prisma";
+import { getJournalDbSlugs } from "@/lib/editorial/editorial-board-data";
 
 export const editorialInboxStatuses: SubmissionStatus[] = [
   "SUBMITTED",
@@ -77,7 +78,11 @@ export async function listPlatformSubmissions(input: {
         ? { status: input.status }
         : { status: { in: editorialInboxStatuses } }),
       ...(input.departmentSlug && input.departmentSlug !== "all"
-        ? { journal: { slug: input.departmentSlug } }
+        ? {
+            journal: {
+              slug: { in: getJournalDbSlugs(input.departmentSlug) },
+            },
+          }
         : {}),
       ...(query
         ? {

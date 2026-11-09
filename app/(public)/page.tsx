@@ -7,7 +7,11 @@ import { publicSubmissionEntryPath } from "@/lib/auth/submission-entry";
 import { prisma } from "@/lib/db/prisma";
 import { getJournalActivationMap } from "@/lib/editorial/journal-activation";
 
-import { getJournalOrderPriority } from "@/lib/editorial/editorial-board-data";
+import {
+  getJournalOrderPriority,
+  getOfficialJournalFullName,
+  normalizeJournalRecord,
+} from "@/lib/editorial/editorial-board-data";
 
 export const dynamic = "force-dynamic";
 
@@ -67,9 +71,9 @@ export default async function Home() {
     getJournalActivationMap(),
   ]);
 
-  const activeJournals = allActiveJournals.filter(
-    (j) => activationMap[j.slug] === true,
-  );
+  const activeJournals = allActiveJournals
+    .filter((j) => activationMap[j.slug] === true)
+    .map(normalizeJournalRecord);
 
   const disciplines = activeJournals
     .map((j) => {
@@ -215,9 +219,10 @@ export default async function Home() {
                       Current Issue
                     </span>
                     <span className="text-[color:var(--color-subtle)]">
-                      {currentIssueArticle.issue.volume.journal.department
-                        ?.name ??
-                        currentIssueArticle.issue.volume.journal.name}{" "}
+                      {getOfficialJournalFullName(
+                        currentIssueArticle.issue.volume.journal.slug,
+                        currentIssueArticle.issue.volume.journal.name,
+                      )}{" "}
                       · Vol. {currentIssueArticle.issue.volume.number}, Issue{" "}
                       {currentIssueArticle.issue.number}
                     </span>
@@ -280,7 +285,10 @@ export default async function Home() {
                         Current Issue
                       </span>
                       <p className="font-serif text-lg font-semibold text-[color:var(--color-foreground)]">
-                        {currentIssueArticle.issue.volume.journal.name}
+                        {getOfficialJournalFullName(
+                          currentIssueArticle.issue.volume.journal.slug,
+                          currentIssueArticle.issue.volume.journal.name,
+                        )}
                       </p>
                       <span className="font-mono text-xs text-[color:var(--color-subtle)]">
                         Faculty of Social Sciences

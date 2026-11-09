@@ -154,9 +154,20 @@ function createMockEventDb() {
       findUnique: async ({ where }: { where: { id: string } }) => {
         return journals.get(where.id) || null;
       },
-      findFirst: async ({ where }: { where: { slug?: string } }) => {
+      findFirst: async ({
+        where,
+      }: {
+        where: { slug?: string | { in?: string[] } };
+      }) => {
         for (const j of journals.values()) {
-          if (where.slug && j.slug === where.slug) return j;
+          if (typeof where.slug === "string" && j.slug === where.slug) return j;
+          if (
+            typeof where.slug === "object" &&
+            where.slug?.in &&
+            where.slug.in.includes(j.slug)
+          ) {
+            return j;
+          }
         }
         return null;
       },
@@ -886,4 +897,84 @@ test("Transaction Safety: Failed transaction in finalizeRequestSubmission does n
   assert.equal(handleManuscriptSubmittedCalled, false);
   const notifs = Array.from(db._store.notifications.values());
   assert.equal(notifs.length, 0);
+});
+
+test("Reviewer Application Notification: Resolves njcp/gjsbr/njsbr aliases to Journal Admins and formats official abbreviations", async () => {
+  const db = createMockEventDb();
+  db._store.userGlobalRoles.push({
+    userId: SUPER_ADMIN_UUID,
+    role: "SUPER_ADMIN",
+  });
+  db._store.journals.set("j-psych", {
+    id: "j-psych",
+    slug: "psychology",
+    shortName: "NJCP",
+    name: "Nigerian Journal of Contemporary Psychology (NJCP)",
+  });
+  db._store.journalRoleAssignments.push({
+    userId: JOURNAL_ADMIN_UUID,
+    journalId: "j-psych",
+    role: "JOURNAL_ADMIN",
+  });
+
+  await handleReviewerApplicationReceived(
+    {
+      applicationId: "app-njcp-alias",
+      applicantName: "Prof. Adaobi Nwosu",
+      targetJournal: "njcp",
+    },
+    db,
+  );
+
+  const notifs = Array.from(db._store.notifications.values());
+  assert.equal(notifs.length, 2);
+  const superNotif = notifs.find((n) => n.userId === SUPER_ADMIN_UUID);
+  const journalNotif = notifs.find((n) => n.userId === JOURNAL_ADMIN_UUID);
+  assert.ok(superNotif);
+  assert.ok(journalNotif);
+  assert.equal(superNotif.resourceType, "ReviewerApplication");
+  assert.equal(superNotif.resourceId, "app-njcp-alias");
+  assert.equal(superNotif.actionUrl, "/admin/reviewers");
+  assert.ok(superNotif.message.includes("for NJCP."));
+
+  // Duplicate event delivery does not create duplicate notifications
+  await handleReviewerApplicationReceived(
+    {
+      applicationId: "app-njcp-alias",
+      applicantName: "Prof. Adaobi Nwosu",
+      targetJournal: "njcp",
+    },
+    db,
+  );
+  assert.equal(db._store.notifications.size, 2);
+});
+
+test("Manuscript Submission Notification: Normalizes legacy DB shortName (NJSBR/GJSBR) to official NJSR/GJCSR", async () => {
+  const db = createMockEventDb();
+  db._store.userGlobalRoles.push({
+    userId: SUPER_ADMIN_UUID,
+    role: "SUPER_ADMIN",
+  });
+  db._store.submissions.set("sub-njsr-1", {
+    id: "sub-njsr-1",
+    title: "Empirical Study of Scientific Research",
+    ownerId: AUTHOR_UUID,
+    journalId: "j-njsbr",
+    trackingNumber: null,
+    journal: {
+      slug: "njsbr",
+      shortName: "NJSBR",
+      name: "Nigerian Journal of Social and Behavioural Research",
+    },
+  });
+
+  await handleManuscriptSubmitted("sub-njsr-1", db);
+
+  const notifs = Array.from(db._store.notifications.values());
+  assert.equal(notifs.length, 1);
+  assert.ok(notifs[0].message.includes("submitted to NJSR"));
+  assert.ok(!notifs[0].message.includes("NJSBR"));
+  assert.equal(notifs[0].resourceType, "Submission");
+  assert.equal(notifs[0].resourceId, "sub-njsr-1");
+  assert.equal(notifs[0].actionUrl, "/admin/njsbr/submissions/sub-njsr-1");
 });

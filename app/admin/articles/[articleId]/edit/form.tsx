@@ -128,8 +128,7 @@ export function AdminArticleEditForm({
           Target Journal:
         </span>{" "}
         <span className="font-bold text-[color:var(--color-foreground)]">
-          {article.issue.volume.journal.departmentName ||
-            article.issue.volume.journal.name}
+          {article.issue.volume.journal.name}
         </span>
         <span className="mx-2 text-[color:var(--color-muted)]">·</span>
         <span className="text-[color:var(--color-muted)]">Slug:</span>{" "}

@@ -2,7 +2,10 @@
 
 import { useRouter, useSearchParams } from "next/navigation";
 import { useTransition } from "react";
-import { sortJournalsByCanonicalOrder } from "@/lib/editorial/editorial-board-data";
+import {
+  getOfficialJournalFullName,
+  sortJournalsByCanonicalOrder,
+} from "@/lib/editorial/editorial-board-data";
 
 export function DepartmentFilterSelect({
   journals,
@@ -50,7 +53,7 @@ export function DepartmentFilterSelect({
         <option value="all">All Journals ({totalCount})</option>
         {sortJournalsByCanonicalOrder(journals).map((journal) => (
           <option key={journal.id} value={journal.slug}>
-            {journal.department?.name ?? journal.name}
+            {getOfficialJournalFullName(journal.slug, journal.name)}
           </option>
         ))}
       </select>

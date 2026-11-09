@@ -1191,6 +1191,11 @@ export async function skipToPublishing(input: {
       authorVisible: true,
     },
   });
+
+  await handleEditorialDecisionIssued({
+    submissionId: submission.id,
+    decision: "ACCEPT",
+  });
 }
 
 export async function publishArticle(input: {
@@ -1577,6 +1582,13 @@ export async function deleteManuscriptSubmission(input: {
         },
       });
     }
+
+    await tx.notification.deleteMany({
+      where: {
+        resourceType: "Submission",
+        resourceId: submission.id,
+      },
+    });
 
     await tx.submission.delete({
       where: { id: submission.id },
